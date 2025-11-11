@@ -6,6 +6,8 @@ import com.example.saveup.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.example.saveup.dto.UsuarioLoginDTO;
+import org.springframework.security.authentication.BadCredentialsException;
 
 @Service
 public class UsuarioService {
@@ -44,4 +46,26 @@ public class UsuarioService {
 
         return usuarioRepository.save(nuevoUsuario);
     }
+
+    /**
+     * Autentica a un usuario comparando las credenciales con la base de datos.
+     *
+     * @param loginDTO Objeto con el email y la contraseña.
+     * @return El objeto Usuario si las credenciales son correctas.
+     * @throws BadCredentialsException si el usuario no existe o la contraseña es incorrecta.
+     */
+    public Usuario autenticarUsuario(UsuarioLoginDTO loginDTO) {
+        // Busca al usuario por email. Si no lo encuentra, lanza excepción.
+        Usuario usuario = usuarioRepository.findByEmail(loginDTO.getEmail())
+                .orElseThrow(() -> new BadCredentialsException("Credenciales inválidas."));
+
+        // Compara la contraseña del DTO con la contraseña hasheada de la BD.
+        if (passwordEncoder.matches(loginDTO.getContrasena(), usuario.getContrasena())) {
+            return usuario; // Si coinciden, devuelve el usuario.
+        } else {
+            // Si no coinciden, lanza la misma excepción para no dar pistas a atacantes.
+            throw new BadCredentialsException("Credenciales inválidas.");
+        }
+    }
+
 }
