@@ -1,12 +1,11 @@
 # ETAPA 1: CONSTRUCCIÓN (BUILD STAGE)
-# Usamos una imagen de JDK 21 para compilar el código.
-FROM openjdk:21-jdk-slim AS build
+# Usamos la imagen JDK 21 slim-buster (una etiqueta estable y ligera)
+FROM openjdk:21-jdk-slim-buster AS build
 
-# Establece el directorio de trabajo dentro del contenedor
+# Establece el directorio de trabajo
 WORKDIR /app
 
-# Copia los archivos de configuración de Maven (pom.xml y .mvn) primero.
-# Esto optimiza el caché de Docker si solo cambias el código fuente.
+# Copia los archivos de configuración de Maven
 COPY pom.xml .
 COPY .mvn .mvn
 
@@ -14,23 +13,23 @@ COPY .mvn .mvn
 COPY src src
 
 # Ejecuta el comando de construcción para generar el JAR ejecutable.
-# La bandera -DskipTests es opcional, pero acelera el deploy.
+# Se usa ./mvnw package para generar el JAR final
 RUN ./mvnw package -DskipTests
 
 # -------------------------------------------------------------
 
 # ETAPA 2: EJECUCIÓN (RUNTIME STAGE)
-# Usamos una imagen de JRE 21 (solo ambiente de ejecución) para un tamaño final mínimo.
-FROM openjdk:21-jre-slim
+# Usamos la imagen JRE 21 slim-buster para un tamaño final mínimo.
+FROM openjdk:21-jre-slim-buster
 
-# Establece el puerto en el que la aplicación esperará peticiones.
-# Render sobreescribirá esto, pero es una buena práctica incluirlo.
+# Expone el puerto (Render usará la variable PORT automáticamente, pero es una buena práctica)
 EXPOSE 8080
 
-# Copia el JAR construido de la etapa 'build' al nuevo contenedor 'runtime'.
-# El JAR suele encontrarse en el directorio 'target' del contenedor de build.
-COPY --from=build /app/target/*.jar app.jar
+# Define el nombre exacto del archivo JAR que se generó en la etapa de construcción:
+ARG JAR_FILE=target/saveup-0.0.1-SNAPSHOT.jar
 
-# Define el comando que se ejecutará al iniciar el contenedor.
-# Esto inicia tu aplicación Java.
+# Copia el JAR construido y lo renombra a app.jar
+COPY --from=build /app/${JAR_FILE} app.jar
+
+# Comando de Inicio: ejecuta la aplicación Java
 ENTRYPOINT ["java", "-jar", "app.jar"]
