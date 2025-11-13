@@ -20,9 +20,6 @@ public class MovimientoController {
     @Autowired
     private MovimientoService movimientoService;
 
-    /**
-     * Endpoint para registrar un nuevo movimiento (ingreso o gasto).
-     */
     @PostMapping
     public ResponseEntity<?> registrarMovimiento(@Valid @RequestBody MovimientoRegistroDTO dto) {
         try {
@@ -37,11 +34,15 @@ public class MovimientoController {
 
     /**
      * Endpoint para obtener todos los movimientos de un usuario por su RUT.
+     * AHORA ACEPTA UN LÍMITE OPCIONAL.
      */
     @GetMapping("/usuario/{rut}")
-    public ResponseEntity<?> obtenerMovimientosPorUsuario(@PathVariable String rut) {
+    public ResponseEntity<?> obtenerMovimientosPorUsuario(
+            @PathVariable String rut,
+            @RequestParam(required = false) Integer limit // <-- ¡NUEVO CAMBIO!
+    ) {
         try {
-            List<MovimientoResponseDTO> movimientos = movimientoService.obtenerMovimientosPorUsuario(rut);
+            List<MovimientoResponseDTO> movimientos = movimientoService.obtenerMovimientosPorUsuario(rut, limit); // <-- ¡NUEVO CAMBIO!
             return ResponseEntity.ok(movimientos);
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
