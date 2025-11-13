@@ -10,6 +10,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.example.saveup.dto.PageResponseDTO;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 import java.util.Map;
 
@@ -43,6 +47,25 @@ public class MovimientoController {
     ) {
         try {
             List<MovimientoResponseDTO> movimientos = movimientoService.obtenerMovimientosPorUsuario(rut, limit); // <-- ¡NUEVO CAMBIO!
+            return ResponseEntity.ok(movimientos);
+        } catch (EntityNotFoundException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+        }
+    }
+
+    /**
+     * ¡NUEVO ENDPOINT!
+     * Endpoint para obtener el historial completo de forma paginada.
+     */
+    @GetMapping("/paginados/usuario/{rut}")
+    public ResponseEntity<?> obtenerMovimientosPaginados(
+            @PathVariable String rut,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size
+    ) {
+        try {
+            Pageable pageable = PageRequest.of(page, size);
+            PageResponseDTO<MovimientoResponseDTO> movimientos = movimientoService.obtenerMovimientosPaginados(rut, pageable);
             return ResponseEntity.ok(movimientos);
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
