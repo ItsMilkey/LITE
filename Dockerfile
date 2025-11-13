@@ -1,35 +1,36 @@
-# ETAPA 1: CONSTRUCCIÓN (BUILD STAGE)
-# Usamos la imagen JDK 21 slim-buster (una etiqueta estable y ligera)
-FROM openjdk:21-jdk-slim-buster AS build
+# --- Etapa 1: Construcción (Build Stage) ---
+# Usamos una imagen oficial de Maven con Java 17 para construir el proyecto.
+FROM maven:3.8.5-openjdk-17 AS build
 
-# Establece el directorio de trabajo
+# Establecemos el directorio de trabajo dentro del contenedor.
 WORKDIR /app
 
-# Copia los archivos de configuración de Maven
+# Copiamos solo el archivo pom.xml para aprovechar el caché de Docker.
+# Si las dependencias no cambian, Docker no las volverá a descargar.
 COPY pom.xml .
-COPY .mvn .mvn
+RUN mvn dependency:go-offline
 
-# Copia el código fuente completo
-COPY src src
+# Copiamos el resto del código fuente.
+COPY src ./src
 
-# Ejecuta el comando de construcción para generar el JAR ejecutable.
-# Se usa ./mvnw package para generar el JAR final
-RUN ./mvnw package -DskipTests
+# Empaquetamos la aplicación en un archivo .jar, omitiendo los tests.
+# Esto genera el archivo JAR en el directorio /app/target/
+RUN mvn package -DskipTests
 
-# -------------------------------------------------------------
 
-# ETAPA 2: EJECUCIÓN (RUNTIME STAGE)
-# Usamos la imagen JRE 21 slim-buster para un tamaño final mínimo.
-FROM openjdk:21-jre-slim-buster
+# --- Etapa 2: Ejecución (Run Stage) ---
+# Usamos una imagen mucho más ligera que solo contiene Java para ejecutar la app.
+FROM eclipse-temurin:17-jre-alpine
 
-# Expone el puerto (Render usará la variable PORT automáticamente, pero es una buena práctica)
+# Establecemos el directorio de trabajo.
+WORKDIR /app
+
+# Copiamos el archivo .jar que compilamos en la etapa anterior.
+COPY --from=build /app/target/*.jar app.jar
+
+# Exponemos el puerto 8080 para que Render pueda redirigir el tráfico hacia él.
 EXPOSE 8080
 
-# Define el nombre exacto del archivo JAR que se generó en la etapa de construcción:
-ARG JAR_FILE=target/saveup-0.0.1-SNAPSHOT.jar
-
-# Copia el JAR construido y lo renombra a app.jar
-COPY --from=build /app/${JAR_FILE} app.jar
-
-# Comando de Inicio: ejecuta la aplicación Java
+# El comando que se ejecutará cuando el contenedor se inicie.
+# Le decimos a Java que ejecute nuestro archivo .jar.
 ENTRYPOINT ["java", "-jar", "app.jar"]
