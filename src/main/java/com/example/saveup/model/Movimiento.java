@@ -39,14 +39,14 @@ public class Movimiento {
     @JoinColumn(name = "USUARIO_ID", nullable = false)
     private Usuario usuario;
 
-    /*
-    // --- Relaciones Futuras (Descomentar cuando creemos Deuda y MetaAhorro) ---
-
+    // Relación Deuda
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "DEUDA_ID") // Será FK a la tabla DEUDA
     private Deuda deuda;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    /*
+    // --- Relaciones Futuras (Descomentar cuando creemos Deuda y MetaAhorro) ---
+     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "META_ID") // Será FK a la tabla META_AHORRO
     private MetaAhorro metaAhorro;
     */

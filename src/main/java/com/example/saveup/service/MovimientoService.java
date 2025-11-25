@@ -3,8 +3,13 @@ package com.example.saveup.service;
 import com.example.saveup.dto.MovimientoRegistroDTO;
 import com.example.saveup.dto.MovimientoResponseDTO;
 import com.example.saveup.dto.PageResponseDTO;
+import com.example.saveup.model.Deuda;
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.Usuario;
+import com.example.saveup.model.enums.EstadoDeuda;
+import com.example.saveup.model.enums.TipoMovimiento;
+import com.example.saveup.service.DeudaService;
+import com.example.saveup.repository.DeudaRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -26,19 +31,67 @@ public class MovimientoService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+    
+    @Autowired
+    private DeudaRepository deudaRepository; 
+
+    // En un futuro, si implementamos MetaAhorro:
+    // @Autowired
+    // private MetaAhorroRepository metaAhorroRepository;
 
     @Transactional
     public MovimientoResponseDTO registrarMovimiento(MovimientoRegistroDTO dto) {
+        // 1. Validar que el usuario exista.
         Usuario usuario = usuarioRepository.findById(dto.getUsuarioRut())
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con RUT: " + dto.getUsuarioRut()));
 
+        // 2. Crear la entidad Movimiento a partir del DTO.
         Movimiento movimiento = new Movimiento();
         movimiento.setUsuario(usuario);
         movimiento.setMonto(dto.getMonto());
         movimiento.setDescripcion(dto.getDescripcion());
         movimiento.setTipoMovimiento(dto.getTipoMovimiento());
+        // La fecha se establece automáticamente gracias a @PrePersist.
 
+        // --- LÓGICA DE ASOCIACIÓN CON DEUDAS Y METAS ---
+
+        // Si se proporciona un deudaId, se asocia el movimiento a esa deuda.
+        if (dto.getDeudaId() != null) {
+            // Validación de negocio: Solo los PAGO_DEUDA pueden tener un deudaId.
+            if (dto.getTipoMovimiento() != TipoMovimiento.PAGO_DEUDA) {
+                throw new IllegalArgumentException("El campo 'deudaId' solo es válido para movimientos de tipo PAGO_DEUDA.");
+            }
+            // Se busca la deuda y se asocia.
+            Deuda deuda = deudaRepository.findById(dto.getDeudaId())
+                    .orElseThrow(() -> new EntityNotFoundException("Deuda no encontrada con ID: " + dto.getDeudaId()));
+            movimiento.setDeuda(deuda);
+
+            // Opcional pero recomendado: Verificar si este pago salda la deuda.
+            // Esto crea consistencia si se usa este endpoint en vez del de DeudaService.
+            // Nota: Se realiza una comprobación después de que el movimiento se guarde teóricamente.
+            double nuevoTotalPagado = Math.abs(deudaRepository.findTotalPagadoPorDeuda(deuda.getId())) + Math.abs(dto.getMonto());
+            if (nuevoTotalPagado >= deuda.getMontoTotal()) {
+                deuda.setEstado(EstadoDeuda.PAGADA);
+                deudaRepository.save(deuda);
+            }
+        }
+
+        /*
+        // Si se proporciona un metaId, se asocia el movimiento a esa meta (para el futuro).
+        if (dto.getMetaId() != null) {
+            if (dto.getTipoMovimiento() != TipoMovimiento.ABONO_META && dto.getTipoMovimiento() != TipoMovimiento.RETIRO_META) {
+                throw new IllegalArgumentException("El campo 'metaId' solo es válido para movimientos relacionados con metas.");
+            }
+            MetaAhorro meta = metaAhorroRepository.findById(dto.getMetaId())
+                    .orElseThrow(() -> new EntityNotFoundException("Meta de ahorro no encontrada con ID: " + dto.getMetaId()));
+            movimiento.setMetaAhorro(meta);
+        }
+        */
+
+        // 3. Guardar la entidad en la base de datos.
         Movimiento movimientoGuardado = movimientoRepository.save(movimiento);
+
+        // 4. Convertir la entidad guardada a un DTO de respuesta y devolverla.
         return convertirAEntidadResponseDTO(movimientoGuardado);
     }
 
