@@ -4,12 +4,14 @@ import oracle.ucp.jdbc.PoolDataSource;
 import oracle.ucp.jdbc.PoolDataSourceFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.beans.factory.annotation.Value;
 
 import javax.sql.DataSource;
 import java.sql.SQLException;
 
 @Configuration
+@Profile("dev")
 public class DataSourceConfig {
 
     // Inyectamos los valores desde application-dev.properties
