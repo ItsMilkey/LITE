@@ -1,4 +1,5 @@
-package com.example.saveup.repository;import com.example.saveup.model.Movimiento;
+package com.example.saveup.repository;import com.example.saveup.model.Deuda;
+import com.example.saveup.model.Movimiento;
 import org.springframework.data.domain.Page; // <-- ¡CAMBIO!
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,5 +19,6 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
 
     @Query("SELECT SUM(m.monto) FROM Movimiento m WHERE m.usuario.rut = :rut")
     Double findSaldoByUsuarioRut(@Param("rut") String rut);
+    List<Movimiento> findByDeuda(Deuda deuda);
 
 }

@@ -8,6 +8,7 @@ import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.Usuario;
 import com.example.saveup.model.enums.EstadoDeuda;
 import com.example.saveup.model.enums.TipoMovimiento;
+import com.example.saveup.repository.CategoriaRepository;
 import com.example.saveup.repository.DeudaRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
@@ -15,6 +16,8 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.saveup.model.Categoria;
+import com.example.saveup.repository.CategoriaRepository;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,6 +31,8 @@ public class DeudaService {
     private UsuarioRepository usuarioRepository;
     @Autowired
     private MovimientoRepository movimientoRepository;
+    @Autowired
+    private CategoriaRepository categoriaRepository;
 
     @Transactional
     public DeudaResponseDTO crearDeuda(DeudaCreacionDTO dto) {
@@ -65,6 +70,8 @@ public class DeudaService {
         if (deuda.getEstado() != EstadoDeuda.PENDIENTE) {
             throw new IllegalStateException("Solo se pueden registrar pagos en deudas pendientes. Estado actual: " + deuda.getEstado());
         }
+        Categoria categoriaDeudas = categoriaRepository.findByNombre("Deudas")
+                .orElseThrow(() -> new IllegalStateException("La categoría 'Deudas' no fue encontrada. Asegúrate de que exista en la base de datos."));
 
         // Crear y guardar el movimiento de pago
         Movimiento pago = new Movimiento();
@@ -73,16 +80,17 @@ public class DeudaService {
         pago.setMonto(pagoDTO.getMonto() * -1); // Los pagos son egresos, por lo tanto negativos
         pago.setDescripcion(pagoDTO.getDescripcion());
         pago.setTipoMovimiento(TipoMovimiento.PAGO_DEUDA);
+        pago.setCategoria(categoriaDeudas);
         movimientoRepository.save(pago);
 
         // Verificar si la deuda está completamente pagada después del nuevo pago
-        double totalPagado = Math.abs(deudaRepository.findTotalPagadoPorDeuda(deudaId));
+        // El cálculo de totalPagado ahora es más preciso
+        double totalPagado = Math.abs(movimientoRepository.findByDeuda(deuda).stream().mapToDouble(Movimiento::getMonto).sum());
         if (totalPagado >= deuda.getMontoTotal()) {
             deuda.setEstado(EstadoDeuda.PAGADA);
-            deudaRepository.save(deuda);
         }
-
-        return convertirADeudaResponseDTO(deuda);
+        Deuda deudaActualizada = deudaRepository.save(deuda);
+        return convertirADeudaResponseDTO(deudaActualizada);
     }
     
     @Transactional

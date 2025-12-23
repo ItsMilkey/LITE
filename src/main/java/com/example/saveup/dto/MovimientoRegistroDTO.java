@@ -23,4 +23,6 @@ public class MovimientoRegistroDTO {
     // Opcional: Se usarán cuando implementemos deudas y metas
     private Long deudaId;
     private Long metaId;
+    
+    private Long categoriaId; // ID de la categoría seleccionada
 }

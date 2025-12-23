@@ -44,6 +44,11 @@ public class Movimiento {
     @JoinColumn(name = "DEUDA_ID") // Será FK a la tabla DEUDA
     private Deuda deuda;
 
+    // Relación Categoría
+    @ManyToOne(fetch = FetchType.EAGER) // EAGER para que venga con los datos básicos
+    @JoinColumn(name = "CATEGORIA_ID")
+    private Categoria categoria;
+
     /*
     // --- Relaciones Futuras (Descomentar cuando creemos Deuda y MetaAhorro) ---
      @ManyToOne(fetch = FetchType.LAZY)

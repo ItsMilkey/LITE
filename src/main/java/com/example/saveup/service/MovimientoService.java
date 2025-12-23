@@ -1,5 +1,6 @@
 package com.example.saveup.service;
 
+import com.example.saveup.dto.CategoriaDTO;
 import com.example.saveup.dto.MovimientoRegistroDTO;
 import com.example.saveup.dto.MovimientoResponseDTO;
 import com.example.saveup.dto.PageResponseDTO;
@@ -34,6 +35,9 @@ public class MovimientoService {
     
     @Autowired
     private DeudaRepository deudaRepository; 
+
+    @Autowired
+    private com.example.saveup.repository.CategoriaRepository categoriaRepository;
 
     // En un futuro, si implementamos MetaAhorro:
     // @Autowired
@@ -87,6 +91,13 @@ public class MovimientoService {
             movimiento.setMetaAhorro(meta);
         }
         */
+
+        // 6. ASOCIACIÓN DE CATEGORÍA
+        if (dto.getCategoriaId() != null) {
+            com.example.saveup.model.Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
+                    .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada con ID: " + dto.getCategoriaId()));
+            movimiento.setCategoria(categoria);
+        }
 
         // 3. Guardar la entidad en la base de datos.
         Movimiento movimientoGuardado = movimientoRepository.save(movimiento);
@@ -166,6 +177,17 @@ public class MovimientoService {
         dto.setDescripcion(movimiento.getDescripcion());
         dto.setFecha(movimiento.getFecha());
         dto.setTipoMovimiento(movimiento.getTipoMovimiento());
+
+        // Si el movimiento tiene una categoría, la convertimos a DTO y la añadimos.
+        if (movimiento.getCategoria() != null) {
+            CategoriaDTO categoriaDTO = new CategoriaDTO();
+            categoriaDTO.setId(movimiento.getCategoria().getId());
+            categoriaDTO.setNombre(movimiento.getCategoria().getNombre());
+            categoriaDTO.setIconId(movimiento.getCategoria().getIconId());
+            categoriaDTO.setColorHex(movimiento.getCategoria().getColorHex());
+            dto.setCategoria(categoriaDTO);
+        }
+
         return dto;
     }
 }
