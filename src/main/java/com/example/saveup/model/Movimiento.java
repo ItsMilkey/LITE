@@ -15,12 +15,12 @@ import java.util.Date;
 public class Movimiento {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // Ideal para IDs numéricos autoincrementales
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID_MOVIMIENTO")
     private Long id;
 
     @Column(name = "MONTO", nullable = false)
-    private double monto; // Positivo para ingresos, negativo para gastos
+    private double monto;
 
     @Column(name = "DESCRIPCION", nullable = false, length = 100)
     private String descripcion;
@@ -29,32 +29,25 @@ public class Movimiento {
     @Temporal(TemporalType.TIMESTAMP)
     private Date fecha;
 
-    @Enumerated(EnumType.STRING) // Le dice a JPA que guarde el nombre del enum ("GASTO_GENERAL")
+    @Enumerated(EnumType.STRING)
     @Column(name = "TIPO_MOVIMIENTO", nullable = false)
     private TipoMovimiento tipoMovimiento;
 
-    // --- Relación Clave ---
-    // Muchos movimientos pueden pertenecer a Un usuario.
-    @ManyToOne(fetch = FetchType.LAZY) // LAZY para no cargar el usuario a menos que se necesite
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "USUARIO_ID", nullable = false)
     private Usuario usuario;
 
-    // Relación Deuda
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "DEUDA_ID") // Será FK a la tabla DEUDA
+    @JoinColumn(name = "DEUDA_ID")
     private Deuda deuda;
 
-    // Relación Categoría
-    @ManyToOne(fetch = FetchType.EAGER) // EAGER para que venga con los datos básicos
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "CATEGORIA_ID")
     private Categoria categoria;
 
-    /*
-    // --- Relaciones Futuras (Descomentar cuando creemos Deuda y MetaAhorro) ---
-     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "META_ID") // Será FK a la tabla META_AHORRO
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "META_ID")
     private MetaAhorro metaAhorro;
-    */
 
     @PrePersist
     protected void onCreate() {

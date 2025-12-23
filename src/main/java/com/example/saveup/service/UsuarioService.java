@@ -1,13 +1,16 @@
 package com.example.saveup.service;
 
+import com.example.saveup.dto.UsuarioLoginDTO;
 import com.example.saveup.dto.UsuarioRegistroDTO;
+import com.example.saveup.model.MetaAhorro;
 import com.example.saveup.model.Usuario;
+import com.example.saveup.repository.MetaAhorroRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.example.saveup.dto.UsuarioLoginDTO;
-import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UsuarioService {
@@ -18,6 +21,8 @@ public class UsuarioService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private MetaAhorroRepository metaAhorroRepository;
     /**
      * Registra un nuevo usuario en el sistema.
      * Valida la existencia, codifica la contraseña y guarda el nuevo usuario.
@@ -26,6 +31,8 @@ public class UsuarioService {
      * @return El usuario guardado en la base de datos.
      * @throws IllegalStateException si el RUT o el email ya están en uso.
      */
+
+    @Transactional
     public Usuario registrarUsuario(UsuarioRegistroDTO usuarioDTO) {
         if (usuarioRepository.existsById(usuarioDTO.getRut())) {
             throw new IllegalStateException("El RUT ingresado ya está registrado.");
@@ -39,12 +46,19 @@ public class UsuarioService {
         nuevoUsuario.setNombre(usuarioDTO.getNombre());
         nuevoUsuario.setApellido(usuarioDTO.getApellido());
         nuevoUsuario.setEmail(usuarioDTO.getEmail());
-
-        // --- PUNTO CLAVE DE SEGURIDAD ---
-        // Codificar la contraseña antes de guardarla.
         nuevoUsuario.setContrasena(passwordEncoder.encode(usuarioDTO.getContrasena()));
 
-        return usuarioRepository.save(nuevoUsuario);
+        // 1. Guardar el usuario y capturar la entidad guardada
+        Usuario usuarioGuardado = usuarioRepository.save(nuevoUsuario);
+
+        // 2. Crear la meta de ahorro por defecto usando el usuario ya guardado
+        MetaAhorro metaPorDefecto = new MetaAhorro();
+        metaPorDefecto.setNombre("Ahorros");
+        metaPorDefecto.setUsuario(usuarioGuardado);
+        metaAhorroRepository.save(metaPorDefecto);
+
+        // 3. Devolver el usuario al final del método
+        return usuarioGuardado;
     }
 
     /**
