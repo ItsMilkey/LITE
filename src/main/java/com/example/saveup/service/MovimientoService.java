@@ -9,7 +9,6 @@ import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.Usuario;
 import com.example.saveup.model.enums.EstadoDeuda;
 import com.example.saveup.model.enums.TipoMovimiento;
-import com.example.saveup.service.DeudaService;
 import com.example.saveup.repository.DeudaRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
@@ -23,6 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import com.example.saveup.model.AsignacionMetaPresupuesto;
+import com.example.saveup.model.MetaAhorro;
+import com.example.saveup.repository.ConfiguracionPresupuestoRepository;
+import com.example.saveup.repository.AsignacionMetaPresupuestoRepository;
+import com.example.saveup.repository.MetaAhorroRepository;
 
 @Service
 public class MovimientoService {
@@ -32,22 +36,28 @@ public class MovimientoService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
-    
+
     @Autowired
-    private DeudaRepository deudaRepository; 
+    private DeudaRepository deudaRepository;
 
     @Autowired
     private com.example.saveup.repository.CategoriaRepository categoriaRepository;
 
-    // En un futuro, si implementamos MetaAhorro:
-    // @Autowired
-    // private MetaAhorroRepository metaAhorroRepository;
+    @Autowired
+    private MetaAhorroRepository metaAhorroRepository;
+
+    @Autowired
+    private ConfiguracionPresupuestoRepository configuracionPresupuestoRepository;
+
+    @Autowired
+    private AsignacionMetaPresupuestoRepository asignacionMetaPresupuestoRepository;
 
     @Transactional
     public MovimientoResponseDTO registrarMovimiento(MovimientoRegistroDTO dto) {
         // 1. Validar que el usuario exista.
         Usuario usuario = usuarioRepository.findById(dto.getUsuarioRut())
-                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con RUT: " + dto.getUsuarioRut()));
+                .orElseThrow(
+                        () -> new EntityNotFoundException("Usuario no encontrado con RUT: " + dto.getUsuarioRut()));
 
         // 2. Crear la entidad Movimiento a partir del DTO.
         Movimiento movimiento = new Movimiento();
@@ -63,7 +73,8 @@ public class MovimientoService {
         if (dto.getDeudaId() != null) {
             // Validación de negocio: Solo los PAGO_DEUDA pueden tener un deudaId.
             if (dto.getTipoMovimiento() != TipoMovimiento.PAGO_DEUDA) {
-                throw new IllegalArgumentException("El campo 'deudaId' solo es válido para movimientos de tipo PAGO_DEUDA.");
+                throw new IllegalArgumentException(
+                        "El campo 'deudaId' solo es válido para movimientos de tipo PAGO_DEUDA.");
             }
             // Se busca la deuda y se asocia.
             Deuda deuda = deudaRepository.findById(dto.getDeudaId())
@@ -72,8 +83,10 @@ public class MovimientoService {
 
             // Opcional pero recomendado: Verificar si este pago salda la deuda.
             // Esto crea consistencia si se usa este endpoint en vez del de DeudaService.
-            // Nota: Se realiza una comprobación después de que el movimiento se guarde teóricamente.
-            double nuevoTotalPagado = Math.abs(deudaRepository.findTotalPagadoPorDeuda(deuda.getId())) + Math.abs(dto.getMonto());
+            // Nota: Se realiza una comprobación después de que el movimiento se guarde
+            // teóricamente.
+            double nuevoTotalPagado = Math.abs(deudaRepository.findTotalPagadoPorDeuda(deuda.getId()))
+                    + Math.abs(dto.getMonto());
             if (nuevoTotalPagado >= deuda.getMontoTotal()) {
                 deuda.setEstado(EstadoDeuda.PAGADA);
                 deudaRepository.save(deuda);
@@ -81,22 +94,72 @@ public class MovimientoService {
         }
 
         /*
-        // Si se proporciona un metaId, se asocia el movimiento a esa meta (para el futuro).
-        if (dto.getMetaId() != null) {
-            if (dto.getTipoMovimiento() != TipoMovimiento.ABONO_META && dto.getTipoMovimiento() != TipoMovimiento.RETIRO_META) {
-                throw new IllegalArgumentException("El campo 'metaId' solo es válido para movimientos relacionados con metas.");
-            }
-            MetaAhorro meta = metaAhorroRepository.findById(dto.getMetaId())
-                    .orElseThrow(() -> new EntityNotFoundException("Meta de ahorro no encontrada con ID: " + dto.getMetaId()));
-            movimiento.setMetaAhorro(meta);
-        }
-        */
+         * // Si se proporciona un metaId, se asocia el movimiento a esa meta (para el
+         * futuro).
+         * if (dto.getMetaId() != null) {
+         * if (dto.getTipoMovimiento() != TipoMovimiento.ABONO_META &&
+         * dto.getTipoMovimiento() != TipoMovimiento.RETIRO_META) {
+         * throw new
+         * IllegalArgumentException("El campo 'metaId' solo es válido para movimientos relacionados con metas."
+         * );
+         * }
+         * MetaAhorro meta = metaAhorroRepository.findById(dto.getMetaId())
+         * .orElseThrow(() -> new
+         * EntityNotFoundException("Meta de ahorro no encontrada con ID: " +
+         * dto.getMetaId()));
+         * movimiento.setMetaAhorro(meta);
+         * }
+         */
 
         // 6. ASOCIACIÓN DE CATEGORÍA
         if (dto.getCategoriaId() != null) {
             com.example.saveup.model.Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
-                    .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada con ID: " + dto.getCategoriaId()));
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "Categoría no encontrada con ID: " + dto.getCategoriaId()));
             movimiento.setCategoria(categoria);
+        }
+
+        // 7. LÓGICA SMART-SPLIT (Planificación Automática)
+        if (Boolean.TRUE.equals(dto.getAplicarPresupuesto())
+                && dto.getTipoMovimiento() == TipoMovimiento.INGRESO_GENERAL) {
+            configuracionPresupuestoRepository.findByUsuarioRut(usuario.getRut()).ifPresent(config -> {
+                if (Boolean.TRUE.equals(config.getActivo())) {
+                    // 1. Calcular Monto para Ahorro
+                    double montoAhorro = dto.getMonto() * (config.getPorcentajeAhorro() / 100.0);
+
+                    // 2. Distribuir en Metas
+                    List<AsignacionMetaPresupuesto> asignaciones = asignacionMetaPresupuestoRepository
+                            .findByConfiguracionId(config.getId());
+
+                    for (AsignacionMetaPresupuesto asignacion : asignaciones) {
+                        double montoAbono = montoAhorro * (asignacion.getPorcentajeAsignacion() / 100.0);
+                        if (montoAbono > 0) {
+                            // Crear Movimiento de Abono a Meta
+                            Movimiento abonoMovimiento = new Movimiento();
+                            abonoMovimiento.setUsuario(usuario);
+                            abonoMovimiento.setMonto(-montoAbono); // Se resta del saldo general virtualmente (o se
+                                                                   // registra como gasto/transferencia?)
+                            // NOTA: En SaveUp, ABONO_META suele tratarse como un EGRESO del saldo
+                            // disponible y un INGRESO a la meta.
+                            // Pero aquí lo registramos como ABONO_META. Dependiendo de cómo se calcule el
+                            // saldo, esto podría restar.
+                            // Vamos a asumir que ABONO_META resta del saldo 'disponible' en el dashboard si
+                            // el saldo se calcula como Sum(Movimientos).
+
+                            abonoMovimiento.setDescripcion("Abono Auto: " + asignacion.getMeta().getNombre());
+                            abonoMovimiento.setTipoMovimiento(TipoMovimiento.ABONO_META);
+                            abonoMovimiento.setMetaAhorro(asignacion.getMeta()); // Relationship exists
+
+                            // Actualizar el saldo de la Meta
+                            MetaAhorro meta = asignacion.getMeta();
+                            meta.setMontoActual(meta.getMontoActual() + montoAbono);
+                            metaAhorroRepository.save(meta);
+
+                            movimientoRepository.save(abonoMovimiento);
+                        }
+                    }
+                }
+            });
         }
 
         // 3. Guardar la entidad en la base de datos.
@@ -108,7 +171,8 @@ public class MovimientoService {
 
     /**
      * Obtiene el historial de movimientos de un usuario.
-     * Si se proporciona un límite, devuelve solo esa cantidad de movimientos recientes.
+     * Si se proporciona un límite, devuelve solo esa cantidad de movimientos
+     * recientes.
      * Si no, devuelve el historial completo.
      */
     @Transactional(readOnly = true)
@@ -151,10 +215,10 @@ public class MovimientoService {
         if (!usuarioRepository.existsById(rut)) {
             throw new EntityNotFoundException("Usuario no encontrado con RUT: " + rut);
         }
-        
+
         // 1. Obtenemos la página de entidades desde el repositorio
         Page<Movimiento> paginaMovimientos = movimientoRepository.findByUsuarioRutOrderByFechaDesc(rut, pageable);
-        
+
         // 2. Convertimos el contenido de la página a una lista de DTOs
         List<MovimientoResponseDTO> contenidoDTO = paginaMovimientos.getContent().stream()
                 .map(this::convertirAEntidadResponseDTO)
@@ -166,10 +230,10 @@ public class MovimientoService {
         respuesta.setCurrentPage(paginaMovimientos.getNumber());
         respuesta.setTotalItems(paginaMovimientos.getTotalElements());
         respuesta.setTotalPages(paginaMovimientos.getTotalPages());
-        
+
         return respuesta;
     }
-    
+
     private MovimientoResponseDTO convertirAEntidadResponseDTO(Movimiento movimiento) {
         MovimientoResponseDTO dto = new MovimientoResponseDTO();
         dto.setId(movimiento.getId());

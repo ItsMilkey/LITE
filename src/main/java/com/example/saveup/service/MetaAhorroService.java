@@ -32,7 +32,7 @@ public class MetaAhorroService {
     public MetaAhorroResponseDTO crearMeta(MetaAhorroCreacionDTO dto) {
         Usuario usuario = usuarioRepository.findById(dto.getUsuarioRut())
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
-        
+
         MetaAhorro meta = new MetaAhorro();
         meta.setUsuario(usuario);
         meta.setNombre(dto.getNombre());
@@ -61,8 +61,13 @@ public class MetaAhorroService {
         abono.setTipoMovimiento(TipoMovimiento.ABONO_META);
         abono.setMonto(dto.getMonto() * -1); // El dinero "sale" del saldo principal
         abono.setDescripcion(dto.getDescripcion());
-        
+
         movimientoRepository.save(abono);
+
+        // Update Meta Amount
+        meta.setMontoActual(meta.getMontoActual() + dto.getMonto());
+        metaAhorroRepository.save(meta);
+
         return convertirADTO(meta);
     }
 
@@ -84,14 +89,19 @@ public class MetaAhorroService {
         retiro.setDescripcion(dto.getDescripcion());
 
         movimientoRepository.save(retiro);
+
+        // Update Meta Amount
+        meta.setMontoActual(meta.getMontoActual() - dto.getMonto());
+        metaAhorroRepository.save(meta);
+
         return convertirADTO(meta);
     }
-    
+
     @Transactional
     public void eliminarMeta(Long metaId) {
         MetaAhorro meta = metaAhorroRepository.findById(metaId)
                 .orElseThrow(() -> new EntityNotFoundException("Meta no encontrada"));
-        
+
         // No se puede eliminar la meta por defecto "Ahorros"
         if ("Ahorros".equalsIgnoreCase(meta.getNombre())) {
             throw new IllegalStateException("La meta por defecto 'Ahorros' no se puede eliminar.");
@@ -108,11 +118,11 @@ public class MetaAhorroService {
             devolucion.setDescripcion("Devolución de fondos por eliminar meta: " + meta.getNombre());
             movimientoRepository.save(devolucion);
         }
-        
+
         // Desvincular movimientos de la meta antes de borrarla
         List<Movimiento> movimientosAsociados = movimientoRepository.findAll().stream()
-            .filter(m -> m.getMetaAhorro() != null && m.getMetaAhorro().getId().equals(metaId))
-            .collect(Collectors.toList());
+                .filter(m -> m.getMetaAhorro() != null && m.getMetaAhorro().getId().equals(metaId))
+                .collect(Collectors.toList());
         movimientosAsociados.forEach(m -> m.setMetaAhorro(null));
         movimientoRepository.saveAll(movimientosAsociados);
 
@@ -125,11 +135,10 @@ public class MetaAhorroService {
         dto.setNombre(meta.getNombre());
         dto.setMontoObjetivo(meta.getMontoObjetivo());
         dto.setFechaLimite(meta.getFechaLimite());
-        
-        // Cálculo en tiempo real del monto ahorrado
-        Double totalAhorrado = metaAhorroRepository.findTotalAhorradoByMetaId(meta.getId());
-        dto.setMontoAhorrado(Math.abs(totalAhorrado));
-        
+
+        // Usar la columna montoActual en lugar de cálculo en tiempo real
+        dto.setMontoActual(meta.getMontoActual());
+
         return dto;
     }
 

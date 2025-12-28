@@ -21,9 +21,13 @@ public class MetaAhorro {
     @Column(name = "NOMBRE", nullable = false, length = 100)
     private String nombre;
 
-    // Nullable para permitir la meta por defecto "Ahorros" que no tiene un objetivo fijo.
+    // Nullable para permitir la meta por defecto "Ahorros" que no tiene un objetivo
+    // fijo.
     @Column(name = "MONTO_OBJETIVO")
     private Double montoObjetivo;
+
+    @Column(name = "MONTO_ACTUAL") // Nullable to support existing data
+    private Double montoActual = 0.0;
 
     // Nullable para la meta por defecto.
     @Column(name = "FECHA_LIMITE")
@@ -33,4 +37,8 @@ public class MetaAhorro {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "USUARIO_ID", nullable = false)
     private Usuario usuario;
+
+    public Double getMontoActual() {
+        return montoActual != null ? montoActual : 0.0;
+    }
 }

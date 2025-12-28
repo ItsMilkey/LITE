@@ -9,7 +9,7 @@ public class MetaAhorroResponseDTO {
     private String nombre;
     private Double montoObjetivo;
     private Date fechaLimite;
-    
-    // Campo calculado en el servicio
-    private double montoAhorrado; 
+
+    // Campo calculado en el servicio (ahora persistido)
+    private double montoActual;
 }
