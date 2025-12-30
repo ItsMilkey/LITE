@@ -90,4 +90,79 @@ public class ConfiguracionPresupuestoController {
 
         return ResponseEntity.ok(savedConfig);
     }
+
+    @Autowired
+    private com.example.saveup.repository.MovimientoRepository movimientoRepository;
+
+    @GetMapping("/ejecucion/{rut}")
+    public ResponseEntity<com.example.saveup.dto.EjecucionPresupuestoDTO> getEjecucionPresupuesto(
+            @PathVariable String rut,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year) {
+
+        // 1. Determine Dates
+        java.time.LocalDate now = java.time.LocalDate.now();
+        int m = month != null ? month : now.getMonthValue();
+        int y = year != null ? year : now.getYear();
+
+        java.time.YearMonth ym = java.time.YearMonth.of(y, m);
+        java.util.Date start = java.sql.Date.valueOf(ym.atDay(1));
+        java.util.Date end = java.sql.Date.valueOf(ym.atEndOfMonth());
+
+        // 2. Get Config
+        ConfiguracionPresupuesto config = repository.findByUsuarioRut(rut)
+                .orElse(new ConfiguracionPresupuesto());
+        // If new/empty, fields are null. Default to 50/30 logic.
+
+        // 3. Get Movements
+        List<com.example.saveup.model.Movimiento> movs = movimientoRepository.findByUsuarioRutAndFechaBetween(rut,
+                start, end);
+
+        // 4. Calculate Income
+        double totalIncome = movs.stream()
+                .filter(mv -> mv.getMonto() > 0
+                        && mv.getTipoMovimiento() == com.example.saveup.model.enums.TipoMovimiento.INGRESO_GENERAL)
+                .mapToDouble(com.example.saveup.model.Movimiento::getMonto)
+                .sum();
+
+        // 5. Calculate Expenses by Type
+        double gastoNecesidad = 0;
+        double gastoDeseos = 0;
+
+        for (com.example.saveup.model.Movimiento mv : movs) {
+            // Expenses are negative in DB, or depends on type.
+            // Usually GASTO_GENERAL and PAGO_DEUDA are stored as negative or filtered by
+            // type.
+            // Let's filter by type.
+            boolean isExpense = mv.getTipoMovimiento() == com.example.saveup.model.enums.TipoMovimiento.GASTO_GENERAL
+                    || mv.getTipoMovimiento() == com.example.saveup.model.enums.TipoMovimiento.PAGO_DEUDA;
+
+            if (isExpense && mv.getCategoria() != null) {
+                com.example.saveup.model.enums.TipoPresupuesto tp = mv.getCategoria().getTipoPresupuesto();
+                if (tp == com.example.saveup.model.enums.TipoPresupuesto.NECESIDAD) {
+                    gastoNecesidad += Math.abs(mv.getMonto());
+                } else if (tp == com.example.saveup.model.enums.TipoPresupuesto.DESEO) {
+                    gastoDeseos += Math.abs(mv.getMonto());
+                }
+            }
+        }
+
+        // 6. Build DTO
+        com.example.saveup.dto.EjecucionPresupuestoDTO dto = new com.example.saveup.dto.EjecucionPresupuestoDTO();
+        dto.setTotalIngresos(totalIncome);
+
+        Double pNeed = config.getPorcentajeNecesidades() != null ? config.getPorcentajeNecesidades() : 50.0;
+        Double pWant = config.getPorcentajeDeseos() != null ? config.getPorcentajeDeseos() : 30.0;
+
+        dto.setPorcentajeNecesidadesConfigurado(pNeed);
+        dto.setPorcentajeDeseosConfigurado(pWant);
+
+        dto.setPresupuestoNecesidades(totalIncome * pNeed / 100.0);
+        dto.setPresupuestoDeseos(totalIncome * pWant / 100.0);
+
+        dto.setGastoNecesidades(gastoNecesidad);
+        dto.setGastoDeseos(gastoDeseos);
+
+        return ResponseEntity.ok(dto);
+    }
 }

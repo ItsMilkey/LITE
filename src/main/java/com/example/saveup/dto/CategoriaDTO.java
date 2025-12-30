@@ -8,4 +8,5 @@ public class CategoriaDTO {
     private String nombre;
     private String iconId;
     private String colorHex;
+    private com.example.saveup.model.enums.TipoPresupuesto tipoPresupuesto;
 }

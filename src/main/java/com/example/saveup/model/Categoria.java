@@ -25,4 +25,8 @@ public class Categoria {
 
     @Column(name = "COLOR_HEX")
     private String colorHex; // Código de color (ej: "#FF5733")
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "TIPO_PRESUPUESTO")
+    private com.example.saveup.model.enums.TipoPresupuesto tipoPresupuesto;
 }
