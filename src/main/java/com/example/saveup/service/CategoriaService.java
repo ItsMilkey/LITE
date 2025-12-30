@@ -31,6 +31,7 @@ public class CategoriaService {
         dto.setNombre(categoria.getNombre());
         dto.setIconId(categoria.getIconId());
         dto.setColorHex(categoria.getColorHex());
+        dto.setTipoPresupuesto(categoria.getTipoPresupuesto());
         return dto;
     }
 }

@@ -49,23 +49,32 @@ public class DataLoader implements CommandLineRunner {
             for (Categoria c : existing) {
                 // Forzamos actualización de categorías conocidas para corregir datos antiguos o
                 // mal migrados
+                // Forzamos actualización de categorías conocidas para corregir datos antiguos o
+                // mal migrados
                 if (true) {
                     com.example.saveup.model.enums.TipoPresupuesto oldType = c.getTipoPresupuesto();
-                    switch (c.getNombre()) {
-                        case "Comida":
-                        case "Transporte":
-                        case "Cuentas y Servicios":
-                        case "Salud y Bienestar":
-                        case "Deudas":
-                        case "Arriendo": // Agregando común
-                        case "Supermercado": // Agregando común
+                    String nombreNormalizado = c.getNombre().trim().toLowerCase();
+
+                    switch (nombreNormalizado) {
+                        case "comida":
+                        case "transporte":
+                        case "cuentas y servicios":
+                        case "salud y bienestar":
+                        case "deudas":
+                        case "arriendo":
+                        case "supermercado":
                             c.setTipoPresupuesto(com.example.saveup.model.enums.TipoPresupuesto.NECESIDAD);
                             break;
-                        case "Ocio y Entretenimiento":
-                        case "Ropa y Accesorios":
-                        case "Viajes":
-                        case "Regalos":
+                        case "ocio y entretenimiento":
+                        case "ropa y accesorios":
+                        case "viajes":
+                        case "regalos":
                             c.setTipoPresupuesto(com.example.saveup.model.enums.TipoPresupuesto.DESEO);
+                            break;
+                        case "sueldo":
+                        case "deposito":
+                            // Ingresos usualmente son 'OTROS' en contexto de gasto, o null si no aplica
+                            c.setTipoPresupuesto(com.example.saveup.model.enums.TipoPresupuesto.OTROS);
                             break;
                         default:
                             if (c.getTipoPresupuesto() == null) {

@@ -249,6 +249,7 @@ public class MovimientoService {
             categoriaDTO.setNombre(movimiento.getCategoria().getNombre());
             categoriaDTO.setIconId(movimiento.getCategoria().getIconId());
             categoriaDTO.setColorHex(movimiento.getCategoria().getColorHex());
+            categoriaDTO.setTipoPresupuesto(movimiento.getCategoria().getTipoPresupuesto());
             dto.setCategoria(categoriaDTO);
         }
 
