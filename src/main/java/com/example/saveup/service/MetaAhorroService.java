@@ -27,6 +27,8 @@ public class MetaAhorroService {
     private UsuarioRepository usuarioRepository;
     @Autowired
     private MovimientoRepository movimientoRepository;
+    @Autowired
+    private com.example.saveup.repository.CategoriaRepository categoriaRepository;
 
     @Transactional
     public MetaAhorroResponseDTO crearMeta(MetaAhorroCreacionDTO dto) {
@@ -62,6 +64,9 @@ public class MetaAhorroService {
         abono.setMonto(dto.getMonto() * -1); // El dinero "sale" del saldo principal
         abono.setDescripcion(dto.getDescripcion());
 
+        // ASIGNAR CATEGORÍA AHORRO
+        categoriaRepository.findByNombre("Ahorro").ifPresent(abono::setCategoria);
+
         movimientoRepository.save(abono);
 
         // Update Meta Amount
@@ -87,6 +92,9 @@ public class MetaAhorroService {
         retiro.setTipoMovimiento(TipoMovimiento.RETIRO_META);
         retiro.setMonto(dto.getMonto()); // El dinero "vuelve" al saldo principal
         retiro.setDescripcion(dto.getDescripcion());
+
+        // ASIGNAR CATEGORÍA AHORRO
+        categoriaRepository.findByNombre("Ahorro").ifPresent(retiro::setCategoria);
 
         movimientoRepository.save(retiro);
 

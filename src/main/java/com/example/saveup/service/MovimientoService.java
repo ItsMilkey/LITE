@@ -137,14 +137,22 @@ public class MovimientoService {
                             // Crear Movimiento de Abono a Meta
                             Movimiento abonoMovimiento = new Movimiento();
                             abonoMovimiento.setUsuario(usuario);
-                            abonoMovimiento.setMonto(-montoAbono); // Se resta del saldo general virtualmente (o se
-                                                                   // registra como gasto/transferencia?)
-                            // NOTA: En SaveUp, ABONO_META suele tratarse como un EGRESO del saldo
-                            // disponible y un INGRESO a la meta.
-                            // Pero aquí lo registramos como ABONO_META. Dependiendo de cómo se calcule el
-                            // saldo, esto podría restar.
-                            // Vamos a asumir que ABONO_META resta del saldo 'disponible' en el dashboard si
-                            // el saldo se calcula como Sum(Movimientos).
+                            abonoMovimiento.setMonto(-montoAbono);
+
+                            // ASIGNAR CATEGORÍA AHORRO
+                            com.example.saveup.model.Categoria catAhorro = categoriaRepository.findByNombre("Ahorro")
+                                    .orElse(null);
+                            if (catAhorro == null) {
+                                // Fallback a 'Sueldo' u 'Otro' si no existe 'Ahorro' (aunque DataLoader lo
+                                // crea)
+                                // O buscamos por tipo AHORRO
+                                List<com.example.saveup.model.Categoria> savings = categoriaRepository
+                                        .findByTipoPresupuesto(com.example.saveup.model.enums.TipoPresupuesto.AHORRO);
+                                if (!savings.isEmpty())
+                                    catAhorro = savings.get(0);
+                            }
+                            if (catAhorro != null)
+                                abonoMovimiento.setCategoria(catAhorro);
 
                             abonoMovimiento.setDescripcion("Abono Auto: " + asignacion.getMeta().getNombre());
                             abonoMovimiento.setTipoMovimiento(TipoMovimiento.ABONO_META);

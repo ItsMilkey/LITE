@@ -37,6 +37,8 @@ public class DataLoader implements CommandLineRunner {
                             com.example.saveup.model.enums.TipoPresupuesto.DESEO),
                     new Categoria(null, "Deudas", "ic_payment", "#795548",
                             com.example.saveup.model.enums.TipoPresupuesto.NECESIDAD),
+                    new Categoria(null, "Ahorro", "ic_savings", "#3F51B5",
+                            com.example.saveup.model.enums.TipoPresupuesto.AHORRO),
                     new Categoria(null, "Otro", "ic_label", "#607D8B",
                             com.example.saveup.model.enums.TipoPresupuesto.OTROS));
 
@@ -63,6 +65,8 @@ public class DataLoader implements CommandLineRunner {
                         case "deudas":
                         case "arriendo":
                         case "supermercado":
+                        case "educación":
+                        case "educacion":
                             c.setTipoPresupuesto(com.example.saveup.model.enums.TipoPresupuesto.NECESIDAD);
                             break;
                         case "ocio y entretenimiento":
@@ -70,6 +74,11 @@ public class DataLoader implements CommandLineRunner {
                         case "viajes":
                         case "regalos":
                             c.setTipoPresupuesto(com.example.saveup.model.enums.TipoPresupuesto.DESEO);
+                            break;
+                        case "ahorro":
+                        case "inversión":
+                        case "inversion":
+                            c.setTipoPresupuesto(com.example.saveup.model.enums.TipoPresupuesto.AHORRO);
                             break;
                         case "sueldo":
                         case "deposito":
@@ -90,6 +99,13 @@ public class DataLoader implements CommandLineRunner {
             if (changed) {
                 categoriaRepository.saveAll(existing);
                 System.out.println("Categorías existentes actualizadas con TipoPresupuesto.");
+            }
+
+            // Asegurar que exista la categoría 'Ahorro'
+            if (categoriaRepository.findByNombre("Ahorro").isEmpty()) {
+                categoriaRepository.save(new Categoria(null, "Ahorro", "ic_savings", "#3F51B5",
+                        com.example.saveup.model.enums.TipoPresupuesto.AHORRO));
+                System.out.println("Categoría 'Ahorro' creada.");
             }
         }
     }
