@@ -1,0 +1,14 @@
+name: Keep Service Alive
+
+on:
+  schedule:
+    - cron: '*/14 * * * *' # Ejecutar cada 14 minutos (Render se duerme a los 15 min)
+  workflow_dispatch: # Permite activarlo manualmente desde la UI de GitHub si es necesario
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Backend to Prevent Scaling Down
+        # Hacemos una petición HEAD (-I) para despertar el servicio sin descargar el contenido
+        run: curl -I https://lite-backend-1wn9.onrender.com/
