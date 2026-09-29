@@ -1,0 +1,1000 @@
+================================================================================
+                    SAVEUP LITE - BACKEND REST API
+            DOCUMENTACION TECNICA COMPLETA Y DETALLADA DEL PROYECTO
+================================================================================
+Fecha de Generacion: 2026-09-29
+Version: 0.0.1-SNAPSHOT
+Framework Base: Spring Boot 3.3.0
+Lenguaje: Java 21 LTS
+Base de Datos: Oracle Cloud Autonomous Database 23c (con soporte PostgreSQL)
+Repositorio: https://github.com/ItsMilkey/LITE
+Servicio en Produccion: https://lite-backend-1wn9.onrender.com/
+================================================================================
+
+TABLA DE CONTENIDOS:
+1. RESUMEN EJECUTIVO Y OBJETIVOS
+2. ARQUITECTURA TECNOLOGICA Y ESTRUCTURA DE CAPAS
+3. MODELO DE DATOS Y ESQUEMA DE ENTIDADES (JPA / HIBERNATE)
+4. CATALOGO COMPLETO DE ENUMS
+5. CATALOGO EXHAUSTIVO DE DTOs (DATA TRANSFER OBJECTS)
+6. MAPA COMPLETO DE ENDPOINTS REST
+7. CATALOGO DE CLASES, SERVICIOS, REPOSITORIOS Y METODOS
+8. REGLAS DE NEGOCIO Y FLUJOS DE TRABAJO (MAPAS CONCEPTUALES EN TEXTO)
+   - Flujo 1: Registro y Autenticacion
+   - Flujo 2: Registro de Movimientos y Algoritmo Smart-Split
+   - Flujo 3: Ciclo de Vida y Amortizacion de Deudas
+   - Flujo 4: Metas de Ahorro y Eliminacion Segura con Reembolso
+   - Flujo 5: Ejecucion Presupuestaria (Regla 50/30/20)
+   - Flujo 6: Generacion y Exportacion de Reportes (Strategy: PDF / CSV)
+9. CONFIGURACIONES, SEGURIDAD, DESPLIEGUE Y DEVOPS
+
+================================================================================
+1. RESUMEN EJECUTIVO Y OBJETIVOS
+================================================================================
+
+SaveUp Lite es una aplicacion backend de servicios REST orientada a la gestion 
+financiera personal inteligente. Permite a los usuarios registrar ingresos y 
+gastos, organizar sus finanzas bajo la popular regla de presupuesto 50/30/20, 
+gestionar metas de ahorro con distribucion automatica (Smart-Split), monitorear 
+y amortizar deudas en cuotas con calculos en tiempo real, y generar reportes 
+exportables estructurados en PDF y CSV.
+
+Aspectos destacados:
+- Modelo financiero integral: ingresos, gastos, deudas, metas y presupuestos 
+  conectados sin fisuras de integridad.
+- Smart-Split: asignacion automatizada de porcentajes de ahorro a metas al 
+  percibir ingresos generales.
+- Calculos en tiempo real: saldos de cuenta, montos acumulados por meta, montos 
+  pagados y restantes en deudas, y porcentaje de ejecucion presupuestaria.
+- Alta compatibilidad de exportacion: PDFs con estilos corporativos listos para 
+  impresion y CSVs optimizados con UTF-8 BOM para apertura directa en Excel.
+- Despliegue preparado para produccion en contenedores Docker ligeros con 
+  mantenimiento activo de disponibilidad mediante GitHub Actions.
+
+================================================================================
+2. ARQUITECTURA TECNOLOGICA Y ESTRUCTURA DE CAPAS
+================================================================================
+
+El backend sigue una arquitectura clasica por capas (N-Tier Layered Architecture),
+combinada con patrones de diseno como Data Transfer Object (DTO) y Strategy:
+
+[Cliente HTTP / Frontend (Ionic, Capacitor, Web)]
+                     |
+                     v
+   [Capa Controladores REST (@RestController)]
+     - Recibe peticiones HTTP, valida DTOs de entrada (@Valid).
+     - Retorna ResponseEntity con HTTP Status apropiados.
+                     |
+                     v
+     [Capa de Servicios (@Service)]
+     - Implementa las reglas de negocio y transacciones (@Transactional).
+     - Transforma entidades a DTOs de respuesta para aislar el modelo interno.
+     - Aplica el patron Strategy para exportacion de reportes.
+                     |
+                     v
+   [Capa de Repositorios (@Repository / JpaRepository)]
+     - Consultas derivadas de Spring Data JPA.
+     - Consultas JPQL optimizadas mediante @Query con agregaciones SUM, COUNT.
+                     |
+                     v
+   [Capa de Persistencia / Entidades (@Entity)]
+     - Mapeo relacional JPA/Hibernate contra Oracle Autonomous Database.
+     - Gestion del ciclo de vida de entidades con @PrePersist.
+
+Estructura de Directorios:
+src/main/java/com/example/saveup/
+├── SaveupLiteApplication.java
+├── config/
+│   ├── DataLoader.java                  (Poblado y normalizacion de categorias)
+│   ├── DataSourceConfig.java            (Oracle UCP Pool y conexion segura con Wallet)
+│   ├── SecurityConfig.java              (Spring Security, BCrypt, CORS y rutas)
+│   └── WebConfig.java                   (Filtros y mapeos globales CORS)
+├── controller/
+│   ├── CategoriaController.java
+│   ├── ConfiguracionPresupuestoController.java
+│   ├── DeudaController.java
+│   ├── MetaAhorroController.java
+│   ├── MovimientoController.java
+│   ├── ReporteController.java
+│   ├── SaldoController.java
+│   └── UsuarioController.java
+├── dto/
+│   ├── AbonoRetiroDTO.java
+│   ├── AsignacionPresupuestoDTO.java
+│   ├── CategoriaDTO.java
+│   ├── ConfiguracionPresupuestoRequestDTO.java
+│   ├── DeudaCreacionDTO.java
+│   ├── DeudaResponseDTO.java
+│   ├── EjecucionPresupuestoDTO.java
+│   ├── MetaAhorroCreacionDTO.java
+│   ├── MetaAhorroResponseDTO.java
+│   ├── MovimientoRegistroDTO.java
+│   ├── MovimientoResponseDTO.java
+│   ├── PageResponseDTO.java
+│   ├── PagoDeudaDTO.java
+│   ├── UsuarioLoginDTO.java
+│   └── UsuarioRegistroDTO.java
+├── model/
+│   ├── AsignacionMetaPresupuesto.java
+│   ├── Categoria.java
+│   ├── ConfiguracionPresupuesto.java
+│   ├── Deuda.java
+│   ├── MetaAhorro.java
+│   ├── Movimiento.java
+│   ├── Usuario.java
+│   └── enums/
+│       ├── EstadoDeuda.java
+│       ├── TipoMovimiento.java
+│       └── TipoPresupuesto.java
+├── repository/
+│   ├── AsignacionMetaPresupuestoRepository.java
+│   ├── CategoriaRepository.java
+│   ├── ConfiguracionPresupuestoRepository.java
+│   ├── DeudaRepository.java
+│   ├── MetaAhorroRepository.java
+│   ├── MovimientoRepository.java
+│   └── UsuarioRepository.java
+└── service/
+    ├── CategoriaService.java
+    ├── DeudaService.java
+    ├── MetaAhorroService.java
+    ├── MovimientoService.java
+    ├── UsuarioService.java
+    └── report/
+        ├── CsvReporteGenerator.java
+        ├── PdfReporteGenerator.java
+        ├── ReporteGenerator.java         (Interfaz Strategy)
+        └── ReporteService.java           (Contexto Strategy)
+
+================================================================================
+3. MODELO DE DATOS Y ESQUEMA DE ENTIDADES (JPA / HIBERNATE)
+================================================================================
+
+3.1. ENTIDAD USUARIO (Tabla: USUARIO)
+--------------------------------------------------------------------------------
+Representa al propietario de las cuentas y finanzas.
+Campos:
+- rut (String, PK, unico): Identificador nacional unico (ej. "12345678-9").
+- nombre (String, NOT NULL): Nombre del usuario.
+- apellido (String, NOT NULL): Apellido del usuario.
+- email (String, NOT NULL, UNIQUE): Direccion de correo electronico.
+- contrasena (String, NOT NULL, length=100): Hash BCrypt de la contrasena.
+- fechaRegistro (Date, NOT NULL, updatable=false): Fecha y hora de creacion.
+Ciclo de vida:
+- @PrePersist onCreate(): Si fechaRegistro es nula, inicializa con new Date().
+
+3.2. ENTIDAD CATEGORIA (Tabla: CATEGORIA)
+--------------------------------------------------------------------------------
+Clasifica los movimientos y los asocia a una regla presupuestaria.
+Campos:
+- id (Long, PK, Auto-incremental IDENTITY): Identificador de la categoria.
+- nombre (String, NOT NULL, UNIQUE): Nombre (ej. "Comida", "Transporte").
+- iconId (String): Nombre del icono para la UI (ej. "ic_fastfood", "ic_work").
+- colorHex (String): Codigo hexadecimal de color (ej. "#FFC107").
+- tipoPresupuesto (Enum TipoPresupuesto): Clasificacion presupuestaria 
+  (NECESIDAD, DESEO, AHORRO, OTROS).
+
+3.3. ENTIDAD MOVIMIENTO (Tabla: MOVIMIENTO)
+--------------------------------------------------------------------------------
+Representa cada transaccion financiera realizada por el usuario.
+Campos:
+- id (Long, PK, Auto-incremental IDENTITY): Identificador unico de transaccion.
+- monto (double, NOT NULL): Cantidad monetaria. Positiva para ingresos y retiros 
+  de metas; negativa para gastos, pagos de deudas y abonos a metas.
+- descripcion (String, NOT NULL, length=100): Detalle descriptivo del movimiento.
+- fecha (Date, NOT NULL, updatable=false): Marca de tiempo del movimiento.
+- tipoMovimiento (Enum TipoMovimiento, NOT NULL): Naturaleza del movimiento.
+- usuario (ManyToOne, NOT NULL, Lazy): Relacion al Usuario dueno del movimiento.
+- categoria (ManyToOne, Eager, Nullable): Categoria asignada.
+- deuda (ManyToOne, Lazy, Nullable): Deuda vinculada si el tipo es PAGO_DEUDA.
+- metaAhorro (ManyToOne, Lazy, Nullable): Meta vinculada si es abono/retiro.
+Ciclo de vida:
+- @PrePersist onCreate(): Si fecha es nula, inicializa con new Date().
+
+3.4. ENTIDAD META_AHORRO (Tabla: META_AHORRO)
+--------------------------------------------------------------------------------
+Objetivo de ahorro financiero del usuario.
+Campos:
+- id (Long, PK, Auto-incremental IDENTITY): Identificador unico de la meta.
+- nombre (String, NOT NULL, length=100): Titulo o motivo (ej. "Vacaciones").
+- montoObjetivo (Double, Nullable): Monto final deseado. Es nulo en la meta 
+  por defecto "Ahorros".
+- montoActual (Double, Default 0.0): Monto total acumulado en la meta.
+- fechaLimite (Date, Nullable): Fecha estimada de cumplimiento.
+- usuario (ManyToOne, NOT NULL, Lazy): Propietario de la meta.
+Metodo auxiliar:
+- getMontoActual(): Retorna montoActual != null ? montoActual : 0.0.
+
+3.5. ENTIDAD DEUDA (Tabla: DEUDA)
+--------------------------------------------------------------------------------
+Compromiso financiero o pasivo adquirido por el usuario.
+Campos:
+- id (Long, PK, Auto-incremental IDENTITY): Identificador de la deuda.
+- nombre (String, NOT NULL, length=100): Titulo (ej. "Credito de Consumo").
+- descripcion (String, length=255, Nullable): Informacion adicional.
+- montoTotal (double, NOT NULL): Monto global comprometido a pagar.
+- cantidadCuotas (int, NOT NULL): Total de cuotas pactadas.
+- estado (Enum EstadoDeuda, NOT NULL): PENDIENTE, PAGADA o CANCELADA.
+- fechaCreacion (Date, NOT NULL, updatable=false): Fecha de ingreso de la deuda.
+- usuario (ManyToOne, NOT NULL, Lazy): Usuario deudor.
+Ciclo de vida:
+- @PrePersist onCreate(): Establece fecha actual y estado PENDIENTE por defecto.
+
+3.6. ENTIDAD CONFIGURACION_PRESUPUESTO (Tabla: CONFIGURACION_PRESUPUESTO)
+--------------------------------------------------------------------------------
+Configuracion del esquema de distribucion de ingresos del usuario (regla 50/30/20).
+Campos:
+- id (Long, PK, Auto-incremental IDENTITY): Identificador de la configuracion.
+- usuario (OneToOne, NOT NULL): Usuario asociado (relacion 1 a 1).
+- porcentajeNecesidades (Double, NOT NULL): Porcentaje asignado (ej. 50.0).
+- porcentajeDeseos (Double, NOT NULL): Porcentaje asignado (ej. 30.0).
+- porcentajeAhorro (Double, NOT NULL): Porcentaje asignado (ej. 20.0).
+- activo (Boolean, NOT NULL, default=true): Estado de la automatizacion.
+
+3.7. ENTIDAD ASIGNACION_META_PRESUPUESTO (Tabla: ASIGNACION_META_PRESUPUESTO)
+--------------------------------------------------------------------------------
+Sub-distribucion del porcentaje de ahorro hacia metas individuales especificas.
+Campos:
+- id (Long, PK, Auto-incremental IDENTITY): Identificador de la asignacion.
+- configuracion (ManyToOne, NOT NULL, Lazy): Configuracion a la que pertenece.
+- meta (ManyToOne, NOT NULL, Eager): Meta de ahorro beneficiaria.
+- porcentajeAsignacion (Double, NOT NULL): Fraccion del ahorro total (ej. 60.0%).
+
+================================================================================
+4. CATALOGO COMPLETO DE ENUMS
+================================================================================
+
+4.1. Enum: TipoMovimiento
+-------------------------
+Ubicacion: com.example.saveup.model.enums.TipoMovimiento
+Valores:
+- INGRESO_GENERAL : Entrada de dinero principal (sueldos, rentas, transferencias).
+                    Puede disparar el algoritmo Smart-Split si asi se indica.
+- GASTO_GENERAL   : Salida ordinaria de dinero (alimentacion, ocio, cuentas).
+- PAGO_DEUDA      : Amortizacion de una cuota o monto de una deuda existente.
+- ABONO_META      : Traslado de dinero desde el saldo principal hacia una meta.
+- RETIRO_META     : Rescate de dinero desde una meta hacia el saldo principal.
+
+4.2. Enum: EstadoDeuda
+----------------------
+Ubicacion: com.example.saveup.model.enums.EstadoDeuda
+Valores:
+- PENDIENTE : La deuda esta vigente y admite abonos/pagos de cuotas.
+- PAGADA    : El total pagado ha igualado o superado el montoTotal.
+- CANCELADA : La deuda fue dada de baja de forma manual por el usuario.
+
+4.3. Enum: TipoPresupuesto
+--------------------------
+Ubicacion: com.example.saveup.model.enums.TipoPresupuesto
+Valores:
+- NECESIDAD : Gastos vitales imprescindibles (supermercado, arriendo, luz, salud).
+              Base del 50% de la regla presupuestaria.
+- DESEO     : Gastos de ocio, placer y estilo de vida (cine, salidas, ropa, viajes).
+              Base del 30% de la regla presupuestaria.
+- AHORRO    : Categorias que representan acumulacion de capital o inversiones.
+              Base del 20% de la regla presupuestaria.
+- OTROS     : Entradas u otros conceptos que no clasifican como gasto 
+              presupuestario estandar.
+
+================================================================================
+5. CATALOGO EXHAUSTIVO DE DTOs (DATA TRANSFER OBJECTS)
+================================================================================
+
+5.1. UsuarioRegistroDTO
+- Paquete: com.example.saveup.dto
+- Proposito: Payload para recepcion de datos de registro de nuevos usuarios.
+- Campos y Validaciones:
+  * rut (String): @NotBlank, @Pattern(regexp = "^\\d{7,8}-[\\dkK]{1}$")
+  * nombre (String): @NotBlank, @Size(min = 2, max = 50)
+  * apellido (String): @NotBlank, @Size(min = 2, max = 50)
+  * email (String): @NotBlank, @Email
+  * contrasena (String): @NotBlank, @Size(min = 8, max = 20), 
+                        @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).*$")
+
+5.2. UsuarioLoginDTO
+- Proposito: Payload de credenciales para iniciar sesion.
+- Campos:
+  * email (String): @NotBlank, @Email
+  * contrasena (String): @NotBlank
+
+5.3. MovimientoRegistroDTO
+- Proposito: Entrada para asentar una nueva transaccion financiera.
+- Campos:
+  * monto (Double): @NotNull
+  * descripcion (String): @NotBlank
+  * tipoMovimiento (TipoMovimiento): @NotNull
+  * usuarioRut (String): @NotBlank
+  * deudaId (Long, opcional): Requerido exclusivamente si es PAGO_DEUDA.
+  * metaId (Long, opcional): Meta vinculada para abonos o retiros.
+  * categoriaId (Long, opcional): Categoria asignada al movimiento.
+  * aplicarPresupuesto (Boolean, default false): Activa el Smart-Split.
+
+5.4. MovimientoResponseDTO
+- Proposito: Datos de salida al consultar un movimiento o confirmar su creacion.
+- Campos:
+  * id (Long)
+  * monto (double)
+  * descripcion (String)
+  * fecha (Date)
+  * tipoMovimiento (TipoMovimiento)
+  * categoria (CategoriaDTO)
+
+5.5. CategoriaDTO
+- Proposito: Transporte liviano de informacion de categorias con metadatos de UI.
+- Campos:
+  * id (Long)
+  * nombre (String)
+  * iconId (String)
+  * colorHex (String)
+  * tipoPresupuesto (TipoPresupuesto)
+
+5.6. MetaAhorroCreacionDTO
+- Proposito: Creacion o edicion de una meta de ahorro.
+- Campos:
+  * nombre (String): @NotBlank
+  * montoObjetivo (Double): @Positive (opcional)
+  * fechaLimite (Date): @Future (opcional)
+  * usuarioRut (String): @NotBlank
+
+5.7. MetaAhorroResponseDTO
+- Proposito: Informacion completa de la meta devuelta a la aplicacion cliente.
+- Campos:
+  * id (Long)
+  * nombre (String)
+  * montoObjetivo (Double)
+  * fechaLimite (Date)
+  * montoActual (double)
+
+5.8. AbonoRetiroDTO
+- Proposito: Ejecucion de inyeccion o extraccion voluntaria de dinero en una meta.
+- Campos:
+  * monto (Double): @NotNull, @Positive
+  * descripcion (String): @NotBlank
+
+5.9. DeudaCreacionDTO
+- Proposito: Alta o actualizacion de compromisos de deuda.
+- Campos:
+  * nombre (String): @NotBlank
+  * descripcion (String, opcional)
+  * montoTotal (Double): @NotNull, @Positive
+  * cantidadCuotas (Integer): @NotNull, @Positive
+  * usuarioRut (String): @NotBlank
+
+5.10. DeudaResponseDTO
+- Proposito: Respuesta detallada con calculos en tiempo real sobre la deuda.
+- Campos:
+  * id (Long)
+  * nombre (String)
+  * descripcion (String)
+  * montoTotal (double)
+  * cantidadCuotas (int)
+  * estado (EstadoDeuda)
+  * fechaCreacion (Date)
+  * montoPagado (double, calculado en tiempo real)
+  * montoRestante (double, calculado: montoTotal - montoPagado)
+  * cuotasPagadas (int, calculado: conteo de movimientos PAGO_DEUDA)
+
+5.11. PagoDeudaDTO
+- Proposito: Registro de abono o pago a una cuota de una deuda activa.
+- Campos:
+  * monto (Double): @NotNull, @Positive
+  * descripcion (String): @NotBlank
+
+5.12. ConfiguracionPresupuestoRequestDTO
+- Proposito: Establecer o modificar los parametros del presupuesto 50/30/20.
+- Campos:
+  * porcentajeNecesidades (Double)
+  * porcentajeDeseos (Double)
+  * porcentajeAhorro (Double)
+  * activo (Boolean)
+  * asignaciones (List<AsignacionPresupuestoDTO>)
+
+5.13. AsignacionPresupuestoDTO
+- Proposito: Declarar que fraccion del ahorro se destinara a una meta concreta.
+- Campos:
+  * metaId (Long)
+  * porcentaje (Double)
+
+5.14. EjecucionPresupuestoDTO
+- Proposito: Comparativa mensual de presupuesto proyectado vs gasto real.
+- Campos:
+  * presupuestoNecesidades (Double) : (Total Ingresos * % Necesidades)
+  * gastoNecesidades (Double)       : Suma real de gastos en Necesidades
+  * presupuestoDeseos (Double)      : (Total Ingresos * % Deseos)
+  * gastoDeseos (Double)            : Suma real de gastos en Deseos
+  * totalIngresos (Double)          : Total acumulado de ingresos del mes
+  * porcentajeNecesidadesConfigurado (Double)
+  * porcentajeDeseosConfigurado (Double)
+
+5.15. PageResponseDTO<T>
+- Proposito: Contenedor generico estandarizado para respuestas con paginacion.
+- Campos:
+  * content (List<T>)
+  * currentPage (int)
+  * totalItems (long)
+  * totalPages (int)
+
+================================================================================
+6. MAPA COMPLETO DE ENDPOINTS REST
+================================================================================
+
+--------------------------------------------------------------------------------
+MODULO: USUARIOS (/api/usuarios)
+--------------------------------------------------------------------------------
+1. POST /api/usuarios/register
+   - Descripcion: Registra un usuario y le crea su meta por defecto "Ahorros".
+   - Body: UsuarioRegistroDTO (JSON)
+   - Respuestas:
+     * 201 Created: {"message": "Usuario registrado exitosamente"}
+     * 409 Conflict: {"error": "El RUT ingresado ya está registrado."} o Correo
+     * 500 Internal Server Error: {"error": "..."}
+
+2. POST /api/usuarios/login
+   - Descripcion: Autentica credenciales mediante BCrypt y retorna el perfil.
+   - Body: UsuarioLoginDTO (JSON)
+   - Respuestas:
+     * 200 OK: Entidad Usuario (con campo contrasena en null)
+     * 401 Unauthorized: {"error": "Credenciales inválidas."}
+
+--------------------------------------------------------------------------------
+MODULO: SALDOS (/api/saldos)
+--------------------------------------------------------------------------------
+3. GET /api/saldos/{rut}
+   - Descripcion: Retorna el balance neto consolidado (SUM de todos los movimientos).
+   - Parametros: rut (Path, String)
+   - Respuestas:
+     * 200 OK: {"saldo": 150000.0}
+     * 404 Not Found: {"error": "Usuario no encontrado con RUT: ..."}
+
+--------------------------------------------------------------------------------
+MODULO: MOVIMIENTOS (/api/movimientos)
+--------------------------------------------------------------------------------
+4. POST /api/movimientos
+   - Descripcion: Registra un movimiento. Si es INGRESO_GENERAL y aplicarPresupuesto
+     es true, ejecuta automaticamente el Smart-Split hacia las metas de ahorro.
+     Si es PAGO_DEUDA, actualiza y comprueba el saldo de la deuda asociada.
+   - Body: MovimientoRegistroDTO (JSON)
+   - Respuestas:
+     * 201 Created: MovimientoResponseDTO
+     * 404 Not Found: {"error": "Usuario/Deuda/Categoria no encontrada"}
+     * 500 Internal Server Error: {"error": "..."}
+
+5. GET /api/movimientos/usuario/{rut}
+   - Descripcion: Obtiene el listado de movimientos de un usuario ordenados por 
+     fecha descendente. Permite limitar resultados.
+   - Parametros:
+     * rut (Path, String)
+     * limit (Query, Integer, opcional)
+   - Respuestas:
+     * 200 OK: List<MovimientoResponseDTO>
+     * 404 Not Found: {"error": "..."}
+
+6. GET /api/movimientos/paginados/usuario/{rut}
+   - Descripcion: Historial paginado con metadatos de navegacion.
+   - Parametros:
+     * rut (Path, String)
+     * page (Query, Integer, default 0)
+     * size (Query, Integer, default 50)
+   - Respuestas:
+     * 200 OK: PageResponseDTO<MovimientoResponseDTO>
+     * 404 Not Found: {"error": "..."}
+
+--------------------------------------------------------------------------------
+MODULO: CATEGORIAS (/api/categorias)
+--------------------------------------------------------------------------------
+7. GET /api/categorias
+   - Descripcion: Obtiene el catalogo completo de categorias disponibles.
+   - Respuestas:
+     * 200 OK: List<CategoriaDTO>
+
+--------------------------------------------------------------------------------
+MODULO: METAS DE AHORRO (/api/metas)
+--------------------------------------------------------------------------------
+8. POST /api/metas
+   - Descripcion: Crea una nueva meta de ahorro asociada a un usuario.
+   - Body: MetaAhorroCreacionDTO (JSON)
+   - Respuestas:
+     * 201 Created: MetaAhorroResponseDTO
+     * 404 Not Found: {"error": "Usuario no encontrado"}
+
+9. GET /api/metas/usuario/{rut}
+   - Descripcion: Lista todas las metas de ahorro de un usuario.
+   - Parametros: rut (Path, String)
+   - Respuestas:
+     * 200 OK: List<MetaAhorroResponseDTO>
+
+10. PUT /api/metas/{metaId}
+    - Descripcion: Edita el nombre, objetivo o fecha limite de una meta. 
+      Si es la meta base "Ahorros", restringe la modificacion unicamente al nombre.
+    - Parametros: metaId (Path, Long)
+    - Body: MetaAhorroCreacionDTO (JSON)
+    - Respuestas:
+      * 200 OK: MetaAhorroResponseDTO
+      * 404 Not Found / 409 Conflict
+
+11. POST /api/metas/{metaId}/abonar
+    - Descripcion: Realiza un aporte voluntario. Genera un movimiento negativo 
+      en el saldo general y suma el monto al acumulado de la meta.
+    - Parametros: metaId (Path, Long)
+    - Body: AbonoRetiroDTO (JSON)
+    - Respuestas:
+      * 200 OK: MetaAhorroResponseDTO
+
+12. POST /api/metas/{metaId}/retirar
+    - Descripcion: Rescata fondos de una meta. Incrementa el saldo general y 
+      reduce el acumulado de la meta. Valida que no exceda lo acumulado.
+    - Parametros: metaId (Path, Long)
+    - Body: AbonoRetiroDTO (JSON)
+    - Respuestas:
+      * 200 OK: MetaAhorroResponseDTO
+      * 409 Conflict: Si el retiro supera los fondos disponibles.
+
+13. DELETE /api/metas/{metaId}
+    - Descripcion: Elimina una meta. Protege la meta base "Ahorros" (no eliminable).
+      Si la meta contenia fondos, genera un movimiento de devolucion automatica 
+      al saldo principal y desvincula los movimientos historicos de la meta.
+    - Parametros: metaId (Path, Long)
+    - Respuestas:
+      * 200 OK: {"message": "Meta eliminada correctamente. Los fondos han sido..."}
+      * 409 Conflict: Si se intenta eliminar la meta por defecto.
+
+--------------------------------------------------------------------------------
+MODULO: DEUDAS (/api/deudas)
+--------------------------------------------------------------------------------
+14. POST /api/deudas
+    - Descripcion: Registra una nueva deuda con estado PENDIENTE.
+    - Body: DeudaCreacionDTO (JSON)
+    - Respuestas:
+      * 201 Created: DeudaResponseDTO
+
+15. GET /api/deudas/usuario/{rut}
+    - Descripcion: Retorna todas las deudas del usuario calculando en tiempo real
+      el monto pagado, monto restante y cantidad de cuotas abonadas.
+    - Parametros: rut (Path, String)
+    - Respuestas:
+      * 200 OK: List<DeudaResponseDTO>
+
+16. POST /api/deudas/{deudaId}/pagar
+    - Descripcion: Paga una cuota. Registra un movimiento PAGO_DEUDA categorizado
+      automaticamente como "Deudas". Si el total pagado cubre la deuda, 
+      actualiza su estado a PAGADA.
+    - Parametros: deudaId (Path, Long)
+    - Body: PagoDeudaDTO (JSON)
+    - Respuestas:
+      * 200 OK: DeudaResponseDTO
+      * 409 Conflict: Si la deuda no se encuentra en estado PENDIENTE.
+
+17. PUT /api/deudas/{deudaId}
+    - Descripcion: Modifica los parametros de una deuda.
+    - Bloqueo de seguridad: No se puede editar si ya cuenta con pagos registrados.
+    - Parametros: deudaId (Path, Long)
+    - Body: DeudaCreacionDTO (JSON)
+    - Respuestas:
+      * 200 OK: DeudaResponseDTO
+      * 409 Conflict: Si la deuda ya tiene pagos abonados.
+
+18. PATCH /api/deudas/{deudaId}/cancelar
+    - Descripcion: Cancela una deuda (marcado en estado CANCELADA).
+    - Bloqueo de seguridad: No se puede cancelar una deuda ya pagada.
+    - Parametros: deudaId (Path, Long)
+    - Respuestas:
+      * 200 OK: DeudaResponseDTO
+
+--------------------------------------------------------------------------------
+MODULO: PRESUPUESTOS (/api/presupuestos)
+--------------------------------------------------------------------------------
+19. GET /api/presupuestos/usuario/{rut}
+    - Descripcion: Consulta los porcentajes configurados y asignaciones a metas.
+    - Parametros: rut (Path, String)
+    - Respuestas:
+      * 200 OK: ConfiguracionPresupuesto
+      * 404 Not Found: Si el usuario no ha definido configuracion aun.
+
+20. POST /api/presupuestos/usuario/{rut}
+    - Descripcion: Guarda o actualiza los porcentajes (Necesidades, Deseos, Ahorro)
+      y reemplaza las asignaciones individuales hacia metas de ahorro.
+    - Parametros: rut (Path, String)
+    - Body: ConfiguracionPresupuestoRequestDTO (JSON)
+    - Respuestas:
+      * 200 OK: ConfiguracionPresupuesto
+
+21. GET /api/presupuestos/ejecucion/{rut}
+    - Descripcion: Calcula el balance del presupuesto de un mes/ano dado. 
+      Compara ingresos totales proyectados contra el gasto real clasificado.
+    - Parametros:
+      * rut (Path, String)
+      * month (Query, Integer, opcional, default mes actual)
+      * year (Query, Integer, opcional, default ano actual)
+    - Respuestas:
+      * 200 OK: EjecucionPresupuestoDTO
+
+--------------------------------------------------------------------------------
+MODULO: REPORTES (/api/reportes)
+--------------------------------------------------------------------------------
+22. GET /api/reportes/movimientos/exportar
+    - Descripcion: Genera y descarga el archivo binario del reporte de movimientos.
+    - Parametros Query:
+      * rut (String, Obligatorio)
+      * alcance (String, "COMPLETO" o "MENSUAL", default "COMPLETO")
+      * formato (String, "PDF" o "CSV", default "CSV")
+      * mes (Integer, opcional, requerido si alcance=MENSUAL)
+      * anio (Integer, opcional, requerido si alcance=MENSUAL)
+    - Respuestas:
+      * 200 OK: Binary stream (byte[])
+      * Encabezados HTTP: 
+        - Content-Disposition: attachment; filename="reporte_saveup_..."
+        - Content-Type: "application/pdf" o "text/csv"
+
+================================================================================
+7. CATALOGO DE CLASES, SERVICIOS, REPOSITORIOS Y METODOS
+================================================================================
+
+7.1. CAPA DE SERVICIOS (Lógica de Negocio)
+--------------------------------------------------------------------------------
+* UsuarioService
+  - registrarUsuario(UsuarioRegistroDTO): Valida duplicidad, aplica BCrypt, 
+    persiste al usuario y crea la meta base "Ahorros" de forma transaccional.
+  - autenticarUsuario(UsuarioLoginDTO): Verifica contrasena con BCrypt y 
+    arroja BadCredentialsException ante fallos.
+
+* MovimientoService
+  - registrarMovimiento(MovimientoRegistroDTO): Valida usuario, asocia categorias 
+    y deudas, y ejecuta el algoritmo Smart-Split ante ingresos aplicables.
+  - obtenerMovimientosPorUsuario(String rut, Integer limit): Consulta movimientos 
+    ordenados con soporte de limite.
+  - obtenerSaldoActual(String rut): Ejecuta la agregacion de saldo neto.
+  - obtenerMovimientosPaginados(String rut, Pageable): Retorna envoltorio 
+    PageResponseDTO con contenido y metadatos.
+
+* MetaAhorroService
+  - crearMeta(MetaAhorroCreacionDTO): Inicializa una meta de ahorro.
+  - obtenerMetasPorUsuario(String rut): Lista de metas con saldos.
+  - realizarAbono(Long metaId, AbonoRetiroDTO): Descuenta saldo general y 
+    abona a meta con categoria "Ahorro".
+  - realizarRetiro(Long metaId, AbonoRetiroDTO): Valida fondos suficientes, 
+    descuenta de la meta y reintegra al saldo principal.
+  - eliminarMeta(Long metaId): Protege la meta por defecto, transfiere fondos 
+    al saldo principal si habia ahorro acumulado, desvincula historicos y borra.
+  - editarMeta(Long metaId, MetaAhorroCreacionDTO): Modifica propiedades 
+    respetando las restricciones de la meta por defecto.
+
+* DeudaService
+  - crearDeuda(DeudaCreacionDTO): Registra deuda pendiente.
+  - obtenerDeudasPorUsuario(String rut): Lista deudas con campos calculados.
+  - registrarPago(Long deudaId, PagoDeudaDTO): Crea movimiento PAGO_DEUDA, 
+    asocia categoria "Deudas" y pasa a PAGADA si se cubre el total.
+  - editarDeuda(Long deudaId, DeudaCreacionDTO): Permite edicion solo si 
+    cuotasPagadas == 0.
+  - cancelarDeuda(Long deudaId): Pasa estado a CANCELADA si no esta PAGADA.
+
+* CategoriaService
+  - obtenerTodas(): Retorna la coleccion de categorias como DTOs.
+
+* ReporteService & Generadores
+  - exportarMovimientos(String rut, String alcance, String formato, Integer mes, Integer anio):
+    Filtra movimientos por rango temporal y delega la generacion a la estrategia correspondiente.
+  - PdfReporteGenerator: Construye el PDF mediante OpenPDF en formato A4 con tablas 
+    estilizadas, alternancia de filas (zebra), colores rojo/verde por monto y metadatos.
+  - CsvReporteGenerator: Construye un CSV delimitado por punto y coma (;) inyectando 
+    el BOM UTF-8 (0xEF, 0xBB, 0xBF) y escapando caracteres especiales.
+
+7.2. CAPA DE REPOSITORIOS (Persistencia JPA)
+--------------------------------------------------------------------------------
+* UsuarioRepository
+  - Optional<Usuario> findByEmail(String email)
+  - boolean existsByEmail(String email)
+
+* MovimientoRepository
+  - List<Movimiento> findByUsuarioRutOrderByFechaDesc(String rut)
+  - Page<Movimiento> findByUsuarioRutOrderByFechaDesc(String rut, Pageable pageable)
+  - @Query("SELECT SUM(m.monto) FROM Movimiento m WHERE m.usuario.rut = :rut")
+    Double findSaldoByUsuarioRut(@Param("rut") String rut)
+  - List<Movimiento> findByDeuda(Deuda deuda)
+  - List<Movimiento> findByUsuarioRutAndFechaBetween(String rut, Date start, Date end)
+
+* MetaAhorroRepository
+  - List<MetaAhorro> findByUsuarioRut(String rut)
+  - @Query("SELECT COALESCE(SUM(m.monto), 0.0) FROM Movimiento m WHERE m.metaAhorro.id = :metaId")
+    Double findTotalAhorradoByMetaId(@Param("metaId") Long metaId)
+
+* DeudaRepository
+  - List<Deuda> findByUsuarioRut(String rut)
+  - @Query("SELECT COALESCE(SUM(m.monto), 0.0) FROM Movimiento m WHERE m.deuda.id = :deudaId AND m.tipoMovimiento = 'PAGO_DEUDA'")
+    Double findTotalPagadoPorDeuda(@Param("deudaId") Long deudaId)
+  - @Query("SELECT COUNT(m) FROM Movimiento m WHERE m.deuda.id = :deudaId AND m.tipoMovimiento = 'PAGO_DEUDA'")
+    Integer countPagosPorDeuda(@Param("deudaId") Long deudaId)
+
+* ConfiguracionPresupuestoRepository
+  - Optional<ConfiguracionPresupuesto> findByUsuarioRut(String usuarioRut)
+
+* AsignacionMetaPresupuestoRepository
+  - List<AsignacionMetaPresupuesto> findByConfiguracionId(Long configuracionId)
+
+* CategoriaRepository
+  - Optional<Categoria> findByNombre(String nombre)
+  - List<Categoria> findByTipoPresupuesto(TipoPresupuesto tipoPresupuesto)
+
+================================================================================
+8. REGLAS DE NEGOCIO Y FLUJOS DE TRABAJO (MAPAS CONCEPTUALES EN TEXTO)
+================================================================================
+
+--------------------------------------------------------------------------------
+FLUJO 1: REGISTRO Y AUTENTICACION
+--------------------------------------------------------------------------------
+
+[Usuario envia credenciales]
+          |
+          v
+[¿Existe RUT o Email en BD?] ----(SI)----> [Retornar 409 Conflict]
+          |
+         (NO)
+          v
+[Cifrar password con BCrypt]
+          |
+          v
+[Guardar entidad Usuario]
+          |
+          v
+[Crear Meta por defecto 'Ahorros' vinculada al Usuario]
+          |
+          v
+[Confirmar transaccion y retornar 201 Created]
+
+Al Iniciar Sesion (Login):
+[Usuario envia email y password]
+          |
+          v
+[Buscar usuario por email] ----(NO HALLADO)----> [Retornar 401 Unauthorized]
+          |
+       (HALLADO)
+          v
+[passwordEncoder.matches(passwordPlano, passwordHash)]
+          |
+       +--+--+
+       |     |
+    (FALSO) (VERDADERO)
+       |     |
+       v     v
+ [401 Error] [Anular campo password de la entidad y retornar 200 OK]
+
+--------------------------------------------------------------------------------
+FLUJO 2: REGISTRO DE MOVIMIENTOS Y ALGORITMO SMART-SPLIT
+--------------------------------------------------------------------------------
+
+[POST /api/movimientos (MovimientoRegistroDTO)]
+                      |
+                      v
+            [¿Tipo de Movimiento?]
+                      |
+        +-------------+-------------+
+        |                           |
+  (PAGO_DEUDA)              (INGRESO_GENERAL)
+        |                           |
+        v                           v
+[Asociar Deuda por ID]       [¿aplicarPresupuesto == true?]
+        |                           |
+        v                     +-----+-----+
+[Comprobar si nuevo           |           |
+ total salda la deuda]      (NO)         (SI)
+        |                     |           |
+        v                     v           v
+[Marcar PAGADA si aplica]  [Guardar] [Buscar Configuracion del Usuario]
+        |                                 |
+        v                           [¿Esta Activa?]
+[Guardar Movimiento Principal]            |
+                                    +-----+-----+
+                                    |           |
+                                  (NO)         (SI)
+                                    |           |
+                                    v           v
+                                [Guardar] [Calcular Monto Ahorro = Ingreso * %Ahorro]
+                                                |
+                                                v
+                                          [Obtener Asignaciones de Metas]
+                                                |
+                                                v
+                                          [Para cada asignacion con % > 0:
+                                           - MontoAbono = MontoAhorro * %Asignacion
+                                           - Crear Movimiento ABONO_META (-monto)
+                                           - Categorizar como 'Ahorro'
+                                           - Actualizar meta.montoActual (+monto)
+                                           - Guardar en BD]
+                                                |
+                                                v
+                                          [Guardar Movimiento Principal]
+                                                |
+                                                v
+                                          [Retornar 201 Created]
+
+--------------------------------------------------------------------------------
+FLUJO 3: CICLO DE VIDA Y AMORTIZACION DE DEUDAS
+--------------------------------------------------------------------------------
+
+Estado Inicial:
+[Crear Deuda] ---> Estado: PENDIENTE (cuotasPagadas = 0, montoPagado = 0)
+     |
+     +--- (PUT /api/deudas/{id}) -------> [Permitido solo si cuotasPagadas == 0]
+     |
+     +--- (PATCH /api/deudas/{id}/cancelar) -> [Pasa a Estado: CANCELADA]
+     |
+     +--- (POST /api/deudas/{id}/pagar):
+               |
+               v
+          [Crear movimiento PAGO_DEUDA con monto negativo]
+               |
+               v
+          [Asociar categoria 'Deudas' automaticamente]
+               |
+               v
+          [Total Pagado = Suma de pagos historicos de la deuda]
+               |
+               v
+          [¿Total Pagado >= Monto Total de la Deuda?]
+               |
+             +-+-+
+             |   |
+          (NO)  (SI)
+             |   |
+             |   +--> [Actualizar Estado a: PAGADA]
+             |
+             +------> [Deuda permanece en: PENDIENTE]
+
+--------------------------------------------------------------------------------
+FLUJO 4: METAS DE AHORRO Y ELIMINACION CON REEMBOLSO
+--------------------------------------------------------------------------------
+
+Escenario A: Abono a Meta
+  [POST /api/metas/{id}/abonar (monto)]
+  -> Crea movimiento ABONO_META con monto negativo (-monto) que resta del saldo.
+  -> Incrementa meta.montoActual += monto.
+  -> Retorna la meta con saldo actualizado.
+
+Escenario B: Retiro de Meta
+  [POST /api/metas/{id}/retirar (monto)]
+  -> Verifica si monto > totalAhorrado. Si es mayor, rechaza con 409 Conflict.
+  -> Crea movimiento RETIRO_META con monto positivo (+monto) que suma al saldo.
+  -> Decrementa meta.montoActual -= monto.
+  -> Retorna la meta actualizada.
+
+Escenario C: Eliminacion de Meta
+  [DELETE /api/metas/{id}]
+  -> ¿Es la meta 'Ahorros' por defecto? -> Rechazar con 409 Conflict (Protegida).
+  -> ¿Tiene ahorros acumulados (> 0)?
+       SI -> Crear movimiento RETIRO_META con descripcion "Devolucion de fondos..."
+             para que el dinero retorne integramente al saldo principal del usuario.
+  -> Desvincular todos los movimientos historicos (m.setMetaAhorro(null)).
+  -> Eliminar el registro de la entidad MetaAhorro de la base de datos.
+  -> Retornar 200 OK con mensaje de confirmacion.
+
+--------------------------------------------------------------------------------
+FLUJO 5: EJECUCION PRESUPUESTARIA (REGLA 50/30/20)
+--------------------------------------------------------------------------------
+
+[GET /api/presupuestos/ejecucion/{rut}?month=M&year=Y]
+                          |
+                          v
+        [Obtener movimientos del usuario en el mes/ano]
+                          |
+                          v
+         [Calcular Total Ingresos del mes (INGRESO_GENERAL > 0)]
+                          |
+                          v
+         [Obtener % de Necesidades y % de Deseos del usuario]
+         (Por defecto: 50.0% Necesidades / 30.0% Deseos)
+                          |
+                          v
+        [Calcular Presupuestos Objetivos:
+         - Presupuesto Necesidades = Total Ingresos * (% Necesidades / 100)
+         - Presupuesto Deseos      = Total Ingresos * (% Deseos / 100)]
+                          |
+                          v
+        [Filtrar egresos del mes (GASTO_GENERAL y PAGO_DEUDA)]
+                          |
+                          v
+        [Clasificar por TipoPresupuesto de la categoria del movimiento:
+         - Si Categoria.tipoPresupuesto == NECESIDAD -> Sumar a gastoNecesidades
+         - Si Categoria.tipoPresupuesto == DESEO     -> Sumar a gastoDeseos]
+                          |
+                          v
+        [Consolidar y retornar EjecucionPresupuestoDTO]
+
+--------------------------------------------------------------------------------
+FLUJO 6: GENERACION Y EXPORTACION DE REPORTES (PATRON STRATEGY)
+--------------------------------------------------------------------------------
+
+[Peticion GET /api/reportes/movimientos/exportar?alcance=...&formato=...]
+                                |
+                                v
+               [Determinar movimientos a consultar]
+                                |
+               +----------------+----------------+
+               |                                 |
+         (alcance=MENSUAL)              (alcance=COMPLETO)
+               |                                 |
+               v                                 v
+     [Consultar movimientos           [Consultar todos los
+      entre dia 1 y fin de mes]        movimientos del usuario]
+               |                                 |
+               +----------------+----------------+
+                                |
+                                v
+                 [Seleccionar ReporteGenerator]
+                                |
+               +----------------+----------------+
+               |                                 |
+         (formato=PDF)                     (formato=CSV)
+               |                                 |
+               v                                 v
+    [PdfReporteGenerator]             [CsvReporteGenerator]
+    - Documento OpenPDF A4.           - StringBuilder con separador ';'.
+    - Titulo y fecha de emision.      - Insercion de bytes BOM UTF-8.
+    - Tabla corporativa con cabecera. - Escape de comillas y saltos.
+    - Formato de moneda es-CL.        - Numeros enteros sin simbolos.
+    - Color verde/rojo segun tipo.
+    - Fila resumen de total.
+               |                                 |
+               +----------------+----------------+
+                                |
+                                v
+     [Construir ResponseEntity con encabezado Content-Disposition:
+      attachment; filename="reporte_saveup_..." y Content-Type adecuado]
+                                |
+                                v
+     [Descarga directa del archivo en el dispositivo del cliente]
+
+================================================================================
+9. CONFIGURACIONES, SEGURIDAD, DESPLIEGUE Y DEVOPS
+================================================================================
+
+9.1. SEGURIDAD Y CORS
+- Clase: com.example.saveup.config.SecurityConfig
+  * CSRF deshabilitado para arquitectura REST sin estado.
+  * Rutas abiertas: POST /api/usuarios/register y endpoints de API para consumo 
+    movil/web.
+  * BCryptPasswordEncoder disponible globalmente como bean inyectable.
+- Clase: com.example.saveup.config.WebConfig
+  * Permite solicitudes de origenes configurados en application.properties:
+    http://localhost:8100 (Ionic Dev Server), http://localhost:4200 (Angular),
+    capacitor://localhost (Android/iOS nativo) y comodin para produccion.
+  * Metodos autorizados: GET, POST, PUT, DELETE, OPTIONS.
+  * Cabeceras autorizadas: Authorization, Content-Type, X-Requested-With.
+
+9.2. POBLADO Y MIGRACION DE DATOS (DataLoader)
+- Clase: com.example.saveup.config.DataLoader (CommandLineRunner)
+  * Si la tabla CATEGORIA esta vacia, puebla 10 categorias iniciales con iconos, 
+    colores hexadecimales y su tipo de presupuesto (Comida, Transporte, Sueldo, 
+    Cuentas y Servicios, Ocio, Salud, Ropa, Deudas, Ahorro, Otro).
+  * Si ya existen datos previos, ejecuta un proceso de normalizacion y saneamiento: 
+    revisa nombres normalizados y asigna el TipoPresupuesto correspondiente.
+  * Garantiza la existencia obligatoria de la categoria "Ahorro".
+
+9.3. CONECTIVIDAD A ORACLE CLOUD CON WALLET
+- Clase: com.example.saveup.config.DataSourceConfig
+  * Perfil activo: "dev" y "prod".
+  * Implementa PoolDataSource (Oracle Universal Connection Pool - UCP).
+  * Lee la carpeta wallet con certificados SSL/TLS y configuraciones tnsnames.ora 
+    y sqlnet.ora para conexiones cifradas seguras contra Oracle Autonomous Database.
+  * Tamano del pool: Minimo 5 conexiones, maximo 20 conexiones. Conmutacion 
+    por error rapida (Fast Connection Failover) habilitada.
+
+9.4. DOCKERFILE MULTI-ETAPA
+- Etapa 1 (Build):
+  * Imagen base: maven:3.9.6-eclipse-temurin-21.
+  * Descarga dependencias offline y compila con `mvn package -DskipTests`.
+- Etapa 2 (Run):
+  * Imagen final ligera: eclipse-temurin:21-jre-alpine.
+  * Copia la carpeta wallet a la ruta del contenedor `/opt/oracle/wallet/`.
+  * Copia el JAR generado a `/app/app.jar`.
+  * Expone el puerto 8080.
+  * Punto de entrada: `java -jar app.jar`.
+
+9.5. DISPONIBILIDAD CONTINUA (Keep-Alive Workflow)
+- Archivo: .github/workflows/keep_alive.yml
+  * Frecuencia: Cada 14 minutos (`cron: '*/14 * * * *'`).
+  * Ejecuta una llamada `curl -I https://lite-backend-1wn9.onrender.com/` para 
+    mantener caliente la instancia de Render y evitar el retardo del cold-start 
+    de los planes gratuitos.
+
+================================================================================
+FIN DE LA DOCUMENTACION TECNICA DE SAVEUP LITE
+================================================================================
