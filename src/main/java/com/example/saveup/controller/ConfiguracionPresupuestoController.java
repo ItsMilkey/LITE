@@ -2,20 +2,29 @@ package com.example.saveup.controller;
 
 import com.example.saveup.dto.AsignacionPresupuestoDTO;
 import com.example.saveup.dto.ConfiguracionPresupuestoRequestDTO;
+import com.example.saveup.dto.EjecucionPresupuestoDTO;
 import com.example.saveup.model.AsignacionMetaPresupuesto;
 import com.example.saveup.model.ConfiguracionPresupuesto;
+import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.Usuario;
+import com.example.saveup.model.enums.TipoMovimiento;
+import com.example.saveup.model.enums.TipoPresupuesto;
 import com.example.saveup.repository.AsignacionMetaPresupuestoRepository;
 import com.example.saveup.repository.ConfiguracionPresupuestoRepository;
 import com.example.saveup.repository.MetaAhorroRepository;
+import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
+import com.example.saveup.security.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Optional;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/presupuestos")
@@ -33,18 +42,83 @@ public class ConfiguracionPresupuestoController {
     @Autowired
     private MetaAhorroRepository metaRepository;
 
-    @GetMapping("/usuario/{rut}")
-    public ResponseEntity<ConfiguracionPresupuesto> obtenerConfiguracion(@PathVariable String rut) {
-        Optional<ConfiguracionPresupuesto> config = repository.findByUsuarioRut(rut);
-        return config.map(ResponseEntity::ok)
+    @Autowired
+    private MovimientoRepository movimientoRepository;
+
+    @Autowired
+    private SecurityUtils securityUtils;
+
+    /**
+     * Endpoint preferido (Implicit Context): Obtiene la configuración del usuario autenticado.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<ConfiguracionPresupuesto> obtenerConfiguracionMe() {
+        String rut = securityUtils.getAuthenticatedRut();
+        return repository.findByUsuarioRut(rut)
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /**
+     * Endpoint preferido (Implicit Context): Guarda o actualiza configuración del usuario autenticado.
+     */
+    @PostMapping("/me")
+    @Transactional
+    public ResponseEntity<ConfiguracionPresupuesto> guardarConfiguracionMe(
+            @RequestBody ConfiguracionPresupuestoRequestDTO request) {
+        String rut = securityUtils.getAuthenticatedRut();
+        return guardarConfiguracionInterno(rut, request);
+    }
+
+    /**
+     * Endpoint preferido (Implicit Context): Ejecución presupuestaria del usuario autenticado.
+     */
+    @GetMapping("/ejecucion/me")
+    public ResponseEntity<EjecucionPresupuestoDTO> getEjecucionPresupuestoMe(
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year) {
+        String rut = securityUtils.getAuthenticatedRut();
+        return getEjecucionPresupuestoInterno(rut, month, year);
+    }
+
+    /**
+     * Endpoint retrocompatible con validación anti-IDOR.
+     */
+    @GetMapping("/usuario/{rut}")
+    public ResponseEntity<ConfiguracionPresupuesto> obtenerConfiguracion(@PathVariable String rut) {
+        securityUtils.validarPropietario(rut);
+        return repository.findByUsuarioRut(rut)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Endpoint retrocompatible con validación anti-IDOR.
+     */
     @PostMapping("/usuario/{rut}")
     @Transactional
-    public ResponseEntity<ConfiguracionPresupuesto> guardarConfiguracion(@PathVariable String rut,
+    public ResponseEntity<ConfiguracionPresupuesto> guardarConfiguracion(
+            @PathVariable String rut,
             @RequestBody ConfiguracionPresupuestoRequestDTO request) {
-        // 1. Obtener o Crear Configuración
+        securityUtils.validarPropietario(rut);
+        return guardarConfiguracionInterno(rut, request);
+    }
+
+    /**
+     * Endpoint retrocompatible con validación anti-IDOR.
+     */
+    @GetMapping("/ejecucion/{rut}")
+    public ResponseEntity<EjecucionPresupuestoDTO> getEjecucionPresupuesto(
+            @PathVariable String rut,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year) {
+        securityUtils.validarPropietario(rut);
+        return getEjecucionPresupuestoInterno(rut, month, year);
+    }
+
+    private ResponseEntity<ConfiguracionPresupuesto> guardarConfiguracionInterno(
+            String rut,
+            ConfiguracionPresupuestoRequestDTO request) {
         ConfiguracionPresupuesto config;
         Optional<ConfiguracionPresupuesto> existing = repository.findByUsuarioRut(rut);
 
@@ -52,13 +126,13 @@ public class ConfiguracionPresupuestoController {
             config = existing.get();
         } else {
             Optional<Usuario> usuarioOpt = usuarioRepository.findById(rut);
-            if (usuarioOpt.isEmpty())
+            if (usuarioOpt.isEmpty()) {
                 return ResponseEntity.notFound().build();
+            }
             config = new ConfiguracionPresupuesto();
             config.setUsuario(usuarioOpt.get());
         }
 
-        // 2. Actualizar valores base
         config.setPorcentajeNecesidades(request.getPorcentajeNecesidades());
         config.setPorcentajeDeseos(request.getPorcentajeDeseos());
         config.setPorcentajeAhorro(request.getPorcentajeAhorro());
@@ -66,18 +140,17 @@ public class ConfiguracionPresupuestoController {
 
         ConfiguracionPresupuesto savedConfig = repository.save(config);
 
-        // 3. Manejar Asignaciones (Strategy: Delete All & Re-create)
-        // Solo si vienen asignaciones en el request.
         if (request.getAsignaciones() != null) {
-            // Borrar asignaciones viejas
             List<AsignacionMetaPresupuesto> currentAsignaciones = asignacionRepository
                     .findByConfiguracionId(savedConfig.getId());
             asignacionRepository.deleteAll(currentAsignaciones);
 
-            // Crear nuevas
             for (AsignacionPresupuestoDTO asignacionDTO : request.getAsignaciones()) {
                 if (asignacionDTO.getMetaId() != null && asignacionDTO.getPorcentaje() > 0) {
                     metaRepository.findById(asignacionDTO.getMetaId()).ifPresent(meta -> {
+                        // Asegurar que la meta pertenezca al usuario
+                        securityUtils.validarPropietario(meta.getUsuario().getRut());
+
                         AsignacionMetaPresupuesto nuevaAsignacion = new AsignacionMetaPresupuesto();
                         nuevaAsignacion.setConfiguracion(savedConfig);
                         nuevaAsignacion.setMeta(meta);
@@ -91,64 +164,47 @@ public class ConfiguracionPresupuestoController {
         return ResponseEntity.ok(savedConfig);
     }
 
-    @Autowired
-    private com.example.saveup.repository.MovimientoRepository movimientoRepository;
-
-    @GetMapping("/ejecucion/{rut}")
-    public ResponseEntity<com.example.saveup.dto.EjecucionPresupuestoDTO> getEjecucionPresupuesto(
-            @PathVariable String rut,
-            @RequestParam(required = false) Integer month,
-            @RequestParam(required = false) Integer year) {
-
-        // 1. Determine Dates
-        java.time.LocalDate now = java.time.LocalDate.now();
+    private ResponseEntity<EjecucionPresupuestoDTO> getEjecucionPresupuestoInterno(
+            String rut,
+            Integer month,
+            Integer year) {
+        LocalDate now = LocalDate.now();
         int m = month != null ? month : now.getMonthValue();
         int y = year != null ? year : now.getYear();
 
-        java.time.YearMonth ym = java.time.YearMonth.of(y, m);
-        java.util.Date start = java.sql.Date.valueOf(ym.atDay(1));
-        java.util.Date end = java.sql.Date.valueOf(ym.atEndOfMonth());
+        YearMonth ym = YearMonth.of(y, m);
+        Date start = java.sql.Date.valueOf(ym.atDay(1));
+        Date end = java.sql.Date.valueOf(ym.atEndOfMonth());
 
-        // 2. Get Config
         ConfiguracionPresupuesto config = repository.findByUsuarioRut(rut)
                 .orElse(new ConfiguracionPresupuesto());
-        // If new/empty, fields are null. Default to 50/30 logic.
 
-        // 3. Get Movements
-        List<com.example.saveup.model.Movimiento> movs = movimientoRepository.findByUsuarioRutAndFechaBetween(rut,
-                start, end);
+        List<Movimiento> movs = movimientoRepository.findByUsuarioRutAndFechaBetween(rut, start, end);
 
-        // 4. Calculate Income
         double totalIncome = movs.stream()
                 .filter(mv -> mv.getMonto() > 0
-                        && mv.getTipoMovimiento() == com.example.saveup.model.enums.TipoMovimiento.INGRESO_GENERAL)
-                .mapToDouble(com.example.saveup.model.Movimiento::getMonto)
+                        && mv.getTipoMovimiento() == TipoMovimiento.INGRESO_GENERAL)
+                .mapToDouble(Movimiento::getMonto)
                 .sum();
 
-        // 5. Calculate Expenses by Type
         double gastoNecesidad = 0;
         double gastoDeseos = 0;
 
-        for (com.example.saveup.model.Movimiento mv : movs) {
-            // Expenses are negative in DB, or depends on type.
-            // Usually GASTO_GENERAL and PAGO_DEUDA are stored as negative or filtered by
-            // type.
-            // Let's filter by type.
-            boolean isExpense = mv.getTipoMovimiento() == com.example.saveup.model.enums.TipoMovimiento.GASTO_GENERAL
-                    || mv.getTipoMovimiento() == com.example.saveup.model.enums.TipoMovimiento.PAGO_DEUDA;
+        for (Movimiento mv : movs) {
+            boolean isExpense = mv.getTipoMovimiento() == TipoMovimiento.GASTO_GENERAL
+                    || mv.getTipoMovimiento() == TipoMovimiento.PAGO_DEUDA;
 
             if (isExpense && mv.getCategoria() != null) {
-                com.example.saveup.model.enums.TipoPresupuesto tp = mv.getCategoria().getTipoPresupuesto();
-                if (tp == com.example.saveup.model.enums.TipoPresupuesto.NECESIDAD) {
+                TipoPresupuesto tp = mv.getCategoria().getTipoPresupuesto();
+                if (tp == TipoPresupuesto.NECESIDAD) {
                     gastoNecesidad += Math.abs(mv.getMonto());
-                } else if (tp == com.example.saveup.model.enums.TipoPresupuesto.DESEO) {
+                } else if (tp == TipoPresupuesto.DESEO) {
                     gastoDeseos += Math.abs(mv.getMonto());
                 }
             }
         }
 
-        // 6. Build DTO
-        com.example.saveup.dto.EjecucionPresupuestoDTO dto = new com.example.saveup.dto.EjecucionPresupuestoDTO();
+        EjecucionPresupuestoDTO dto = new EjecucionPresupuestoDTO();
         dto.setTotalIngresos(totalIncome);
 
         Double pNeed = config.getPorcentajeNecesidades() != null ? config.getPorcentajeNecesidades() : 50.0;

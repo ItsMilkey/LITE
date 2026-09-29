@@ -1,7 +1,9 @@
 package com.example.saveup.controller;
 
-import com.example.saveup.dto.AbonoRetiroDTO;import com.example.saveup.dto.MetaAhorroCreacionDTO;
+import com.example.saveup.dto.AbonoRetiroDTO;
+import com.example.saveup.dto.MetaAhorroCreacionDTO;
 import com.example.saveup.dto.MetaAhorroResponseDTO;
+import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.MetaAhorroService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
@@ -20,6 +22,9 @@ public class MetaAhorroController {
     @Autowired
     private MetaAhorroService metaAhorroService;
 
+    @Autowired
+    private SecurityUtils securityUtils;
+
     @PostMapping
     public ResponseEntity<?> crearMeta(@Valid @RequestBody MetaAhorroCreacionDTO dto) {
         try {
@@ -30,6 +35,18 @@ public class MetaAhorroController {
         }
     }
 
+    /**
+     * Endpoint preferido (Implicit Context): Obtiene las metas del usuario autenticado.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<List<MetaAhorroResponseDTO>> obtenerMetasMe() {
+        String rutAutenticado = securityUtils.getAuthenticatedRut();
+        return ResponseEntity.ok(metaAhorroService.obtenerMetasPorUsuario(rutAutenticado));
+    }
+
+    /**
+     * Endpoint retrocompatible con validación anti-IDOR.
+     */
     @GetMapping("/usuario/{rut}")
     public ResponseEntity<List<MetaAhorroResponseDTO>> obtenerMetas(@PathVariable String rut) {
         return ResponseEntity.ok(metaAhorroService.obtenerMetasPorUsuario(rut));
@@ -56,7 +73,7 @@ public class MetaAhorroController {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.CONFLICT);
         }
     }
-    
+
     @PutMapping("/{metaId}")
     public ResponseEntity<?> editarMeta(@PathVariable Long metaId, @Valid @RequestBody MetaAhorroCreacionDTO dto) {
         try {

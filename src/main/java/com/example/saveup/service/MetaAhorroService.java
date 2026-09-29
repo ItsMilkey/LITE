@@ -10,6 +10,7 @@ import com.example.saveup.model.enums.TipoMovimiento;
 import com.example.saveup.repository.MetaAhorroRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
+import com.example.saveup.security.SecurityUtils;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,11 +30,21 @@ public class MetaAhorroService {
     private MovimientoRepository movimientoRepository;
     @Autowired
     private com.example.saveup.repository.CategoriaRepository categoriaRepository;
+    @Autowired
+    private SecurityUtils securityUtils;
 
     @Transactional
     public MetaAhorroResponseDTO crearMeta(MetaAhorroCreacionDTO dto) {
-        Usuario usuario = usuarioRepository.findById(dto.getUsuarioRut())
-                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+        final String rut;
+        if (dto.getUsuarioRut() == null || dto.getUsuarioRut().isBlank()) {
+            rut = securityUtils.getAuthenticatedRut();
+        } else {
+            securityUtils.validarPropietario(dto.getUsuarioRut());
+            rut = dto.getUsuarioRut().trim();
+        }
+
+        Usuario usuario = usuarioRepository.findById(rut)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con RUT: " + rut));
 
         MetaAhorro meta = new MetaAhorro();
         meta.setUsuario(usuario);
@@ -47,6 +58,7 @@ public class MetaAhorroService {
 
     @Transactional(readOnly = true)
     public List<MetaAhorroResponseDTO> obtenerMetasPorUsuario(String rut) {
+        securityUtils.validarPropietario(rut);
         return metaAhorroRepository.findByUsuarioRut(rut).stream()
                 .map(this::convertirADTO)
                 .collect(Collectors.toList());
@@ -55,7 +67,9 @@ public class MetaAhorroService {
     @Transactional
     public MetaAhorroResponseDTO realizarAbono(Long metaId, AbonoRetiroDTO dto) {
         MetaAhorro meta = metaAhorroRepository.findById(metaId)
-                .orElseThrow(() -> new EntityNotFoundException("Meta no encontrada"));
+                .orElseThrow(() -> new EntityNotFoundException("Meta no encontrada con ID: " + metaId));
+
+        securityUtils.validarPropietario(meta.getUsuario().getRut());
 
         Movimiento abono = new Movimiento();
         abono.setUsuario(meta.getUsuario());
@@ -79,7 +93,9 @@ public class MetaAhorroService {
     @Transactional
     public MetaAhorroResponseDTO realizarRetiro(Long metaId, AbonoRetiroDTO dto) {
         MetaAhorro meta = metaAhorroRepository.findById(metaId)
-                .orElseThrow(() -> new EntityNotFoundException("Meta no encontrada"));
+                .orElseThrow(() -> new EntityNotFoundException("Meta no encontrada con ID: " + metaId));
+
+        securityUtils.validarPropietario(meta.getUsuario().getRut());
 
         double totalAhorrado = Math.abs(metaAhorroRepository.findTotalAhorradoByMetaId(metaId));
         if (dto.getMonto() > totalAhorrado) {
@@ -108,7 +124,9 @@ public class MetaAhorroService {
     @Transactional
     public void eliminarMeta(Long metaId) {
         MetaAhorro meta = metaAhorroRepository.findById(metaId)
-                .orElseThrow(() -> new EntityNotFoundException("Meta no encontrada"));
+                .orElseThrow(() -> new EntityNotFoundException("Meta no encontrada con ID: " + metaId));
+
+        securityUtils.validarPropietario(meta.getUsuario().getRut());
 
         // No se puede eliminar la meta por defecto "Ahorros"
         if ("Ahorros".equalsIgnoreCase(meta.getNombre())) {
@@ -127,33 +145,20 @@ public class MetaAhorroService {
             movimientoRepository.save(devolucion);
         }
 
-        // Desvincular movimientos de la meta antes de borrarla
-        List<Movimiento> movimientosAsociados = movimientoRepository.findAll().stream()
-                .filter(m -> m.getMetaAhorro() != null && m.getMetaAhorro().getId().equals(metaId))
-                .collect(Collectors.toList());
+        // Desvincular movimientos de la meta antes de borrarla (optimizado sin findAll)
+        List<Movimiento> movimientosAsociados = movimientoRepository.findByMetaAhorroId(metaId);
         movimientosAsociados.forEach(m -> m.setMetaAhorro(null));
         movimientoRepository.saveAll(movimientosAsociados);
 
         metaAhorroRepository.delete(meta);
     }
 
-    private MetaAhorroResponseDTO convertirADTO(MetaAhorro meta) {
-        MetaAhorroResponseDTO dto = new MetaAhorroResponseDTO();
-        dto.setId(meta.getId());
-        dto.setNombre(meta.getNombre());
-        dto.setMontoObjetivo(meta.getMontoObjetivo());
-        dto.setFechaLimite(meta.getFechaLimite());
-
-        // Usar la columna montoActual en lugar de cálculo en tiempo real
-        dto.setMontoActual(meta.getMontoActual());
-
-        return dto;
-    }
-
     @Transactional
     public MetaAhorroResponseDTO editarMeta(Long metaId, MetaAhorroCreacionDTO dto) {
         MetaAhorro meta = metaAhorroRepository.findById(metaId)
-                .orElseThrow(() -> new EntityNotFoundException("Meta no encontrada"));
+                .orElseThrow(() -> new EntityNotFoundException("Meta no encontrada con ID: " + metaId));
+
+        securityUtils.validarPropietario(meta.getUsuario().getRut());
 
         // Regla: La meta por defecto "Ahorros" no puede tener objetivo ni fecha.
         boolean isDefaultMeta = meta.getMontoObjetivo() == null && meta.getFechaLimite() == null;
@@ -170,4 +175,13 @@ public class MetaAhorroService {
         return convertirADTO(metaActualizada);
     }
 
+    private MetaAhorroResponseDTO convertirADTO(MetaAhorro meta) {
+        MetaAhorroResponseDTO dto = new MetaAhorroResponseDTO();
+        dto.setId(meta.getId());
+        dto.setNombre(meta.getNombre());
+        dto.setMontoObjetivo(meta.getMontoObjetivo());
+        dto.setFechaLimite(meta.getFechaLimite());
+        dto.setMontoActual(meta.getMontoActual());
+        return dto;
+    }
 }

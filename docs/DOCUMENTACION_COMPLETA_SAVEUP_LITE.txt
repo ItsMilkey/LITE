@@ -421,7 +421,7 @@ Valores:
 --------------------------------------------------------------------------------
 MODULO: USUARIOS (/api/usuarios)
 --------------------------------------------------------------------------------
-1. POST /api/usuarios/register
+1. POST /api/usuarios/register (PÚBLICO)
    - Descripcion: Registra un usuario y le crea su meta por defecto "Ahorros".
    - Body: UsuarioRegistroDTO (JSON)
    - Respuestas:
@@ -429,192 +429,123 @@ MODULO: USUARIOS (/api/usuarios)
      * 409 Conflict: {"error": "El RUT ingresado ya está registrado."} o Correo
      * 500 Internal Server Error: {"error": "..."}
 
-2. POST /api/usuarios/login
-   - Descripcion: Autentica credenciales mediante BCrypt y retorna el perfil.
+2. POST /api/usuarios/login (PÚBLICO)
+   - Descripcion: Autentica credenciales mediante BCrypt y retorna el token JWT firmado.
    - Body: UsuarioLoginDTO (JSON)
    - Respuestas:
-     * 200 OK: Entidad Usuario (con campo contrasena en null)
+     * 200 OK: {"token": "eyJhbGci..."}
      * 401 Unauthorized: {"error": "Credenciales inválidas."}
+
+3. GET /api/usuarios/me (PROTEGIDO)
+   - Descripcion: Obtiene el perfil completo del usuario autenticado (sin contraseña).
+   - Cabecera: Authorization: Bearer <token>
+   - Respuestas:
+     * 200 OK: Entidad Usuario (con contrasena null)
+     * 401 Unauthorized / 403 Forbidden
 
 --------------------------------------------------------------------------------
 MODULO: SALDOS (/api/saldos)
 --------------------------------------------------------------------------------
-3. GET /api/saldos/{rut}
-   - Descripcion: Retorna el balance neto consolidado (SUM de todos los movimientos).
+4. GET /api/saldos/me (PROTEGIDO - Implicit Context)
+   - Descripcion: Retorna el saldo neto acumulado del usuario autenticado.
+   - Cabecera: Authorization: Bearer <token>
+   - Respuestas:
+     * 200 OK: {"saldo": 150000.0}
+
+5. GET /api/saldos/{rut} (PROTEGIDO - Retrocompatible con Anti-IDOR)
+   - Descripcion: Retorna el balance neto validando que {rut} coincida con el token.
    - Parametros: rut (Path, String)
    - Respuestas:
      * 200 OK: {"saldo": 150000.0}
-     * 404 Not Found: {"error": "Usuario no encontrado con RUT: ..."}
+     * 403 Forbidden: Si el {rut} no coincide con el token.
 
 --------------------------------------------------------------------------------
 MODULO: MOVIMIENTOS (/api/movimientos)
 --------------------------------------------------------------------------------
-4. POST /api/movimientos
-   - Descripcion: Registra un movimiento. Si es INGRESO_GENERAL y aplicarPresupuesto
-     es true, ejecuta automaticamente el Smart-Split hacia las metas de ahorro.
-     Si es PAGO_DEUDA, actualiza y comprueba el saldo de la deuda asociada.
+6. POST /api/movimientos (PROTEGIDO)
+   - Descripcion: Registra un movimiento. usuarioRut es opcional (se infiere del token).
+     Soporta Smart-Split automático si es INGRESO_GENERAL y aplicarPresupuesto=true.
    - Body: MovimientoRegistroDTO (JSON)
    - Respuestas:
      * 201 Created: MovimientoResponseDTO
-     * 404 Not Found: {"error": "Usuario/Deuda/Categoria no encontrada"}
-     * 500 Internal Server Error: {"error": "..."}
 
-5. GET /api/movimientos/usuario/{rut}
-   - Descripcion: Obtiene el listado de movimientos de un usuario ordenados por 
-     fecha descendente. Permite limitar resultados.
-   - Parametros:
-     * rut (Path, String)
-     * limit (Query, Integer, opcional)
+7. GET /api/movimientos/me (PROTEGIDO - Implicit Context)
+   - Descripcion: Obtiene movimientos del usuario autenticado. Permite ?limit=N.
    - Respuestas:
      * 200 OK: List<MovimientoResponseDTO>
-     * 404 Not Found: {"error": "..."}
 
-6. GET /api/movimientos/paginados/usuario/{rut}
-   - Descripcion: Historial paginado con metadatos de navegacion.
-   - Parametros:
-     * rut (Path, String)
-     * page (Query, Integer, default 0)
-     * size (Query, Integer, default 50)
+8. GET /api/movimientos/paginados/me (PROTEGIDO - Implicit Context)
+   - Descripcion: Historial paginado del usuario autenticado (?page=0&size=50).
    - Respuestas:
      * 200 OK: PageResponseDTO<MovimientoResponseDTO>
-     * 404 Not Found: {"error": "..."}
+
+9. GET /api/movimientos/usuario/{rut} (PROTEGIDO - Retrocompatible con Anti-IDOR)
+10. GET /api/movimientos/paginados/usuario/{rut} (PROTEGIDO - Retrocompatible con Anti-IDOR)
 
 --------------------------------------------------------------------------------
 MODULO: CATEGORIAS (/api/categorias)
 --------------------------------------------------------------------------------
-7. GET /api/categorias
-   - Descripcion: Obtiene el catalogo completo de categorias disponibles.
-   - Respuestas:
-     * 200 OK: List<CategoriaDTO>
+11. GET /api/categorias (PROTEGIDO)
+    - Descripcion: Obtiene el catálogo de categorías con colores, iconos y tipo.
+    - Respuestas:
+      * 200 OK: List<CategoriaDTO>
 
 --------------------------------------------------------------------------------
 MODULO: METAS DE AHORRO (/api/metas)
 --------------------------------------------------------------------------------
-8. POST /api/metas
-   - Descripcion: Crea una nueva meta de ahorro asociada a un usuario.
-   - Body: MetaAhorroCreacionDTO (JSON)
-   - Respuestas:
-     * 201 Created: MetaAhorroResponseDTO
-     * 404 Not Found: {"error": "Usuario no encontrado"}
-
-9. GET /api/metas/usuario/{rut}
-   - Descripcion: Lista todas las metas de ahorro de un usuario.
-   - Parametros: rut (Path, String)
-   - Respuestas:
-     * 200 OK: List<MetaAhorroResponseDTO>
-
-10. PUT /api/metas/{metaId}
-    - Descripcion: Edita el nombre, objetivo o fecha limite de una meta. 
-      Si es la meta base "Ahorros", restringe la modificacion unicamente al nombre.
-    - Parametros: metaId (Path, Long)
+12. POST /api/metas (PROTEGIDO)
+    - Descripcion: Crea una meta para el usuario autenticado (usuarioRut opcional).
     - Body: MetaAhorroCreacionDTO (JSON)
     - Respuestas:
-      * 200 OK: MetaAhorroResponseDTO
-      * 404 Not Found / 409 Conflict
+      * 201 Created: MetaAhorroResponseDTO
 
-11. POST /api/metas/{metaId}/abonar
-    - Descripcion: Realiza un aporte voluntario. Genera un movimiento negativo 
-      en el saldo general y suma el monto al acumulado de la meta.
-    - Parametros: metaId (Path, Long)
-    - Body: AbonoRetiroDTO (JSON)
+13. GET /api/metas/me (PROTEGIDO - Implicit Context)
+    - Descripcion: Lista las metas del usuario autenticado.
     - Respuestas:
-      * 200 OK: MetaAhorroResponseDTO
+      * 200 OK: List<MetaAhorroResponseDTO>
 
-12. POST /api/metas/{metaId}/retirar
-    - Descripcion: Rescata fondos de una meta. Incrementa el saldo general y 
-      reduce el acumulado de la meta. Valida que no exceda lo acumulado.
-    - Parametros: metaId (Path, Long)
-    - Body: AbonoRetiroDTO (JSON)
-    - Respuestas:
-      * 200 OK: MetaAhorroResponseDTO
-      * 409 Conflict: Si el retiro supera los fondos disponibles.
-
-13. DELETE /api/metas/{metaId}
-    - Descripcion: Elimina una meta. Protege la meta base "Ahorros" (no eliminable).
-      Si la meta contenia fondos, genera un movimiento de devolucion automatica 
-      al saldo principal y desvincula los movimientos historicos de la meta.
-    - Parametros: metaId (Path, Long)
-    - Respuestas:
-      * 200 OK: {"message": "Meta eliminada correctamente. Los fondos han sido..."}
-      * 409 Conflict: Si se intenta eliminar la meta por defecto.
+14. GET /api/metas/usuario/{rut} (PROTEGIDO - Retrocompatible con Anti-IDOR)
+15. POST /api/metas/{metaId}/abonar (PROTEGIDO - Valida propiedad de la meta)
+16. POST /api/metas/{metaId}/retirar (PROTEGIDO - Valida propiedad de la meta)
+17. PUT /api/metas/{metaId} (PROTEGIDO - Valida propiedad de la meta)
+18. DELETE /api/metas/{metaId} (PROTEGIDO - Valida propiedad, reembolso a saldo)
 
 --------------------------------------------------------------------------------
 MODULO: DEUDAS (/api/deudas)
 --------------------------------------------------------------------------------
-14. POST /api/deudas
-    - Descripcion: Registra una nueva deuda con estado PENDIENTE.
+19. POST /api/deudas (PROTEGIDO)
+    - Descripcion: Registra deuda para el usuario autenticado (usuarioRut opcional).
     - Body: DeudaCreacionDTO (JSON)
     - Respuestas:
       * 201 Created: DeudaResponseDTO
 
-15. GET /api/deudas/usuario/{rut}
-    - Descripcion: Retorna todas las deudas del usuario calculando en tiempo real
-      el monto pagado, monto restante y cantidad de cuotas abonadas.
-    - Parametros: rut (Path, String)
+20. GET /api/deudas/me (PROTEGIDO - Implicit Context)
+    - Descripcion: Lista deudas con cálculo en tiempo real del usuario en sesión.
     - Respuestas:
       * 200 OK: List<DeudaResponseDTO>
 
-16. POST /api/deudas/{deudaId}/pagar
-    - Descripcion: Paga una cuota. Registra un movimiento PAGO_DEUDA categorizado
-      automaticamente como "Deudas". Si el total pagado cubre la deuda, 
-      actualiza su estado a PAGADA.
-    - Parametros: deudaId (Path, Long)
-    - Body: PagoDeudaDTO (JSON)
-    - Respuestas:
-      * 200 OK: DeudaResponseDTO
-      * 409 Conflict: Si la deuda no se encuentra en estado PENDIENTE.
-
-17. PUT /api/deudas/{deudaId}
-    - Descripcion: Modifica los parametros de una deuda.
-    - Bloqueo de seguridad: No se puede editar si ya cuenta con pagos registrados.
-    - Parametros: deudaId (Path, Long)
-    - Body: DeudaCreacionDTO (JSON)
-    - Respuestas:
-      * 200 OK: DeudaResponseDTO
-      * 409 Conflict: Si la deuda ya tiene pagos abonados.
-
-18. PATCH /api/deudas/{deudaId}/cancelar
-    - Descripcion: Cancela una deuda (marcado en estado CANCELADA).
-    - Bloqueo de seguridad: No se puede cancelar una deuda ya pagada.
-    - Parametros: deudaId (Path, Long)
-    - Respuestas:
-      * 200 OK: DeudaResponseDTO
+21. GET /api/deudas/usuario/{rut} (PROTEGIDO - Retrocompatible con Anti-IDOR)
+22. POST /api/deudas/{deudaId}/pagar (PROTEGIDO - Valida propiedad de la deuda)
+23. PUT /api/deudas/{deudaId} (PROTEGIDO - Valida propiedad de la deuda)
+24. PATCH /api/deudas/{deudaId}/cancelar (PROTEGIDO - Valida propiedad)
 
 --------------------------------------------------------------------------------
 MODULO: PRESUPUESTOS (/api/presupuestos)
 --------------------------------------------------------------------------------
-19. GET /api/presupuestos/usuario/{rut}
-    - Descripcion: Consulta los porcentajes configurados y asignaciones a metas.
-    - Parametros: rut (Path, String)
-    - Respuestas:
-      * 200 OK: ConfiguracionPresupuesto
-      * 404 Not Found: Si el usuario no ha definido configuracion aun.
-
-20. POST /api/presupuestos/usuario/{rut}
-    - Descripcion: Guarda o actualiza los porcentajes (Necesidades, Deseos, Ahorro)
-      y reemplaza las asignaciones individuales hacia metas de ahorro.
-    - Parametros: rut (Path, String)
-    - Body: ConfiguracionPresupuestoRequestDTO (JSON)
-    - Respuestas:
-      * 200 OK: ConfiguracionPresupuesto
-
-21. GET /api/presupuestos/ejecucion/{rut}
-    - Descripcion: Calcula el balance del presupuesto de un mes/ano dado. 
-      Compara ingresos totales proyectados contra el gasto real clasificado.
-    - Parametros:
-      * rut (Path, String)
-      * month (Query, Integer, opcional, default mes actual)
-      * year (Query, Integer, opcional, default ano actual)
-    - Respuestas:
-      * 200 OK: EjecucionPresupuestoDTO
+25. GET /api/presupuestos/me (PROTEGIDO - Implicit Context)
+26. POST /api/presupuestos/me (PROTEGIDO - Implicit Context)
+27. GET /api/presupuestos/ejecucion/me (PROTEGIDO - Implicit Context)
+28. GET /api/presupuestos/usuario/{rut} (PROTEGIDO - Anti-IDOR)
+29. POST /api/presupuestos/usuario/{rut} (PROTEGIDO - Anti-IDOR)
+30. GET /api/presupuestos/ejecucion/{rut} (PROTEGIDO - Anti-IDOR)
 
 --------------------------------------------------------------------------------
 MODULO: REPORTES (/api/reportes)
 --------------------------------------------------------------------------------
-22. GET /api/reportes/movimientos/exportar
-    - Descripcion: Genera y descarga el archivo binario del reporte de movimientos.
+31. GET /api/reportes/movimientos/exportar (PROTEGIDO)
+    - Descripcion: Descarga PDF o CSV. Parámetro 'rut' es opcional (por defecto usuario en sesión).
     - Parametros Query:
-      * rut (String, Obligatorio)
+      * rut (String, Opcional - por defecto usuario autenticado)
       * alcance (String, "COMPLETO" o "MENSUAL", default "COMPLETO")
       * formato (String, "PDF" o "CSV", default "CSV")
       * mes (Integer, opcional, requerido si alcance=MENSUAL)
@@ -713,6 +644,30 @@ MODULO: REPORTES (/api/reportes)
 * CategoriaRepository
   - Optional<Categoria> findByNombre(String nombre)
   - List<Categoria> findByTipoPresupuesto(TipoPresupuesto tipoPresupuesto)
+
+7.3. CAPA DE SEGURIDAD Y CONTROL DE ACCESO (Anti-IDOR)
+--------------------------------------------------------------------------------
+* JwtService
+  - generateToken(String rut, String email): Emite token JWT firmado con HMAC-SHA256.
+  - extractRut(String token): Obtiene el RUT del usuario del Subject del JWT.
+  - extractEmail(String token): Obtiene el claim 'email'.
+  - isTokenValid(String token): Valida firma criptográfica y expiración.
+  - getSigningKey(): Decodificación flexible (Base64 o UTF-8 >= 256 bits).
+
+* JwtAuthenticationFilter (OncePerRequestFilter)
+  - doFilterInternal(...): Intercepta peticiones HTTP, extrae 'Authorization: Bearer <token>',
+    valida la firma de forma 100% stateless y carga el AuthenticationToken en SecurityContextHolder.
+
+* SecurityUtils
+  - getAuthenticatedRut(): Retorna el RUT del usuario en sesión desde SecurityContextHolder.
+  - validarPropietario(String rutTarget): Lanza AccessDeniedException (403) si el RUT
+    del recurso no coincide con el del usuario autenticado en el token.
+
+* CustomAuthenticationEntryPoint (AuthenticationEntryPoint)
+  - commence(...): Retorna respuesta HTTP 401 en formato RFC 7807 (ProblemDetail).
+
+* CustomAccessDeniedHandler (AccessDeniedHandler)
+  - handle(...): Retorna respuesta HTTP 403 en formato RFC 7807 (ProblemDetail).
 
 ================================================================================
 8. REGLAS DE NEGOCIO Y FLUJOS DE TRABAJO (MAPAS CONCEPTUALES EN TEXTO)

@@ -82,4 +82,10 @@ public class UsuarioService {
         }
     }
 
+    public Usuario obtenerPerfil(String rut) {
+        Usuario usuario = usuarioRepository.findById(rut)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Usuario no encontrado con RUT: " + rut));
+        usuario.setContrasena(null);
+        return usuario;
+    }
 }

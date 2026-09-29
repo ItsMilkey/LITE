@@ -25,6 +25,7 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
 
     List<Movimiento> findByDeuda(Deuda deuda);
 
-    List<Movimiento> findByUsuarioRutAndFechaBetween(String rut, java.util.Date start, java.util.Date end);
+    List<Movimiento> findByMetaAhorroId(Long metaId);
 
+    List<Movimiento> findByUsuarioRutAndFechaBetween(String rut, java.util.Date start, java.util.Date end);
 }

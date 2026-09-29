@@ -1,5 +1,6 @@
 package com.example.saveup.controller;
 
+import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.MovimientoService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,16 +15,34 @@ import java.util.Map;
 public class SaldoController {
 
     @Autowired
-    private MovimientoService movimientoService; // Reutilizamos el mismo servicio
+    private MovimientoService movimientoService;
+
+    @Autowired
+    private SecurityUtils securityUtils;
 
     /**
-     * Endpoint para obtener el saldo actual y total de un usuario por su RUT.
+     * Endpoint preferido (Implicit Context): Obtiene el saldo del usuario autenticado.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<?> obtenerSaldoMe() {
+        try {
+            String rutAutenticado = securityUtils.getAuthenticatedRut();
+            Double saldo = movimientoService.obtenerSaldoActual(rutAutenticado);
+            return ResponseEntity.ok(Map.of("saldo", saldo));
+        } catch (EntityNotFoundException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+        }
+    }
+
+    /**
+     * Endpoint con validación de propiedad (anti-IDOR): Comprueba que el {rut}
+     * coincida con el usuario del token JWT.
      */
     @GetMapping("/{rut}")
     public ResponseEntity<?> obtenerSaldoActual(@PathVariable String rut) {
         try {
+            securityUtils.validarPropietario(rut);
             Double saldo = movimientoService.obtenerSaldoActual(rut);
-            // Devolvemos un objeto JSON para mantener la consistencia en la API.
             return ResponseEntity.ok(Map.of("saldo", saldo));
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);

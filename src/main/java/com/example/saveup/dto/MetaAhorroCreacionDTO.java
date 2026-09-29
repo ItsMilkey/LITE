@@ -17,6 +17,6 @@ public class MetaAhorroCreacionDTO {
     @Future(message = "La fecha límite debe ser en el futuro")
     private Date fechaLimite;
 
-    @NotBlank(message = "El RUT del usuario es obligatorio")
+    // Opcional para soportar Implicit Context (se infiere del token JWT si viene vacío)
     private String usuarioRut;
 }

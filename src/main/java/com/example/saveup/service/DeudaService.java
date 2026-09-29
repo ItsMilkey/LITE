@@ -3,6 +3,7 @@ package com.example.saveup.service;
 import com.example.saveup.dto.DeudaCreacionDTO;
 import com.example.saveup.dto.DeudaResponseDTO;
 import com.example.saveup.dto.PagoDeudaDTO;
+import com.example.saveup.model.Categoria;
 import com.example.saveup.model.Deuda;
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.Usuario;
@@ -12,12 +13,11 @@ import com.example.saveup.repository.CategoriaRepository;
 import com.example.saveup.repository.DeudaRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
+import com.example.saveup.security.SecurityUtils;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.example.saveup.model.Categoria;
-import com.example.saveup.repository.CategoriaRepository;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,11 +33,21 @@ public class DeudaService {
     private MovimientoRepository movimientoRepository;
     @Autowired
     private CategoriaRepository categoriaRepository;
+    @Autowired
+    private SecurityUtils securityUtils;
 
     @Transactional
     public DeudaResponseDTO crearDeuda(DeudaCreacionDTO dto) {
-        Usuario usuario = usuarioRepository.findById(dto.getUsuarioRut())
-                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con RUT: " + dto.getUsuarioRut()));
+        final String rut;
+        if (dto.getUsuarioRut() == null || dto.getUsuarioRut().isBlank()) {
+            rut = securityUtils.getAuthenticatedRut();
+        } else {
+            securityUtils.validarPropietario(dto.getUsuarioRut());
+            rut = dto.getUsuarioRut().trim();
+        }
+
+        Usuario usuario = usuarioRepository.findById(rut)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con RUT: " + rut));
 
         Deuda deuda = new Deuda();
         deuda.setUsuario(usuario);
@@ -45,7 +55,6 @@ public class DeudaService {
         deuda.setDescripcion(dto.getDescripcion());
         deuda.setMontoTotal(dto.getMontoTotal());
         deuda.setCantidadCuotas(dto.getCantidadCuotas());
-        // El estado y la fecha se asignan automáticamente por @PrePersist
 
         Deuda deudaGuardada = deudaRepository.save(deuda);
         return convertirADeudaResponseDTO(deudaGuardada);
@@ -53,6 +62,8 @@ public class DeudaService {
 
     @Transactional(readOnly = true)
     public List<DeudaResponseDTO> obtenerDeudasPorUsuario(String rut) {
+        securityUtils.validarPropietario(rut);
+
         if (!usuarioRepository.existsById(rut)) {
             throw new EntityNotFoundException("Usuario no encontrado con RUT: " + rut);
         }
@@ -66,6 +77,8 @@ public class DeudaService {
     public DeudaResponseDTO registrarPago(Long deudaId, PagoDeudaDTO pagoDTO) {
         Deuda deuda = deudaRepository.findById(deudaId)
                 .orElseThrow(() -> new EntityNotFoundException("Deuda no encontrada con ID: " + deudaId));
+
+        securityUtils.validarPropietario(deuda.getUsuario().getRut());
 
         if (deuda.getEstado() != EstadoDeuda.PENDIENTE) {
             throw new IllegalStateException("Solo se pueden registrar pagos en deudas pendientes. Estado actual: " + deuda.getEstado());
@@ -84,7 +97,6 @@ public class DeudaService {
         movimientoRepository.save(pago);
 
         // Verificar si la deuda está completamente pagada después del nuevo pago
-        // El cálculo de totalPagado ahora es más preciso
         double totalPagado = Math.abs(movimientoRepository.findByDeuda(deuda).stream().mapToDouble(Movimiento::getMonto).sum());
         if (totalPagado >= deuda.getMontoTotal()) {
             deuda.setEstado(EstadoDeuda.PAGADA);
@@ -96,7 +108,9 @@ public class DeudaService {
     @Transactional
     public DeudaResponseDTO editarDeuda(Long deudaId, DeudaCreacionDTO dto) {
         Deuda deuda = deudaRepository.findById(deudaId)
-            .orElseThrow(() -> new EntityNotFoundException("Deuda no encontrada con ID: " + deudaId));
+                .orElseThrow(() -> new EntityNotFoundException("Deuda no encontrada con ID: " + deudaId));
+
+        securityUtils.validarPropietario(deuda.getUsuario().getRut());
 
         Integer cuotasPagadas = deudaRepository.countPagosPorDeuda(deudaId);
         if (cuotasPagadas > 0) {
@@ -115,7 +129,9 @@ public class DeudaService {
     @Transactional
     public DeudaResponseDTO cancelarDeuda(Long deudaId) {
         Deuda deuda = deudaRepository.findById(deudaId)
-            .orElseThrow(() -> new EntityNotFoundException("Deuda no encontrada con ID: " + deudaId));
+                .orElseThrow(() -> new EntityNotFoundException("Deuda no encontrada con ID: " + deudaId));
+
+        securityUtils.validarPropietario(deuda.getUsuario().getRut());
         
         if (deuda.getEstado() == EstadoDeuda.PAGADA) {
              throw new IllegalStateException("No se puede cancelar una deuda que ya fue pagada.");
@@ -126,8 +142,6 @@ public class DeudaService {
         return convertirADeudaResponseDTO(deudaCancelada);
     }
 
-
-    // Método de utilidad para convertir y calcular los campos dinámicos
     private DeudaResponseDTO convertirADeudaResponseDTO(Deuda deuda) {
         DeudaResponseDTO dto = new DeudaResponseDTO();
         dto.setId(deuda.getId());
@@ -138,7 +152,6 @@ public class DeudaService {
         dto.setEstado(deuda.getEstado());
         dto.setFechaCreacion(deuda.getFechaCreacion());
 
-        // --- La Magia de los Cálculos en Tiempo Real ---
         double montoPagadoAbsoluto = Math.abs(deudaRepository.findTotalPagadoPorDeuda(deuda.getId()));
         dto.setMontoPagado(montoPagadoAbsoluto);
         dto.setMontoRestante(deuda.getMontoTotal() - montoPagadoAbsoluto);

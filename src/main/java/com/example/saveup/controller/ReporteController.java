@@ -1,5 +1,6 @@
 package com.example.saveup.controller;
 
+import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.report.ReporteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -17,14 +18,26 @@ public class ReporteController {
     @Autowired
     private ReporteService reporteService;
 
+    @Autowired
+    private SecurityUtils securityUtils;
+
     @GetMapping("/movimientos/exportar")
     public ResponseEntity<byte[]> exportarMovimientos(
-            @RequestParam("rut") String rut,
+            @RequestParam(value = "rut", required = false) String rut,
             @RequestParam(value = "alcance", defaultValue = "COMPLETO") String alcance,
             @RequestParam(value = "formato", defaultValue = "CSV") String formato,
             @RequestParam(value = "mes", required = false) Integer mes,
             @RequestParam(value = "anio", required = false) Integer anio) {
-        ReporteService.ReporteGenerado reporte = reporteService.exportarMovimientos(rut, alcance, formato, mes, anio);
+
+        String targetRut;
+        if (rut != null && !rut.isBlank()) {
+            securityUtils.validarPropietario(rut);
+            targetRut = rut.trim();
+        } else {
+            targetRut = securityUtils.getAuthenticatedRut();
+        }
+
+        ReporteService.ReporteGenerado reporte = reporteService.exportarMovimientos(targetRut, alcance, formato, mes, anio);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + reporte.filename + "\"")

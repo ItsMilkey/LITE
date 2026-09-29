@@ -3,6 +3,7 @@ package com.example.saveup.controller;
 import com.example.saveup.dto.DeudaCreacionDTO;
 import com.example.saveup.dto.DeudaResponseDTO;
 import com.example.saveup.dto.PagoDeudaDTO;
+import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.DeudaService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
@@ -21,6 +22,9 @@ public class DeudaController {
     @Autowired
     private DeudaService deudaService;
 
+    @Autowired
+    private SecurityUtils securityUtils;
+
     // Endpoint para crear una nueva deuda
     @PostMapping
     public ResponseEntity<?> crearDeuda(@Valid @RequestBody DeudaCreacionDTO dto) {
@@ -32,7 +36,21 @@ public class DeudaController {
         }
     }
 
-    // Endpoint para obtener todas las deudas de un usuario
+    /**
+     * Endpoint preferido (Implicit Context): Obtiene deudas del usuario autenticado.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<?> obtenerDeudasMe() {
+        try {
+            String rutAutenticado = securityUtils.getAuthenticatedRut();
+            List<DeudaResponseDTO> deudas = deudaService.obtenerDeudasPorUsuario(rutAutenticado);
+            return ResponseEntity.ok(deudas);
+        } catch (EntityNotFoundException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+        }
+    }
+
+    // Endpoint retrocompatible con validación anti-IDOR
     @GetMapping("/usuario/{rut}")
     public ResponseEntity<?> obtenerDeudasPorUsuario(@PathVariable String rut) {
         try {
@@ -52,7 +70,6 @@ public class DeudaController {
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
         } catch (IllegalStateException e) {
-            // Para casos como intentar pagar una deuda ya pagada o cancelada
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.CONFLICT);
         }
     }
@@ -66,7 +83,6 @@ public class DeudaController {
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
         } catch (IllegalStateException e) {
-            // Si se intenta editar una deuda con pagos
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.CONFLICT);
         }
     }
