@@ -49,17 +49,6 @@ public class DeudaController {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
         }
     }
-
-    // Endpoint retrocompatible con validación anti-IDOR
-    @GetMapping("/usuario/{rut}")
-    public ResponseEntity<?> obtenerDeudasPorUsuario(@PathVariable String rut) {
-        try {
-            List<DeudaResponseDTO> deudas = deudaService.obtenerDeudasPorUsuario(rut);
-            return ResponseEntity.ok(deudas);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        }
-    }
     
     // Endpoint para registrar el pago de una cuota
     @PostMapping("/{deudaId}/pagar")

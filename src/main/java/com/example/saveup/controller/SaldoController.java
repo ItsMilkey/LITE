@@ -21,28 +21,14 @@ public class SaldoController {
     private SecurityUtils securityUtils;
 
     /**
-     * Endpoint preferido (Implicit Context): Obtiene el saldo del usuario autenticado.
+     * Obtiene el saldo del usuario autenticado en sesión a partir de su token JWT.
+     * Soporta tanto /api/saldos/me como /api/saldos de forma implícita.
      */
-    @GetMapping("/me")
+    @GetMapping({"", "/me"})
     public ResponseEntity<?> obtenerSaldoMe() {
         try {
             String rutAutenticado = securityUtils.getAuthenticatedRut();
             Double saldo = movimientoService.obtenerSaldoActual(rutAutenticado);
-            return ResponseEntity.ok(Map.of("saldo", saldo));
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        }
-    }
-
-    /**
-     * Endpoint con validación de propiedad (anti-IDOR): Comprueba que el {rut}
-     * coincida con el usuario del token JWT.
-     */
-    @GetMapping("/{rut}")
-    public ResponseEntity<?> obtenerSaldoActual(@PathVariable String rut) {
-        try {
-            securityUtils.validarPropietario(rut);
-            Double saldo = movimientoService.obtenerSaldoActual(rut);
             return ResponseEntity.ok(Map.of("saldo", saldo));
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);

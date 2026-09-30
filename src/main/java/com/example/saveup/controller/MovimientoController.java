@@ -30,13 +30,6 @@ public class MovimientoController {
     @PostMapping
     public ResponseEntity<?> registrarMovimiento(@Valid @RequestBody MovimientoRegistroDTO dto) {
         try {
-            String rutAutenticado = securityUtils.getAuthenticatedRut();
-            if (dto.getUsuarioRut() != null && !dto.getUsuarioRut().isBlank()) {
-                securityUtils.validarPropietario(dto.getUsuarioRut());
-            } else {
-                dto.setUsuarioRut(rutAutenticado);
-            }
-
             MovimientoResponseDTO nuevoMovimiento = movimientoService.registrarMovimiento(dto);
             return new ResponseEntity<>(nuevoMovimiento, HttpStatus.CREATED);
         } catch (EntityNotFoundException e) {
@@ -49,7 +42,7 @@ public class MovimientoController {
     }
 
     /**
-     * Endpoint preferido (Implicit Context): Obtiene movimientos del usuario autenticado.
+     * Endpoint basado estrictamente en el contexto del usuario autenticado en la sesión JWT.
      */
     @GetMapping("/me")
     public ResponseEntity<?> obtenerMovimientosMe(@RequestParam(required = false) Integer limit) {
@@ -63,7 +56,7 @@ public class MovimientoController {
     }
 
     /**
-     * Endpoint preferido paginado (Implicit Context).
+     * Endpoint paginado para el usuario autenticado en sesión.
      */
     @GetMapping("/paginados/me")
     public ResponseEntity<?> obtenerMovimientosPaginadosMe(
@@ -72,42 +65,6 @@ public class MovimientoController {
     ) {
         try {
             String rut = securityUtils.getAuthenticatedRut();
-            Pageable pageable = PageRequest.of(page, size);
-            PageResponseDTO<MovimientoResponseDTO> movimientos = movimientoService.obtenerMovimientosPaginados(rut, pageable);
-            return ResponseEntity.ok(movimientos);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        }
-    }
-
-    /**
-     * Endpoint retrocompatible con validación anti-IDOR.
-     */
-    @GetMapping("/usuario/{rut}")
-    public ResponseEntity<?> obtenerMovimientosPorUsuario(
-            @PathVariable String rut,
-            @RequestParam(required = false) Integer limit
-    ) {
-        try {
-            securityUtils.validarPropietario(rut);
-            List<MovimientoResponseDTO> movimientos = movimientoService.obtenerMovimientosPorUsuario(rut, limit);
-            return ResponseEntity.ok(movimientos);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        }
-    }
-
-    /**
-     * Endpoint retrocompatible paginado con validación anti-IDOR.
-     */
-    @GetMapping("/paginados/usuario/{rut}")
-    public ResponseEntity<?> obtenerMovimientosPaginados(
-            @PathVariable String rut,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size
-    ) {
-        try {
-            securityUtils.validarPropietario(rut);
             Pageable pageable = PageRequest.of(page, size);
             PageResponseDTO<MovimientoResponseDTO> movimientos = movimientoService.obtenerMovimientosPaginados(rut, pageable);
             return ResponseEntity.ok(movimientos);

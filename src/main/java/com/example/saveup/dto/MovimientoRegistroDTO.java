@@ -17,9 +17,6 @@ public class MovimientoRegistroDTO {
     @NotNull(message = "El tipo de movimiento es obligatorio")
     private TipoMovimiento tipoMovimiento;
 
-    // Opcional para soportar Implicit Context (se infiere del token JWT si viene vacío)
-    private String usuarioRut;
-
     // Opcional: Se usarán cuando implementemos deudas y metas
     private Long deudaId;
     private Long metaId;

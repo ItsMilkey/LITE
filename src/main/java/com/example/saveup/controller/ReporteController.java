@@ -23,19 +23,12 @@ public class ReporteController {
 
     @GetMapping("/movimientos/exportar")
     public ResponseEntity<byte[]> exportarMovimientos(
-            @RequestParam(value = "rut", required = false) String rut,
             @RequestParam(value = "alcance", defaultValue = "COMPLETO") String alcance,
             @RequestParam(value = "formato", defaultValue = "CSV") String formato,
             @RequestParam(value = "mes", required = false) Integer mes,
             @RequestParam(value = "anio", required = false) Integer anio) {
 
-        String targetRut;
-        if (rut != null && !rut.isBlank()) {
-            securityUtils.validarPropietario(rut);
-            targetRut = rut.trim();
-        } else {
-            targetRut = securityUtils.getAuthenticatedRut();
-        }
+        String targetRut = securityUtils.getAuthenticatedRut();
 
         ReporteService.ReporteGenerado reporte = reporteService.exportarMovimientos(targetRut, alcance, formato, mes, anio);
 

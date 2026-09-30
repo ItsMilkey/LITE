@@ -44,14 +44,6 @@ public class MetaAhorroController {
         return ResponseEntity.ok(metaAhorroService.obtenerMetasPorUsuario(rutAutenticado));
     }
 
-    /**
-     * Endpoint retrocompatible con validación anti-IDOR.
-     */
-    @GetMapping("/usuario/{rut}")
-    public ResponseEntity<List<MetaAhorroResponseDTO>> obtenerMetas(@PathVariable String rut) {
-        return ResponseEntity.ok(metaAhorroService.obtenerMetasPorUsuario(rut));
-    }
-
     @PostMapping("/{metaId}/abonar")
     public ResponseEntity<?> abonarAMeta(@PathVariable Long metaId, @Valid @RequestBody AbonoRetiroDTO dto) {
         try {

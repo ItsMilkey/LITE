@@ -4,14 +4,17 @@ import com.example.saveup.dto.CategoriaDTO;
 import com.example.saveup.dto.MovimientoRegistroDTO;
 import com.example.saveup.dto.MovimientoResponseDTO;
 import com.example.saveup.dto.PageResponseDTO;
+import com.example.saveup.model.Categoria;
 import com.example.saveup.model.Deuda;
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.Usuario;
 import com.example.saveup.model.enums.EstadoDeuda;
 import com.example.saveup.model.enums.TipoMovimiento;
+import com.example.saveup.repository.CategoriaRepository;
 import com.example.saveup.repository.DeudaRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
+import com.example.saveup.security.SecurityUtils;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -22,11 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
-import com.example.saveup.model.AsignacionMetaPresupuesto;
-import com.example.saveup.model.MetaAhorro;
-import com.example.saveup.repository.ConfiguracionPresupuestoRepository;
-import com.example.saveup.repository.AsignacionMetaPresupuestoRepository;
-import com.example.saveup.repository.MetaAhorroRepository;
 
 @Service
 public class MovimientoService {
@@ -41,23 +39,20 @@ public class MovimientoService {
     private DeudaRepository deudaRepository;
 
     @Autowired
-    private com.example.saveup.repository.CategoriaRepository categoriaRepository;
+    private CategoriaRepository categoriaRepository;
 
     @Autowired
-    private MetaAhorroRepository metaAhorroRepository;
+    private SmartSplitProcessor smartSplitProcessor;
 
     @Autowired
-    private ConfiguracionPresupuestoRepository configuracionPresupuestoRepository;
-
-    @Autowired
-    private AsignacionMetaPresupuestoRepository asignacionMetaPresupuestoRepository;
+    private SecurityUtils securityUtils;
 
     @Transactional
     public MovimientoResponseDTO registrarMovimiento(MovimientoRegistroDTO dto) {
-        // 1. Validar que el usuario exista.
-        Usuario usuario = usuarioRepository.findById(dto.getUsuarioRut())
-                .orElseThrow(
-                        () -> new EntityNotFoundException("Usuario no encontrado con RUT: " + dto.getUsuarioRut()));
+        // 1. Obtener identidad segura desde el token JWT
+        String rut = securityUtils.getAuthenticatedRut();
+        Usuario usuario = usuarioRepository.findById(rut)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con RUT: " + rut));
 
         // 2. Crear la entidad Movimiento a partir del DTO.
         Movimiento movimiento = new Movimiento();
@@ -67,24 +62,19 @@ public class MovimientoService {
         movimiento.setTipoMovimiento(dto.getTipoMovimiento());
         // La fecha se establece automáticamente gracias a @PrePersist.
 
-        // --- LÓGICA DE ASOCIACIÓN CON DEUDAS Y METAS ---
-
-        // Si se proporciona un deudaId, se asocia el movimiento a esa deuda.
+        // --- LÓGICA DE ASOCIACIÓN CON DEUDAS ---
         if (dto.getDeudaId() != null) {
-            // Validación de negocio: Solo los PAGO_DEUDA pueden tener un deudaId.
             if (dto.getTipoMovimiento() != TipoMovimiento.PAGO_DEUDA) {
                 throw new IllegalArgumentException(
                         "El campo 'deudaId' solo es válido para movimientos de tipo PAGO_DEUDA.");
             }
-            // Se busca la deuda y se asocia.
             Deuda deuda = deudaRepository.findById(dto.getDeudaId())
                     .orElseThrow(() -> new EntityNotFoundException("Deuda no encontrada con ID: " + dto.getDeudaId()));
+
+            // Validación de propiedad de la deuda
+            securityUtils.validarPropietario(deuda.getUsuario().getRut());
             movimiento.setDeuda(deuda);
 
-            // Opcional pero recomendado: Verificar si este pago salda la deuda.
-            // Esto crea consistencia si se usa este endpoint en vez del de DeudaService.
-            // Nota: Se realiza una comprobación después de que el movimiento se guarde
-            // teóricamente.
             double nuevoTotalPagado = Math.abs(deudaRepository.findTotalPagadoPorDeuda(deuda.getId()))
                     + Math.abs(dto.getMonto());
             if (nuevoTotalPagado >= deuda.getMontoTotal()) {
@@ -93,81 +83,18 @@ public class MovimientoService {
             }
         }
 
-        /*
-         * // Si se proporciona un metaId, se asocia el movimiento a esa meta (para el
-         * futuro).
-         * if (dto.getMetaId() != null) {
-         * if (dto.getTipoMovimiento() != TipoMovimiento.ABONO_META &&
-         * dto.getTipoMovimiento() != TipoMovimiento.RETIRO_META) {
-         * throw new
-         * IllegalArgumentException("El campo 'metaId' solo es válido para movimientos relacionados con metas."
-         * );
-         * }
-         * MetaAhorro meta = metaAhorroRepository.findById(dto.getMetaId())
-         * .orElseThrow(() -> new
-         * EntityNotFoundException("Meta de ahorro no encontrada con ID: " +
-         * dto.getMetaId()));
-         * movimiento.setMetaAhorro(meta);
-         * }
-         */
-
-        // 6. ASOCIACIÓN DE CATEGORÍA
+        // ASOCIACIÓN DE CATEGORÍA
         if (dto.getCategoriaId() != null) {
-            com.example.saveup.model.Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
+            Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
                     .orElseThrow(() -> new EntityNotFoundException(
                             "Categoría no encontrada con ID: " + dto.getCategoriaId()));
             movimiento.setCategoria(categoria);
         }
 
-        // 7. LÓGICA SMART-SPLIT (Planificación Automática)
+        // LÓGICA SMART-SPLIT: Delegada a un servicio de dominio especializado
         if (Boolean.TRUE.equals(dto.getAplicarPresupuesto())
                 && dto.getTipoMovimiento() == TipoMovimiento.INGRESO_GENERAL) {
-            configuracionPresupuestoRepository.findByUsuarioRut(usuario.getRut()).ifPresent(config -> {
-                if (Boolean.TRUE.equals(config.getActivo())) {
-                    // 1. Calcular Monto para Ahorro
-                    double montoAhorro = dto.getMonto() * (config.getPorcentajeAhorro() / 100.0);
-
-                    // 2. Distribuir en Metas
-                    List<AsignacionMetaPresupuesto> asignaciones = asignacionMetaPresupuestoRepository
-                            .findByConfiguracionId(config.getId());
-
-                    for (AsignacionMetaPresupuesto asignacion : asignaciones) {
-                        double montoAbono = montoAhorro * (asignacion.getPorcentajeAsignacion() / 100.0);
-                        if (montoAbono > 0) {
-                            // Crear Movimiento de Abono a Meta
-                            Movimiento abonoMovimiento = new Movimiento();
-                            abonoMovimiento.setUsuario(usuario);
-                            abonoMovimiento.setMonto(-montoAbono);
-
-                            // ASIGNAR CATEGORÍA AHORRO
-                            com.example.saveup.model.Categoria catAhorro = categoriaRepository.findByNombre("Ahorro")
-                                    .orElse(null);
-                            if (catAhorro == null) {
-                                // Fallback a 'Sueldo' u 'Otro' si no existe 'Ahorro' (aunque DataLoader lo
-                                // crea)
-                                // O buscamos por tipo AHORRO
-                                List<com.example.saveup.model.Categoria> savings = categoriaRepository
-                                        .findByTipoPresupuesto(com.example.saveup.model.enums.TipoPresupuesto.AHORRO);
-                                if (!savings.isEmpty())
-                                    catAhorro = savings.get(0);
-                            }
-                            if (catAhorro != null)
-                                abonoMovimiento.setCategoria(catAhorro);
-
-                            abonoMovimiento.setDescripcion("Abono Auto: " + asignacion.getMeta().getNombre());
-                            abonoMovimiento.setTipoMovimiento(TipoMovimiento.ABONO_META);
-                            abonoMovimiento.setMetaAhorro(asignacion.getMeta()); // Relationship exists
-
-                            // Actualizar el saldo de la Meta
-                            MetaAhorro meta = asignacion.getMeta();
-                            meta.setMontoActual(meta.getMontoActual() + montoAbono);
-                            metaAhorroRepository.save(meta);
-
-                            movimientoRepository.save(abonoMovimiento);
-                        }
-                    }
-                }
-            });
+            smartSplitProcessor.procesarDistribucion(usuario, dto.getMonto());
         }
 
         // 3. Guardar la entidad en la base de datos.
@@ -179,8 +106,7 @@ public class MovimientoService {
 
     /**
      * Obtiene el historial de movimientos de un usuario.
-     * Si se proporciona un límite, devuelve solo esa cantidad de movimientos
-     * recientes.
+     * Si se proporciona un límite, devuelve solo esa cantidad de movimientos recientes.
      * Si no, devuelve el historial completo.
      */
     @Transactional(readOnly = true)
@@ -193,10 +119,8 @@ public class MovimientoService {
 
         if (limit != null && limit > 0) {
             Pageable pageable = PageRequest.of(0, limit);
-            // ¡CORRECCIÓN! Añadimos .getContent() para extraer la lista del objeto Page.
             movimientos = movimientoRepository.findByUsuarioRutOrderByFechaDesc(rut, pageable).getContent();
         } else {
-            // Si no hay límite, usamos el método original que devuelve una Lista.
             movimientos = movimientoRepository.findByUsuarioRutOrderByFechaDesc(rut);
         }
 
@@ -215,7 +139,6 @@ public class MovimientoService {
     }
 
     /**
-     * ¡NUEVO MÉTODO!
      * Obtiene el historial de movimientos de forma paginada.
      */
     @Transactional(readOnly = true)
@@ -250,7 +173,6 @@ public class MovimientoService {
         dto.setFecha(movimiento.getFecha());
         dto.setTipoMovimiento(movimiento.getTipoMovimiento());
 
-        // Si el movimiento tiene una categoría, la convertimos a DTO y la añadimos.
         if (movimiento.getCategoria() != null) {
             CategoriaDTO categoriaDTO = new CategoriaDTO();
             categoriaDTO.setId(movimiento.getCategoria().getId());

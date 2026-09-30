@@ -35,13 +35,7 @@ public class MetaAhorroService {
 
     @Transactional
     public MetaAhorroResponseDTO crearMeta(MetaAhorroCreacionDTO dto) {
-        final String rut;
-        if (dto.getUsuarioRut() == null || dto.getUsuarioRut().isBlank()) {
-            rut = securityUtils.getAuthenticatedRut();
-        } else {
-            securityUtils.validarPropietario(dto.getUsuarioRut());
-            rut = dto.getUsuarioRut().trim();
-        }
+        String rut = securityUtils.getAuthenticatedRut();
 
         Usuario usuario = usuarioRepository.findById(rut)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con RUT: " + rut));
@@ -58,7 +52,9 @@ public class MetaAhorroService {
 
     @Transactional(readOnly = true)
     public List<MetaAhorroResponseDTO> obtenerMetasPorUsuario(String rut) {
-        securityUtils.validarPropietario(rut);
+        if (!usuarioRepository.existsById(rut)) {
+            throw new EntityNotFoundException("Usuario no encontrado con RUT: " + rut);
+        }
         return metaAhorroRepository.findByUsuarioRut(rut).stream()
                 .map(this::convertirADTO)
                 .collect(Collectors.toList());

@@ -8,19 +8,19 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    @Value("${app.cors.allowed-origins}")
+    @Value("${app.cors.allowed-origins:*}")
     private String[] allowedOrigins;
 
-    @Value("${app.cors.allowed-methods}")
+    @Value("${app.cors.allowed-methods:GET,POST,PUT,DELETE,PATCH,OPTIONS}")
     private String[] allowedMethods;
 
-    @Value("${app.cors.allowed-headers}")
+    @Value("${app.cors.allowed-headers:Authorization,Content-Type,X-Requested-With}")
     private String[] allowedHeaders;
 
-    @Value("${app.cors.allow-credentials}")
+    @Value("${app.cors.allow-credentials:false}")
     private boolean allowCredentials;
 
-    @Value("${app.cors.max-age}")
+    @Value("${app.cors.max-age:3600}")
     private long maxAge;
 
     @Override

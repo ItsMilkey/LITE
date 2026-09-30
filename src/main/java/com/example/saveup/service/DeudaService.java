@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class DeudaService {
@@ -38,13 +37,7 @@ public class DeudaService {
 
     @Transactional
     public DeudaResponseDTO crearDeuda(DeudaCreacionDTO dto) {
-        final String rut;
-        if (dto.getUsuarioRut() == null || dto.getUsuarioRut().isBlank()) {
-            rut = securityUtils.getAuthenticatedRut();
-        } else {
-            securityUtils.validarPropietario(dto.getUsuarioRut());
-            rut = dto.getUsuarioRut().trim();
-        }
+        String rut = securityUtils.getAuthenticatedRut();
 
         Usuario usuario = usuarioRepository.findById(rut)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con RUT: " + rut));
@@ -60,17 +53,16 @@ public class DeudaService {
         return convertirADeudaResponseDTO(deudaGuardada);
     }
 
+    /**
+     * Obtiene todas las deudas de un usuario con sus agregaciones calculadas en una única consulta JPQL
+     * optimizada, eliminando el problema de N+1 queries.
+     */
     @Transactional(readOnly = true)
     public List<DeudaResponseDTO> obtenerDeudasPorUsuario(String rut) {
-        securityUtils.validarPropietario(rut);
-
         if (!usuarioRepository.existsById(rut)) {
             throw new EntityNotFoundException("Usuario no encontrado con RUT: " + rut);
         }
-        List<Deuda> deudas = deudaRepository.findByUsuarioRut(rut);
-        return deudas.stream()
-                .map(this::convertirADeudaResponseDTO)
-                .collect(Collectors.toList());
+        return deudaRepository.findDeudasDTOByUsuarioRut(rut);
     }
 
     @Transactional
@@ -97,14 +89,14 @@ public class DeudaService {
         movimientoRepository.save(pago);
 
         // Verificar si la deuda está completamente pagada después del nuevo pago
-        double totalPagado = Math.abs(movimientoRepository.findByDeuda(deuda).stream().mapToDouble(Movimiento::getMonto).sum());
+        double totalPagado = Math.abs(deudaRepository.findTotalPagadoPorDeuda(deuda.getId()));
         if (totalPagado >= deuda.getMontoTotal()) {
             deuda.setEstado(EstadoDeuda.PAGADA);
         }
         Deuda deudaActualizada = deudaRepository.save(deuda);
         return convertirADeudaResponseDTO(deudaActualizada);
     }
-    
+
     @Transactional
     public DeudaResponseDTO editarDeuda(Long deudaId, DeudaCreacionDTO dto) {
         Deuda deuda = deudaRepository.findById(deudaId)
@@ -113,7 +105,7 @@ public class DeudaService {
         securityUtils.validarPropietario(deuda.getUsuario().getRut());
 
         Integer cuotasPagadas = deudaRepository.countPagosPorDeuda(deudaId);
-        if (cuotasPagadas > 0) {
+        if (cuotasPagadas != null && cuotasPagadas > 0) {
             throw new IllegalStateException("No se puede editar una deuda que ya tiene pagos registrados.");
         }
 
@@ -132,9 +124,9 @@ public class DeudaService {
                 .orElseThrow(() -> new EntityNotFoundException("Deuda no encontrada con ID: " + deudaId));
 
         securityUtils.validarPropietario(deuda.getUsuario().getRut());
-        
+
         if (deuda.getEstado() == EstadoDeuda.PAGADA) {
-             throw new IllegalStateException("No se puede cancelar una deuda que ya fue pagada.");
+            throw new IllegalStateException("No se puede cancelar una deuda que ya fue pagada.");
         }
 
         deuda.setEstado(EstadoDeuda.CANCELADA);
@@ -143,20 +135,20 @@ public class DeudaService {
     }
 
     private DeudaResponseDTO convertirADeudaResponseDTO(Deuda deuda) {
-        DeudaResponseDTO dto = new DeudaResponseDTO();
-        dto.setId(deuda.getId());
-        dto.setNombre(deuda.getNombre());
-        dto.setDescripcion(deuda.getDescripcion());
-        dto.setMontoTotal(deuda.getMontoTotal());
-        dto.setCantidadCuotas(deuda.getCantidadCuotas());
-        dto.setEstado(deuda.getEstado());
-        dto.setFechaCreacion(deuda.getFechaCreacion());
-
-        double montoPagadoAbsoluto = Math.abs(deudaRepository.findTotalPagadoPorDeuda(deuda.getId()));
-        dto.setMontoPagado(montoPagadoAbsoluto);
-        dto.setMontoRestante(deuda.getMontoTotal() - montoPagadoAbsoluto);
-        dto.setCuotasPagadas(deudaRepository.countPagosPorDeuda(deuda.getId()));
-
-        return dto;
+        return deudaRepository.findDeudaDTOById(deuda.getId())
+                .orElseGet(() -> {
+                    DeudaResponseDTO dto = new DeudaResponseDTO();
+                    dto.setId(deuda.getId());
+                    dto.setNombre(deuda.getNombre());
+                    dto.setDescripcion(deuda.getDescripcion());
+                    dto.setMontoTotal(deuda.getMontoTotal());
+                    dto.setCantidadCuotas(deuda.getCantidadCuotas());
+                    dto.setEstado(deuda.getEstado());
+                    dto.setFechaCreacion(deuda.getFechaCreacion());
+                    dto.setMontoPagado(0.0);
+                    dto.setMontoRestante(deuda.getMontoTotal());
+                    dto.setCuotasPagadas(0);
+                    return dto;
+                });
     }
 }

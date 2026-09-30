@@ -15,6 +15,7 @@ import com.example.saveup.repository.MetaAhorroRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.SecurityUtils;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,7 +66,7 @@ public class ConfiguracionPresupuestoController {
     @PostMapping("/me")
     @Transactional
     public ResponseEntity<ConfiguracionPresupuesto> guardarConfiguracionMe(
-            @RequestBody ConfiguracionPresupuestoRequestDTO request) {
+            @Valid @RequestBody ConfiguracionPresupuestoRequestDTO request) {
         String rut = securityUtils.getAuthenticatedRut();
         return guardarConfiguracionInterno(rut, request);
     }
@@ -78,41 +79,6 @@ public class ConfiguracionPresupuestoController {
             @RequestParam(required = false) Integer month,
             @RequestParam(required = false) Integer year) {
         String rut = securityUtils.getAuthenticatedRut();
-        return getEjecucionPresupuestoInterno(rut, month, year);
-    }
-
-    /**
-     * Endpoint retrocompatible con validación anti-IDOR.
-     */
-    @GetMapping("/usuario/{rut}")
-    public ResponseEntity<ConfiguracionPresupuesto> obtenerConfiguracion(@PathVariable String rut) {
-        securityUtils.validarPropietario(rut);
-        return repository.findByUsuarioRut(rut)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    /**
-     * Endpoint retrocompatible con validación anti-IDOR.
-     */
-    @PostMapping("/usuario/{rut}")
-    @Transactional
-    public ResponseEntity<ConfiguracionPresupuesto> guardarConfiguracion(
-            @PathVariable String rut,
-            @RequestBody ConfiguracionPresupuestoRequestDTO request) {
-        securityUtils.validarPropietario(rut);
-        return guardarConfiguracionInterno(rut, request);
-    }
-
-    /**
-     * Endpoint retrocompatible con validación anti-IDOR.
-     */
-    @GetMapping("/ejecucion/{rut}")
-    public ResponseEntity<EjecucionPresupuestoDTO> getEjecucionPresupuesto(
-            @PathVariable String rut,
-            @RequestParam(required = false) Integer month,
-            @RequestParam(required = false) Integer year) {
-        securityUtils.validarPropietario(rut);
         return getEjecucionPresupuestoInterno(rut, month, year);
     }
 
@@ -136,7 +102,8 @@ public class ConfiguracionPresupuestoController {
         config.setPorcentajeNecesidades(request.getPorcentajeNecesidades());
         config.setPorcentajeDeseos(request.getPorcentajeDeseos());
         config.setPorcentajeAhorro(request.getPorcentajeAhorro());
-        config.setActivo(request.getActivo());
+        config.setActivo(request.getActivo() != null ? request.getActivo() : true);
+        config.setAutomatizarAhorroEnMetas(request.getAutomatizarAhorroEnMetas() != null ? request.getAutomatizarAhorroEnMetas() : false);
 
         ConfiguracionPresupuesto savedConfig = repository.save(config);
 
@@ -189,6 +156,7 @@ public class ConfiguracionPresupuestoController {
 
         double gastoNecesidad = 0;
         double gastoDeseos = 0;
+        double ahorroRealizado = 0;
 
         for (Movimiento mv : movs) {
             boolean isExpense = mv.getTipoMovimiento() == TipoMovimiento.GASTO_GENERAL
@@ -201,6 +169,8 @@ public class ConfiguracionPresupuestoController {
                 } else if (tp == TipoPresupuesto.DESEO) {
                     gastoDeseos += Math.abs(mv.getMonto());
                 }
+            } else if (mv.getTipoMovimiento() == TipoMovimiento.ABONO_META) {
+                ahorroRealizado += Math.abs(mv.getMonto());
             }
         }
 
@@ -209,15 +179,20 @@ public class ConfiguracionPresupuestoController {
 
         Double pNeed = config.getPorcentajeNecesidades() != null ? config.getPorcentajeNecesidades() : 50.0;
         Double pWant = config.getPorcentajeDeseos() != null ? config.getPorcentajeDeseos() : 30.0;
+        Double pSave = config.getPorcentajeAhorro() != null ? config.getPorcentajeAhorro() : 20.0;
 
         dto.setPorcentajeNecesidadesConfigurado(pNeed);
         dto.setPorcentajeDeseosConfigurado(pWant);
+        dto.setPorcentajeAhorroConfigurado(pSave);
 
         dto.setPresupuestoNecesidades(totalIncome * pNeed / 100.0);
         dto.setPresupuestoDeseos(totalIncome * pWant / 100.0);
+        dto.setPresupuestoAhorro(totalIncome * pSave / 100.0);
 
         dto.setGastoNecesidades(gastoNecesidad);
         dto.setGastoDeseos(gastoDeseos);
+        dto.setAhorroRealizado(ahorroRealizado);
+        dto.setAutomatizarAhorroEnMetas(Boolean.TRUE.equals(config.getAutomatizarAhorroEnMetas()));
 
         return ResponseEntity.ok(dto);
     }

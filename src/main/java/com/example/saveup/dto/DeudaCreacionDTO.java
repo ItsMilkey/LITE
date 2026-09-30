@@ -20,7 +20,4 @@ public class DeudaCreacionDTO {
     @NotNull(message = "La cantidad de cuotas es obligatoria")
     @Positive(message = "La cantidad de cuotas debe ser un número positivo")
     private Integer cantidadCuotas;
-
-    // Opcional para soportar Implicit Context (se infiere del token JWT si viene vacío)
-    private String usuarioRut;
 }
