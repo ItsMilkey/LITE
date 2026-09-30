@@ -46,7 +46,7 @@ public class CsvReporteGenerator implements ReporteGenerator {
             csv.append(escapeSpecialCharacters(m.getDescripcion())).append(CSV_SEPARATOR);
 
             // Monto (Sin formato de moneda para facilitar cálculos en Excel, solo entero)
-            csv.append((int) m.getMonto()).append(LINE_SEPARATOR);
+            csv.append(m.getMonto().intValue()).append(LINE_SEPARATOR);
         }
 
         // Combinar BOM + Contenido

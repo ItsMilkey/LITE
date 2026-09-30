@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import java.math.BigDecimal;
 import java.util.Date;
 
 @Entity
@@ -19,8 +20,13 @@ public class Movimiento {
     @Column(name = "ID_MOVIMIENTO")
     private Long id;
 
-    @Column(name = "MONTO", nullable = false)
-    private double monto;
+    /**
+     * Monto de la transaccion. Positivo para ingresos/retiros; negativo para
+     * gastos, pagos de deudas y abonos a metas. Escala fija de 2 decimales
+     * con redondeo HALF_EVEN (bancario) para evitar imprecisiones IEEE 754.
+     */
+    @Column(name = "MONTO", nullable = false, precision = 19, scale = 2)
+    private BigDecimal monto;
 
     @Column(name = "DESCRIPCION", nullable = false, length = 100)
     private String descripcion;

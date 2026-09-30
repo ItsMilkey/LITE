@@ -59,7 +59,7 @@ class DeudaServiceTest {
         deuda = new Deuda();
         deuda.setId(1L);
         deuda.setNombre("Crédito Universitario");
-        deuda.setMontoTotal(100000.0);
+        deuda.setMontoTotal(new java.math.BigDecimal("100000.00"));
         deuda.setCantidadCuotas(10);
         deuda.setEstado(EstadoDeuda.PENDIENTE);
         deuda.setUsuario(usuario);
@@ -72,15 +72,15 @@ class DeudaServiceTest {
         DeudaCreacionDTO dto = new DeudaCreacionDTO();
         dto.setNombre("Crédito Universitario");
         dto.setDescripcion("Cuotas");
-        dto.setMontoTotal(100000.0);
+        dto.setMontoTotal(new java.math.BigDecimal("100000.00"));
         dto.setCantidadCuotas(10);
 
         when(securityUtils.getAuthenticatedRut()).thenReturn("11223344-5");
         when(usuarioRepository.findById("11223344-5")).thenReturn(Optional.of(usuario));
         when(deudaRepository.save(any(Deuda.class))).thenReturn(deuda);
 
-        DeudaResponseDTO response = new DeudaResponseDTO(1L, "Crédito Universitario", "Cuotas", 100000.0, 10,
-                EstadoDeuda.PENDIENTE, new Date(), 0.0, 0L);
+        DeudaResponseDTO response = new DeudaResponseDTO(1L, "Crédito Universitario", "Cuotas", new java.math.BigDecimal("100000.00"), 10,
+                EstadoDeuda.PENDIENTE, new Date(), java.math.BigDecimal.ZERO, 0L);
         when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(response));
 
         DeudaResponseDTO result = deudaService.crearDeuda(dto);
@@ -96,18 +96,18 @@ class DeudaServiceTest {
     void obtenerDeudasPorUsuario_ejecutaConsultaOptimizadaSinNPlusOne() {
         when(usuarioRepository.existsById("11223344-5")).thenReturn(true);
 
-        DeudaResponseDTO dto1 = new DeudaResponseDTO(1L, "Tarjeta Crédito", "Mastercard", 50000.0, 5,
-                EstadoDeuda.PENDIENTE, new Date(), -20000.0, 2L);
-        DeudaResponseDTO dto2 = new DeudaResponseDTO(2L, "Préstamo Auto", "Cuotas banco", 200000.0, 24,
-                EstadoDeuda.PENDIENTE, new Date(), -50000.0, 6L);
+        DeudaResponseDTO dto1 = new DeudaResponseDTO(1L, "Tarjeta Crédito", "Mastercard", new java.math.BigDecimal("50000.00"), 5,
+                EstadoDeuda.PENDIENTE, new Date(), new java.math.BigDecimal("-20000.00"), 2L);
+        DeudaResponseDTO dto2 = new DeudaResponseDTO(2L, "Préstamo Auto", "Cuotas banco", new java.math.BigDecimal("200000.00"), 24,
+                EstadoDeuda.PENDIENTE, new Date(), new java.math.BigDecimal("-50000.00"), 6L);
 
         when(deudaRepository.findDeudasDTOByUsuarioRut("11223344-5")).thenReturn(List.of(dto1, dto2));
 
         List<DeudaResponseDTO> result = deudaService.obtenerDeudasPorUsuario("11223344-5");
 
         assertEquals(2, result.size());
-        assertEquals(20000.0, result.get(0).getMontoPagado());
-        assertEquals(30000.0, result.get(0).getMontoRestante());
+        assertEquals(0, new java.math.BigDecimal("20000.00").compareTo(result.get(0).getMontoPagado()));
+        assertEquals(0, new java.math.BigDecimal("30000.00").compareTo(result.get(0).getMontoRestante()));
         assertEquals(2, result.get(0).getCuotasPagadas());
 
         // Verificamos que se llamó a la proyección directa y NO a consultas individuales por cada deuda
@@ -120,11 +120,11 @@ class DeudaServiceTest {
     @DisplayName("DeudaResponseDTO calcula correctamente montoPagado, montoRestante y cuotasPagadas")
     void deudaResponseDTO_calculaCamposAgregados() {
         DeudaResponseDTO dto = new DeudaResponseDTO(
-                5L, "Crédito", "Desc", 100000.0, 10, EstadoDeuda.PENDIENTE, new Date(), -40000.0, 4L
+                5L, "Crédito", "Desc", new java.math.BigDecimal("100000.00"), 10, EstadoDeuda.PENDIENTE, new Date(), new java.math.BigDecimal("-40000.00"), 4L
         );
 
-        assertEquals(40000.0, dto.getMontoPagado());
-        assertEquals(60000.0, dto.getMontoRestante());
+        assertEquals(0, new java.math.BigDecimal("40000.00").compareTo(dto.getMontoPagado()));
+        assertEquals(0, new java.math.BigDecimal("60000.00").compareTo(dto.getMontoRestante()));
         assertEquals(4, dto.getCuotasPagadas());
     }
 
@@ -132,18 +132,18 @@ class DeudaServiceTest {
     @DisplayName("registrarPago actualiza la deuda a PAGADA si cubre el total")
     void registrarPago_saldoTotal_marcaDeudaPagada() {
         PagoDeudaDTO pagoDTO = new PagoDeudaDTO();
-        pagoDTO.setMonto(100000.0);
+        pagoDTO.setMonto(new java.math.BigDecimal("100000.00"));
         pagoDTO.setDescripcion("Pago total");
 
         Categoria catDeudas = new Categoria(1L, "Deudas", "ic_payment", "#795548", TipoPresupuesto.NECESIDAD);
 
         when(deudaRepository.findById(1L)).thenReturn(Optional.of(deuda));
         when(categoriaRepository.findByNombre("Deudas")).thenReturn(Optional.of(catDeudas));
-        when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(-100000.0);
+        when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(new java.math.BigDecimal("-100000.00"));
         when(deudaRepository.save(any(Deuda.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        DeudaResponseDTO dtoEsperado = new DeudaResponseDTO(1L, "Crédito Universitario", "Cuotas", 100000.0, 10,
-                EstadoDeuda.PAGADA, new Date(), -100000.0, 1L);
+        DeudaResponseDTO dtoEsperado = new DeudaResponseDTO(1L, "Crédito Universitario", "Cuotas", new java.math.BigDecimal("100000.00"), 10,
+                EstadoDeuda.PAGADA, new Date(), new java.math.BigDecimal("-100000.00"), 1L);
         when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(dtoEsperado));
 
         DeudaResponseDTO result = deudaService.registrarPago(1L, pagoDTO);

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import java.math.BigDecimal;
 import java.util.Date;
 
 @Entity
@@ -23,11 +24,11 @@ public class MetaAhorro {
 
     // Nullable para permitir la meta por defecto "Ahorros" que no tiene un objetivo
     // fijo.
-    @Column(name = "MONTO_OBJETIVO")
-    private Double montoObjetivo;
+    @Column(name = "MONTO_OBJETIVO", precision = 19, scale = 2)
+    private BigDecimal montoObjetivo;
 
-    @Column(name = "MONTO_ACTUAL") // Nullable to support existing data
-    private Double montoActual = 0.0;
+    @Column(name = "MONTO_ACTUAL", precision = 19, scale = 2) // Nullable to support existing data
+    private BigDecimal montoActual = BigDecimal.ZERO;
 
     // Nullable para la meta por defecto.
     @Column(name = "FECHA_LIMITE")
@@ -38,7 +39,7 @@ public class MetaAhorro {
     @JoinColumn(name = "USUARIO_ID", nullable = false)
     private Usuario usuario;
 
-    public Double getMontoActual() {
-        return montoActual != null ? montoActual : 0.0;
+    public BigDecimal getMontoActual() {
+        return montoActual != null ? montoActual : BigDecimal.ZERO;
     }
 }

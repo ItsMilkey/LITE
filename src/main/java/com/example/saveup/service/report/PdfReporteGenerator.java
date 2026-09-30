@@ -104,7 +104,7 @@ public class PdfReporteGenerator implements ReporteGenerator {
                 // Monto con color: Verde para Ingresos/RetirosAhorro, Rojo para Gastos/Abonos
                 Color amountColor = isIngreso ? new Color(34, 139, 34) : new Color(220, 20, 60);
 
-                PdfPCell amountCell = new PdfPCell(new Phrase(currencyFormat.format(Math.abs(m.getMonto())),
+                PdfPCell amountCell = new PdfPCell(new Phrase(currencyFormat.format(m.getMonto().abs()),
                         FontFactory.getFont(FontFactory.HELVETICA, 10, amountColor)));
                 amountCell.setBackgroundColor(bgColor);
                 amountCell.setPadding(6f);

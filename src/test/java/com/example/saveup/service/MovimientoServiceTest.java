@@ -63,7 +63,7 @@ class MovimientoServiceTest {
     @DisplayName("registrarMovimiento con ingreso y aplicarPresupuesto delega Smart-Split a SmartSplitProcessor")
     void registrarMovimiento_conSmartSplit_delegaAProcesador() {
         MovimientoRegistroDTO dto = new MovimientoRegistroDTO();
-        dto.setMonto(500000.0);
+        dto.setMonto(new java.math.BigDecimal("500000.00"));
         dto.setDescripcion("Sueldo mensual");
         dto.setTipoMovimiento(TipoMovimiento.INGRESO_GENERAL);
         dto.setAplicarPresupuesto(true);
@@ -79,11 +79,11 @@ class MovimientoServiceTest {
         MovimientoResponseDTO response = movimientoService.registrarMovimiento(dto);
 
         assertNotNull(response);
-        assertEquals(500000.0, response.getMonto());
+        assertEquals(0, new java.math.BigDecimal("500000.00").compareTo(response.getMonto()));
         assertEquals("Sueldo mensual", response.getDescripcion());
 
         // Verificamos que se delegó la distribución al procesador de dominio
-        verify(smartSplitProcessor, times(1)).procesarDistribucion(usuario, 500000.0);
+        verify(smartSplitProcessor, times(1)).procesarDistribucion(usuario, new java.math.BigDecimal("500000.00"));
         verify(securityUtils).getAuthenticatedRut();
     }
 
@@ -91,7 +91,7 @@ class MovimientoServiceTest {
     @DisplayName("registrarMovimiento con gasto NO invoca SmartSplitProcessor")
     void registrarMovimiento_conGasto_noInvocaSmartSplit() {
         MovimientoRegistroDTO dto = new MovimientoRegistroDTO();
-        dto.setMonto(-35000.0);
+        dto.setMonto(new java.math.BigDecimal("-35000.00"));
         dto.setDescripcion("Compra supermercado");
         dto.setTipoMovimiento(TipoMovimiento.GASTO_GENERAL);
         dto.setAplicarPresupuesto(true); // Aunque venga true, es un gasto

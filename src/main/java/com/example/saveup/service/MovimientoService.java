@@ -75,9 +75,9 @@ public class MovimientoService {
             securityUtils.validarPropietario(deuda.getUsuario().getRut());
             movimiento.setDeuda(deuda);
 
-            double nuevoTotalPagado = Math.abs(deudaRepository.findTotalPagadoPorDeuda(deuda.getId()))
-                    + Math.abs(dto.getMonto());
-            if (nuevoTotalPagado >= deuda.getMontoTotal()) {
+            java.math.BigDecimal nuevoTotalPagado = deudaRepository.findTotalPagadoPorDeuda(deuda.getId()).abs()
+                    .add(dto.getMonto().abs());
+            if (nuevoTotalPagado.compareTo(deuda.getMontoTotal()) >= 0) {
                 deuda.setEstado(EstadoDeuda.PAGADA);
                 deudaRepository.save(deuda);
             }
@@ -134,8 +134,8 @@ public class MovimientoService {
         if (!usuarioRepository.existsById(rut)) {
             throw new EntityNotFoundException("Usuario no encontrado con RUT: " + rut);
         }
-        Double saldo = movimientoRepository.findSaldoByUsuarioRut(rut);
-        return saldo == null ? 0.0 : saldo;
+        java.math.BigDecimal saldo = movimientoRepository.findSaldoByUsuarioRut(rut);
+        return saldo == null ? 0.0 : saldo.doubleValue();
     }
 
     /**

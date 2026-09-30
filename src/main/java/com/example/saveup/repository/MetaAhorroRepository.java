@@ -12,6 +12,6 @@ public interface MetaAhorroRepository extends JpaRepository<MetaAhorro, Long> {
 
     List<MetaAhorro> findByUsuarioRut(String rut);
 
-    @Query("SELECT COALESCE(SUM(m.monto), 0.0) FROM Movimiento m WHERE m.metaAhorro.id = :metaId")
-    Double findTotalAhorradoByMetaId(@Param("metaId") Long metaId);
+    @Query("SELECT COALESCE(SUM(m.monto), 0) FROM Movimiento m WHERE m.metaAhorro.id = :metaId")
+    java.math.BigDecimal findTotalAhorradoByMetaId(@Param("metaId") Long metaId);
 }

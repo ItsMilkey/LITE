@@ -4,12 +4,13 @@ import com.example.saveup.model.enums.TipoMovimiento;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import java.math.BigDecimal;
 
 @Data
 public class MovimientoRegistroDTO {
 
     @NotNull(message = "El monto no puede ser nulo")
-    private Double monto;
+    private BigDecimal monto;
 
     @NotBlank(message = "La descripción es obligatoria")
     private String descripcion;

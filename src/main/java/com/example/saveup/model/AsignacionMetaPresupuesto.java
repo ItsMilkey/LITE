@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "ASIGNACION_META_PRESUPUESTO")
@@ -25,6 +26,10 @@ public class AsignacionMetaPresupuesto {
     @JoinColumn(name = "META_ID", nullable = false)
     private MetaAhorro meta;
 
-    @Column(name = "PORCENTAJE_ASIGNACION", nullable = false)
-    private Double porcentajeAsignacion;
+    /**
+     * Fraccion porcentual del total de ahorro a derivar a esta meta (0.0 - 100.0).
+     * Precision 5, escala 2 (ej: 99.99%).
+     */
+    @Column(name = "PORCENTAJE_ASIGNACION", nullable = false, precision = 5, scale = 2)
+    private BigDecimal porcentajeAsignacion;
 }

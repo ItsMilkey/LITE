@@ -56,8 +56,8 @@ public class SmartSplitProcessor {
      * @param montoIngreso Monto total del ingreso percibido.
      */
     @Transactional
-    public void procesarDistribucion(Usuario usuario, double montoIngreso) {
-        if (usuario == null || montoIngreso <= 0) {
+    public void procesarDistribucion(Usuario usuario, java.math.BigDecimal montoIngreso) {
+        if (usuario == null || montoIngreso.compareTo(java.math.BigDecimal.ZERO) <= 0) {
             return;
         }
 
@@ -69,10 +69,11 @@ public class SmartSplitProcessor {
             if (Boolean.TRUE.equals(config.getActivo())
                     && Boolean.TRUE.equals(config.getAutomatizarAhorroEnMetas())
                     && config.getPorcentajeAhorro() != null
-                    && config.getPorcentajeAhorro() > 0) {
+                    && config.getPorcentajeAhorro().compareTo(java.math.BigDecimal.ZERO) > 0) {
 
                 // 1. Calcular Monto para Ahorro general según configuración
-                double montoAhorro = montoIngreso * (config.getPorcentajeAhorro() / 100.0);
+                java.math.BigDecimal divisor = new java.math.BigDecimal("100");
+                java.math.BigDecimal montoAhorro = montoIngreso.multiply(config.getPorcentajeAhorro()).divide(divisor, 2, java.math.RoundingMode.HALF_EVEN);
 
                 // 2. Obtener las asignaciones porcentuales hacia cada meta
                 List<AsignacionMetaPresupuesto> asignaciones = asignacionMetaPresupuestoRepository
@@ -86,15 +87,15 @@ public class SmartSplitProcessor {
                 Categoria catAhorro = resolverCategoriaAhorro();
 
                 for (AsignacionMetaPresupuesto asignacion : asignaciones) {
-                    if (asignacion.getPorcentajeAsignacion() != null && asignacion.getPorcentajeAsignacion() > 0) {
-                        double montoAbono = montoAhorro * (asignacion.getPorcentajeAsignacion() / 100.0);
-                        if (montoAbono > 0 && asignacion.getMeta() != null) {
+                    if (asignacion.getPorcentajeAsignacion() != null && asignacion.getPorcentajeAsignacion().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                        java.math.BigDecimal montoAbono = montoAhorro.multiply(asignacion.getPorcentajeAsignacion()).divide(divisor, 2, java.math.RoundingMode.HALF_EVEN);
+                        if (montoAbono.compareTo(java.math.BigDecimal.ZERO) > 0 && asignacion.getMeta() != null) {
                             MetaAhorro meta = asignacion.getMeta();
 
                             // Crear Movimiento de Abono a Meta (egreso contable del saldo corriente)
                             Movimiento abonoMovimiento = new Movimiento();
                             abonoMovimiento.setUsuario(usuario);
-                            abonoMovimiento.setMonto(-montoAbono);
+                            abonoMovimiento.setMonto(montoAbono.negate());
                             abonoMovimiento.setDescripcion("Abono Auto: " + meta.getNombre());
                             abonoMovimiento.setTipoMovimiento(TipoMovimiento.ABONO_META);
                             abonoMovimiento.setMetaAhorro(meta);
@@ -103,7 +104,7 @@ public class SmartSplitProcessor {
                             }
 
                             // Actualizar saldo acumulado en la Meta
-                            meta.setMontoActual(meta.getMontoActual() + montoAbono);
+                            meta.setMontoActual(meta.getMontoActual().add(montoAbono));
                             metaAhorroRepository.save(meta);
 
                             // Guardar sub-movimiento

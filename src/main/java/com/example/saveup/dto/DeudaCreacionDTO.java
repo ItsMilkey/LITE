@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
+import java.math.BigDecimal;
 
 @Data
 public class DeudaCreacionDTO {
@@ -15,7 +16,7 @@ public class DeudaCreacionDTO {
 
     @NotNull(message = "El monto total es obligatorio")
     @Positive(message = "El monto total debe ser un número positivo")
-    private Double montoTotal;
+    private BigDecimal montoTotal;
 
     @NotNull(message = "La cantidad de cuotas es obligatoria")
     @Positive(message = "La cantidad de cuotas debe ser un número positivo")

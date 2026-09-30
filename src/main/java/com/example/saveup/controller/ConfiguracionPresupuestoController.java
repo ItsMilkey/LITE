@@ -113,7 +113,7 @@ public class ConfiguracionPresupuestoController {
             asignacionRepository.deleteAll(currentAsignaciones);
 
             for (AsignacionPresupuestoDTO asignacionDTO : request.getAsignaciones()) {
-                if (asignacionDTO.getMetaId() != null && asignacionDTO.getPorcentaje() > 0) {
+                if (asignacionDTO.getMetaId() != null && asignacionDTO.getPorcentaje() != null && asignacionDTO.getPorcentaje().compareTo(java.math.BigDecimal.ZERO) > 0) {
                     metaRepository.findById(asignacionDTO.getMetaId()).ifPresent(meta -> {
                         // Asegurar que la meta pertenezca al usuario
                         securityUtils.validarPropietario(meta.getUsuario().getRut());
@@ -148,15 +148,15 @@ public class ConfiguracionPresupuestoController {
 
         List<Movimiento> movs = movimientoRepository.findByUsuarioRutAndFechaBetween(rut, start, end);
 
-        double totalIncome = movs.stream()
-                .filter(mv -> mv.getMonto() > 0
+        java.math.BigDecimal totalIncome = movs.stream()
+                .filter(mv -> mv.getMonto().compareTo(java.math.BigDecimal.ZERO) > 0
                         && mv.getTipoMovimiento() == TipoMovimiento.INGRESO_GENERAL)
-                .mapToDouble(Movimiento::getMonto)
-                .sum();
+                .map(Movimiento::getMonto)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
-        double gastoNecesidad = 0;
-        double gastoDeseos = 0;
-        double ahorroRealizado = 0;
+        java.math.BigDecimal gastoNecesidad = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal gastoDeseos = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal ahorroRealizado = java.math.BigDecimal.ZERO;
 
         for (Movimiento mv : movs) {
             boolean isExpense = mv.getTipoMovimiento() == TipoMovimiento.GASTO_GENERAL
@@ -165,29 +165,30 @@ public class ConfiguracionPresupuestoController {
             if (isExpense && mv.getCategoria() != null) {
                 TipoPresupuesto tp = mv.getCategoria().getTipoPresupuesto();
                 if (tp == TipoPresupuesto.NECESIDAD) {
-                    gastoNecesidad += Math.abs(mv.getMonto());
+                    gastoNecesidad = gastoNecesidad.add(mv.getMonto().abs());
                 } else if (tp == TipoPresupuesto.DESEO) {
-                    gastoDeseos += Math.abs(mv.getMonto());
+                    gastoDeseos = gastoDeseos.add(mv.getMonto().abs());
                 }
             } else if (mv.getTipoMovimiento() == TipoMovimiento.ABONO_META) {
-                ahorroRealizado += Math.abs(mv.getMonto());
+                ahorroRealizado = ahorroRealizado.add(mv.getMonto().abs());
             }
         }
 
         EjecucionPresupuestoDTO dto = new EjecucionPresupuestoDTO();
         dto.setTotalIngresos(totalIncome);
 
-        Double pNeed = config.getPorcentajeNecesidades() != null ? config.getPorcentajeNecesidades() : 50.0;
-        Double pWant = config.getPorcentajeDeseos() != null ? config.getPorcentajeDeseos() : 30.0;
-        Double pSave = config.getPorcentajeAhorro() != null ? config.getPorcentajeAhorro() : 20.0;
+        java.math.BigDecimal pNeed = config.getPorcentajeNecesidades() != null ? config.getPorcentajeNecesidades() : new java.math.BigDecimal("50.00");
+        java.math.BigDecimal pWant = config.getPorcentajeDeseos() != null ? config.getPorcentajeDeseos() : new java.math.BigDecimal("30.00");
+        java.math.BigDecimal pSave = config.getPorcentajeAhorro() != null ? config.getPorcentajeAhorro() : new java.math.BigDecimal("20.00");
 
         dto.setPorcentajeNecesidadesConfigurado(pNeed);
         dto.setPorcentajeDeseosConfigurado(pWant);
         dto.setPorcentajeAhorroConfigurado(pSave);
 
-        dto.setPresupuestoNecesidades(totalIncome * pNeed / 100.0);
-        dto.setPresupuestoDeseos(totalIncome * pWant / 100.0);
-        dto.setPresupuestoAhorro(totalIncome * pSave / 100.0);
+        java.math.BigDecimal cien = new java.math.BigDecimal("100");
+        dto.setPresupuestoNecesidades(totalIncome.multiply(pNeed).divide(cien, 2, java.math.RoundingMode.HALF_EVEN));
+        dto.setPresupuestoDeseos(totalIncome.multiply(pWant).divide(cien, 2, java.math.RoundingMode.HALF_EVEN));
+        dto.setPresupuestoAhorro(totalIncome.multiply(pSave).divide(cien, 2, java.math.RoundingMode.HALF_EVEN));
 
         dto.setGastoNecesidades(gastoNecesidad);
         dto.setGastoDeseos(gastoDeseos);

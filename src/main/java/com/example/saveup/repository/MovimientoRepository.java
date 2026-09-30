@@ -21,7 +21,7 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
     Page<Movimiento> findByUsuarioRutOrderByFechaDesc(String rut, Pageable pageable);
 
     @Query("SELECT SUM(m.monto) FROM Movimiento m WHERE m.usuario.rut = :rut")
-    Double findSaldoByUsuarioRut(@Param("rut") String rut);
+    java.math.BigDecimal findSaldoByUsuarioRut(@Param("rut") String rut);
 
     List<Movimiento> findByDeuda(Deuda deuda);
 

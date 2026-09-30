@@ -82,15 +82,15 @@ public class DeudaService {
         Movimiento pago = new Movimiento();
         pago.setUsuario(deuda.getUsuario());
         pago.setDeuda(deuda);
-        pago.setMonto(pagoDTO.getMonto() * -1); // Los pagos son egresos, por lo tanto negativos
+        pago.setMonto(pagoDTO.getMonto().negate()); // Los pagos son egresos, por lo tanto negativos
         pago.setDescripcion(pagoDTO.getDescripcion());
         pago.setTipoMovimiento(TipoMovimiento.PAGO_DEUDA);
         pago.setCategoria(categoriaDeudas);
         movimientoRepository.save(pago);
 
         // Verificar si la deuda está completamente pagada después del nuevo pago
-        double totalPagado = Math.abs(deudaRepository.findTotalPagadoPorDeuda(deuda.getId()));
-        if (totalPagado >= deuda.getMontoTotal()) {
+        java.math.BigDecimal totalPagado = deudaRepository.findTotalPagadoPorDeuda(deuda.getId()).abs();
+        if (totalPagado.compareTo(deuda.getMontoTotal()) >= 0) {
             deuda.setEstado(EstadoDeuda.PAGADA);
         }
         Deuda deudaActualizada = deudaRepository.save(deuda);
@@ -145,7 +145,7 @@ public class DeudaService {
                     dto.setCantidadCuotas(deuda.getCantidadCuotas());
                     dto.setEstado(deuda.getEstado());
                     dto.setFechaCreacion(deuda.getFechaCreacion());
-                    dto.setMontoPagado(0.0);
+                    dto.setMontoPagado(java.math.BigDecimal.ZERO);
                     dto.setMontoRestante(deuda.getMontoTotal());
                     dto.setCuotasPagadas(0);
                     return dto;

@@ -3,6 +3,7 @@ package com.example.saveup.model;
 import com.example.saveup.model.enums.EstadoDeuda;
 import jakarta.persistence.*;
 import lombok.Data;
+import java.math.BigDecimal;
 import java.util.Date;
 
 @Entity
@@ -21,8 +22,11 @@ public class Deuda {
     @Column(name = "DESCRIPCION", length = 255)
     private String descripcion;
 
-    @Column(name = "MONTO_TOTAL", nullable = false)
-    private double montoTotal;
+    /**
+     * Monto total comprometido de la deuda. Precision 19, escala 2, redondeo HALF_EVEN.
+     */
+    @Column(name = "MONTO_TOTAL", nullable = false, precision = 19, scale = 2)
+    private BigDecimal montoTotal;
 
     @Column(name = "CANTIDAD_CUOTAS", nullable = false)
     private int cantidadCuotas;

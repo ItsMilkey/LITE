@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "CONFIGURACION_PRESUPUESTO")
@@ -21,14 +22,14 @@ public class ConfiguracionPresupuesto {
     @JoinColumn(name = "USUARIO_ID", referencedColumnName = "ID_USUARIO", nullable = false)
     private Usuario usuario;
 
-    @Column(name = "PORCENTAJE_NECESIDADES", nullable = false)
-    private Double porcentajeNecesidades;
+    @Column(name = "PORCENTAJE_NECESIDADES", nullable = false, precision = 5, scale = 2)
+    private BigDecimal porcentajeNecesidades;
 
-    @Column(name = "PORCENTAJE_DESEOS", nullable = false)
-    private Double porcentajeDeseos;
+    @Column(name = "PORCENTAJE_DESEOS", nullable = false, precision = 5, scale = 2)
+    private BigDecimal porcentajeDeseos;
 
-    @Column(name = "PORCENTAJE_AHORRO", nullable = false)
-    private Double porcentajeAhorro;
+    @Column(name = "PORCENTAJE_AHORRO", nullable = false, precision = 5, scale = 2)
+    private BigDecimal porcentajeAhorro;
 
     @Column(name = "ACTIVO", nullable = false)
     private Boolean activo = true;

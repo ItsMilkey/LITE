@@ -3,24 +3,25 @@ package com.example.saveup.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class EjecucionPresupuestoDTO {
-    private Double presupuestoNecesidades; // (Ingresos * % Necesidades)
-    private Double gastoNecesidades; // Suma gastos tipo NECESIDAD
+    private BigDecimal presupuestoNecesidades; // (Ingresos * % Necesidades)
+    private BigDecimal gastoNecesidades; // Suma gastos tipo NECESIDAD
 
-    private Double presupuestoDeseos; // (Ingresos * % Deseos)
-    private Double gastoDeseos; // Suma gastos tipo DESEO
+    private BigDecimal presupuestoDeseos; // (Ingresos * % Deseos)
+    private BigDecimal gastoDeseos; // Suma gastos tipo DESEO
 
-    private Double presupuestoAhorro; // (Ingresos * % Ahorro)
-    private Double ahorroRealizado; // Suma de egresos hacia metas (ABONO_META)
+    private BigDecimal presupuestoAhorro; // (Ingresos * % Ahorro)
+    private BigDecimal ahorroRealizado; // Suma de egresos hacia metas (ABONO_META)
 
     // Metadata
-    private Double totalIngresos;
-    private Double porcentajeNecesidadesConfigurado;
-    private Double porcentajeDeseosConfigurado;
-    private Double porcentajeAhorroConfigurado;
+    private BigDecimal totalIngresos;
+    private BigDecimal porcentajeNecesidadesConfigurado;
+    private BigDecimal porcentajeDeseosConfigurado;
+    private BigDecimal porcentajeAhorroConfigurado;
     private Boolean automatizarAhorroEnMetas;
 }

@@ -71,7 +71,7 @@ public class MetaAhorroService {
         abono.setUsuario(meta.getUsuario());
         abono.setMetaAhorro(meta);
         abono.setTipoMovimiento(TipoMovimiento.ABONO_META);
-        abono.setMonto(dto.getMonto() * -1); // El dinero "sale" del saldo principal
+        abono.setMonto(dto.getMonto().negate()); // El dinero "sale" del saldo principal
         abono.setDescripcion(dto.getDescripcion());
 
         // ASIGNAR CATEGORÍA AHORRO
@@ -80,7 +80,7 @@ public class MetaAhorroService {
         movimientoRepository.save(abono);
 
         // Update Meta Amount
-        meta.setMontoActual(meta.getMontoActual() + dto.getMonto());
+        meta.setMontoActual(meta.getMontoActual().add(dto.getMonto()));
         metaAhorroRepository.save(meta);
 
         return convertirADTO(meta);
@@ -93,8 +93,8 @@ public class MetaAhorroService {
 
         securityUtils.validarPropietario(meta.getUsuario().getRut());
 
-        double totalAhorrado = Math.abs(metaAhorroRepository.findTotalAhorradoByMetaId(metaId));
-        if (dto.getMonto() > totalAhorrado) {
+        java.math.BigDecimal totalAhorrado = metaAhorroRepository.findTotalAhorradoByMetaId(metaId).abs();
+        if (dto.getMonto().compareTo(totalAhorrado) > 0) {
             throw new IllegalStateException("El monto a retirar no puede ser mayor al total ahorrado.");
         }
 
@@ -111,7 +111,7 @@ public class MetaAhorroService {
         movimientoRepository.save(retiro);
 
         // Update Meta Amount
-        meta.setMontoActual(meta.getMontoActual() - dto.getMonto());
+        meta.setMontoActual(meta.getMontoActual().subtract(dto.getMonto()));
         metaAhorroRepository.save(meta);
 
         return convertirADTO(meta);
@@ -129,9 +129,9 @@ public class MetaAhorroService {
             throw new IllegalStateException("La meta por defecto 'Ahorros' no se puede eliminar.");
         }
 
-        double totalAhorrado = Math.abs(metaAhorroRepository.findTotalAhorradoByMetaId(metaId));
+        java.math.BigDecimal totalAhorrado = metaAhorroRepository.findTotalAhorradoByMetaId(metaId).abs();
 
-        if (totalAhorrado > 0) {
+        if (totalAhorrado.compareTo(java.math.BigDecimal.ZERO) > 0) {
             // Devolver el dinero al saldo principal
             Movimiento devolucion = new Movimiento();
             devolucion.setUsuario(meta.getUsuario());

@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -18,17 +19,17 @@ public class ConfiguracionPresupuestoRequestDTO {
     @NotNull(message = "El porcentaje de necesidades es obligatorio")
     @DecimalMin(value = "0.0", message = "El porcentaje de necesidades debe ser mayor o igual a 0")
     @DecimalMax(value = "100.0", message = "El porcentaje de necesidades no puede exceder 100")
-    private Double porcentajeNecesidades;
+    private BigDecimal porcentajeNecesidades;
 
     @NotNull(message = "El porcentaje de deseos es obligatorio")
     @DecimalMin(value = "0.0", message = "El porcentaje de deseos debe ser mayor o igual a 0")
     @DecimalMax(value = "100.0", message = "El porcentaje de deseos no puede exceder 100")
-    private Double porcentajeDeseos;
+    private BigDecimal porcentajeDeseos;
 
     @NotNull(message = "El porcentaje de ahorro es obligatorio")
     @DecimalMin(value = "0.0", message = "El porcentaje de ahorro debe ser mayor o igual a 0")
     @DecimalMax(value = "100.0", message = "El porcentaje de ahorro no puede exceder 100")
-    private Double porcentajeAhorro;
+    private BigDecimal porcentajeAhorro;
 
     private Boolean activo = true;
 

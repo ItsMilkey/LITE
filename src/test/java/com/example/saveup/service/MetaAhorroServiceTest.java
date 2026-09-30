@@ -58,8 +58,8 @@ class MetaAhorroServiceTest {
         meta = new MetaAhorro();
         meta.setId(1L);
         meta.setNombre("Fondo de emergencia");
-        meta.setMontoObjetivo(500000.0);
-        meta.setMontoActual(100000.0);
+        meta.setMontoObjetivo(new java.math.BigDecimal("500000.00"));
+        meta.setMontoActual(new java.math.BigDecimal("100000.00"));
         meta.setFechaLimite(new Date());
         meta.setUsuario(usuario);
     }
@@ -69,7 +69,7 @@ class MetaAhorroServiceTest {
     void crearMeta_asignaRutAutenticado() {
         MetaAhorroCreacionDTO dto = new MetaAhorroCreacionDTO();
         dto.setNombre("Fondo de emergencia");
-        dto.setMontoObjetivo(500000.0);
+        dto.setMontoObjetivo(new java.math.BigDecimal("500000.00"));
         dto.setFechaLimite(new Date());
 
         when(securityUtils.getAuthenticatedRut()).thenReturn("12345678-9");
@@ -92,7 +92,7 @@ class MetaAhorroServiceTest {
     @DisplayName("realizarAbono valida propiedad de la meta y registra movimiento negativo en saldo corriente")
     void realizarAbono_validaPropietarioYGuardaMovimiento() {
         AbonoRetiroDTO dto = new AbonoRetiroDTO();
-        dto.setMonto(50000.0);
+        dto.setMonto(new java.math.BigDecimal("50000.00"));
         dto.setDescripcion("Abono manual");
 
         Categoria catAhorro = new Categoria(1L, "Ahorro", "ic_savings", "#3F51B5", TipoPresupuesto.AHORRO);
@@ -104,7 +104,7 @@ class MetaAhorroServiceTest {
         MetaAhorroResponseDTO response = metaAhorroService.realizarAbono(1L, dto);
 
         assertNotNull(response);
-        assertEquals(150000.0, meta.getMontoActual());
+        assertEquals(0, new java.math.BigDecimal("150000.00").compareTo(meta.getMontoActual()));
         verify(securityUtils).validarPropietario(usuario.getRut());
         verify(movimientoRepository).save(any(Movimiento.class));
     }
