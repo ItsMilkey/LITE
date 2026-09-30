@@ -179,7 +179,7 @@ Campos:
 Representa cada transaccion financiera realizada por el usuario.
 Campos:
 - id (Long, PK, Auto-incremental IDENTITY): Identificador unico de transaccion.
-- monto (double, NOT NULL): Cantidad monetaria. Positiva para ingresos y retiros 
+- monto (BigDecimal, NOT NULL): Cantidad monetaria. Positiva para ingresos y retiros 
   de metas; negativa para gastos, pagos de deudas y abonos a metas.
 - descripcion (String, NOT NULL, length=100): Detalle descriptivo del movimiento.
 - fecha (Date, NOT NULL, updatable=false): Marca de tiempo del movimiento.
@@ -197,13 +197,13 @@ Objetivo de ahorro financiero del usuario.
 Campos:
 - id (Long, PK, Auto-incremental IDENTITY): Identificador unico de la meta.
 - nombre (String, NOT NULL, length=100): Titulo o motivo (ej. "Vacaciones").
-- montoObjetivo (Double, Nullable): Monto final deseado. Es nulo en la meta 
+- montoObjetivo (BigDecimal, Nullable): Monto final deseado. Es nulo en la meta 
   por defecto "Ahorros".
-- montoActual (Double, Default 0.0): Monto total acumulado en la meta.
+- montoActual (BigDecimal, Default 0.00): Monto total acumulado en la meta.
 - fechaLimite (Date, Nullable): Fecha estimada de cumplimiento.
 - usuario (ManyToOne, NOT NULL, Lazy): Propietario de la meta.
 Metodo auxiliar:
-- getMontoActual(): Retorna montoActual != null ? montoActual : 0.0.
+- getMontoActual(): Retorna montoActual != null ? montoActual : BigDecimal.ZERO.
 
 3.5. ENTIDAD DEUDA (Tabla: DEUDA)
 --------------------------------------------------------------------------------
@@ -212,7 +212,7 @@ Campos:
 - id (Long, PK, Auto-incremental IDENTITY): Identificador de la deuda.
 - nombre (String, NOT NULL, length=100): Titulo (ej. "Credito de Consumo").
 - descripcion (String, length=255, Nullable): Informacion adicional.
-- montoTotal (double, NOT NULL): Monto global comprometido a pagar.
+- montoTotal (BigDecimal, NOT NULL): Monto global comprometido a pagar.
 - cantidadCuotas (int, NOT NULL): Total de cuotas pactadas.
 - estado (Enum EstadoDeuda, NOT NULL): PENDIENTE, PAGADA o CANCELADA.
 - fechaCreacion (Date, NOT NULL, updatable=false): Fecha de ingreso de la deuda.
@@ -228,9 +228,9 @@ Deseos / Ahorro); la ejecucion fisica de abonos automaticos a metas es opcional.
 Campos:
 - id (Long, PK, Auto-incremental IDENTITY): Identificador de la configuracion.
 - usuario (OneToOne, NOT NULL): Usuario asociado (relacion 1 a 1).
-- porcentajeNecesidades (Double, NOT NULL): Porcentaje asignado (ej. 50.0).
-- porcentajeDeseos (Double, NOT NULL): Porcentaje asignado (ej. 30.0).
-- porcentajeAhorro (Double, NOT NULL): Porcentaje asignado (ej. 20.0).
+- porcentajeNecesidades (BigDecimal, NOT NULL): Porcentaje asignado (ej. 50.00).
+- porcentajeDeseos (BigDecimal, NOT NULL): Porcentaje asignado (ej. 30.00).
+- porcentajeAhorro (BigDecimal, NOT NULL): Porcentaje asignado (ej. 20.00).
 - activo (Boolean, NOT NULL, default=true): Indica si la configuracion esta habilitada.
 - automatizarAhorroEnMetas (Boolean, NOT NULL, default=false): Bandera de desacoplamiento.
   * false (por defecto): El presupuesto actua solo como guia visual 50/30/20. El dinero
@@ -248,7 +248,7 @@ Campos:
 - id (Long, PK, Auto-incremental IDENTITY): Identificador de la asignacion.
 - configuracion (ManyToOne, NOT NULL, Lazy): Configuracion a la que pertenece.
 - meta (ManyToOne, NOT NULL, Eager): Meta de ahorro beneficiaria.
-- porcentajeAsignacion (Double, NOT NULL): Fraccion del ahorro total (ej. 60.0%).
+- porcentajeAsignacion (BigDecimal, NOT NULL): Fraccion del ahorro total (ej. 60.00%).
 
 ================================================================================
 4. CATALOGO COMPLETO DE ENUMS
