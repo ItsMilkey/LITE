@@ -104,6 +104,18 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- === FLYWAY — MIGRACIÓN DE ESQUEMA VERSIONADA === -->
+        <!-- flyway-core: versión gestionada por el BOM de Spring Boot 3.3 (Flyway 10.x) -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <!-- Requerido en Flyway 10+ para soporte explícito de Oracle -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-oracle</artifactId>
+        </dependency>
+
         <!-- === DEPENDENCIAS DE TEST === -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-@Component
+// @Component // Deshabilitado: Flyway ahora gestiona el esquema y la población inicial de datos.
 public class DataLoader implements CommandLineRunner {
 
     @Autowired
