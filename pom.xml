@@ -17,6 +17,7 @@
     <properties>
         <java.version>21</java.version>
         <oracle.version>23.4.0.24.05</oracle.version>
+        <flyway.version>10.20.0</flyway.version>
     </properties>
 
     <dependencies>
@@ -114,6 +115,10 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-oracle</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
         <!-- === DEPENDENCIAS DE TEST === -->
