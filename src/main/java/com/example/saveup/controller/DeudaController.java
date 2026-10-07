@@ -88,4 +88,17 @@ public class DeudaController {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.CONFLICT);
         }
     }
+
+    // Endpoint para obtener la tabla de amortización
+    @GetMapping("/{deudaId}/amortizacion")
+    public ResponseEntity<?> obtenerAmortizacion(@PathVariable Long deudaId) {
+        try {
+            java.util.List<com.example.saveup.dto.SimulacionCreditoResponseDTO.CuotaSimulacionDTO> amortizacion = deudaService.obtenerAmortizacion(deudaId);
+            return ResponseEntity.ok(amortizacion);
+        } catch (EntityNotFoundException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+        } catch (SecurityException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.FORBIDDEN);
+        }
+    }
 }

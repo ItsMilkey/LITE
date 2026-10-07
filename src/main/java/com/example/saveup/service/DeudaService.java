@@ -1,24 +1,34 @@
 package com.example.saveup.service;
 
+import com.example.saveup.dto.CondicionesCreditoDTO;
 import com.example.saveup.dto.DeudaCreacionDTO;
 import com.example.saveup.dto.DeudaResponseDTO;
 import com.example.saveup.dto.PagoDeudaDTO;
+import com.example.saveup.dto.SimulacionCreditoResponseDTO.CuotaSimulacionDTO;
 import com.example.saveup.model.Categoria;
 import com.example.saveup.model.Deuda;
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.Usuario;
 import com.example.saveup.model.enums.EstadoDeuda;
+import com.example.saveup.model.enums.ModalidadCalculo;
+import com.example.saveup.model.enums.TipoDeuda;
 import com.example.saveup.model.enums.TipoMovimiento;
 import com.example.saveup.repository.CategoriaRepository;
 import com.example.saveup.repository.DeudaRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.SecurityUtils;
+import com.example.saveup.service.finanzas.*;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -35,6 +45,10 @@ public class DeudaService {
     @Autowired
     private SecurityUtils securityUtils;
 
+    private final CalculoFinancieroService calculoService = new CalculoFinancieroService();
+    private final CalendarioCuotas calendarioCuotas = new CalendarioCuotas();
+    private static final MathContext MC = MathContext.DECIMAL128;
+
     @Transactional
     public DeudaResponseDTO crearDeuda(DeudaCreacionDTO dto) {
         String rut = securityUtils.getAuthenticatedRut();
@@ -44,19 +58,12 @@ public class DeudaService {
 
         Deuda deuda = new Deuda();
         deuda.setUsuario(usuario);
-        deuda.setNombre(dto.getNombre());
-        deuda.setDescripcion(dto.getDescripcion());
-        deuda.setMontoTotal(dto.getMontoTotal());
-        deuda.setCantidadCuotas(dto.getCantidadCuotas());
+        aplicarCalculoGuardar(deuda, dto);
 
         Deuda deudaGuardada = deudaRepository.save(deuda);
         return convertirADeudaResponseDTO(deudaGuardada);
     }
 
-    /**
-     * Obtiene todas las deudas de un usuario con sus agregaciones calculadas en una única consulta JPQL
-     * optimizada, eliminando el problema de N+1 queries.
-     */
     @Transactional(readOnly = true)
     public List<DeudaResponseDTO> obtenerDeudasPorUsuario(String rut) {
         if (!usuarioRepository.existsById(rut)) {
@@ -78,20 +85,19 @@ public class DeudaService {
         Categoria categoriaDeudas = categoriaRepository.findByNombre("Deudas")
                 .orElseThrow(() -> new IllegalStateException("La categoría 'Deudas' no fue encontrada. Asegúrate de que exista en la base de datos."));
 
-        // Crear y guardar el movimiento de pago
         Movimiento pago = new Movimiento();
         pago.setUsuario(deuda.getUsuario());
         pago.setDeuda(deuda);
-        pago.setMonto(pagoDTO.getMonto().negate()); // Los pagos son egresos, por lo tanto negativos
+        pago.setMonto(pagoDTO.getMonto().negate());
         pago.setDescripcion(pagoDTO.getDescripcion());
         pago.setTipoMovimiento(TipoMovimiento.PAGO_DEUDA);
         pago.setCategoria(categoriaDeudas);
         movimientoRepository.save(pago);
 
-        // Verificar si la deuda está completamente pagada después del nuevo pago
         java.math.BigDecimal totalPagadoRaw = deudaRepository.findTotalPagadoPorDeuda(deuda.getId());
         java.math.BigDecimal totalPagado = (totalPagadoRaw != null ? totalPagadoRaw : java.math.BigDecimal.ZERO).abs();
-        if (totalPagado.compareTo(deuda.getMontoTotal()) >= 0) {
+        java.math.BigDecimal prev = deuda.getMontoPagadoPrevio() != null ? deuda.getMontoPagadoPrevio() : BigDecimal.ZERO;
+        if (totalPagado.add(prev).compareTo(deuda.getMontoTotal()) >= 0) {
             deuda.setEstado(EstadoDeuda.PAGADA);
         }
         Deuda deudaActualizada = deudaRepository.save(deuda);
@@ -110,10 +116,7 @@ public class DeudaService {
             throw new IllegalStateException("No se puede editar una deuda que ya tiene pagos registrados.");
         }
 
-        deuda.setNombre(dto.getNombre());
-        deuda.setDescripcion(dto.getDescripcion());
-        deuda.setMontoTotal(dto.getMontoTotal());
-        deuda.setCantidadCuotas(dto.getCantidadCuotas());
+        aplicarCalculoGuardar(deuda, dto);
         Deuda deudaActualizada = deudaRepository.save(deuda);
 
         return convertirADeudaResponseDTO(deudaActualizada);
@@ -135,21 +138,138 @@ public class DeudaService {
         return convertirADeudaResponseDTO(deudaCancelada);
     }
 
+    @Transactional(readOnly = true)
+    public List<CuotaSimulacionDTO> obtenerAmortizacion(Long deudaId) {
+        Deuda deuda = deudaRepository.findById(deudaId)
+                .orElseThrow(() -> new EntityNotFoundException("Deuda no encontrada con ID: " + deudaId));
+
+        String rut = securityUtils.getAuthenticatedRut();
+        if (!deuda.getUsuario().getRut().equals(rut)) {
+            throw new SecurityException("No tiene permisos para acceder a esta deuda");
+        }
+
+        CondicionesCredito condiciones = new CondicionesCredito(
+                deuda.getModalidadCalculo(),
+                deuda.getMontoCapital(),
+                deuda.getCantidadCuotas(),
+                deuda.getTasaMensual(),
+                deuda.getModalidadCalculo() == ModalidadCalculo.CUOTA_CONOCIDA ? deuda.getValorCuota() : null,
+                deuda.getGastosIniciales(),
+                deuda.getCostoAdicionalPorCuota()
+        );
+
+        ResultadoCalculo resultado = calculoService.calcular(condiciones);
+        
+        List<LocalDate> fechasVencimiento = null;
+        if (deuda.getFechaPrimeraCuota() != null) {
+            fechasVencimiento = calendarioCuotas.fechasVencimiento(deuda.getFechaPrimeraCuota(), deuda.getCantidadCuotas());
+        }
+
+        List<CuotaSimulacionDTO> tabla = new ArrayList<>(resultado.tabla().size());
+        for (int i = 0; i < resultado.tabla().size(); i++) {
+            CuotaAmortizacion c = resultado.tabla().get(i);
+            LocalDate fv = fechasVencimiento != null ? fechasVencimiento.get(i) : null;
+            tabla.add(CuotaSimulacionDTO.builder()
+                    .numero(c.numero())
+                    .fechaVencimiento(fv)
+                    .cuota(c.cuota())
+                    .capital(c.capital())
+                    .interes(c.interes())
+                    .costoAdicional(c.costoAdicional())
+                    .saldo(c.saldo())
+                    .build());
+        }
+        return tabla;
+    }
+
+    private void aplicarCalculoGuardar(Deuda deuda, DeudaCreacionDTO dto) {
+        deuda.setNombre(dto.getNombre());
+        deuda.setDescripcion(dto.getDescripcion());
+        deuda.setTipoDeuda(dto.getTipoDeuda() != null ? dto.getTipoDeuda() : TipoDeuda.OTRO);
+        
+        if (dto.getCuotasPagadasPrevias() != null && dto.getCuotasPagadasPrevias() >= 0) {
+            deuda.setCuotasPagadasPrevias(dto.getCuotasPagadasPrevias());
+        }
+
+        CondicionesCreditoDTO condDto = dto.getCondiciones();
+        int cantidadCuotas;
+        LocalDate fechaPrimera = null;
+        BigDecimal tasaMensualFraccion = BigDecimal.ZERO;
+        ModalidadCalculo modalidad = ModalidadCalculo.SIN_INTERES;
+        BigDecimal montoCapital;
+        BigDecimal valorCuotaInput = null;
+        BigDecimal gastosIniciales = BigDecimal.ZERO;
+        BigDecimal costoAdicional = BigDecimal.ZERO;
+
+        if (condDto != null) {
+            modalidad = condDto.getModalidad();
+            montoCapital = condDto.getMontoCapital();
+            gastosIniciales = condDto.getGastosIniciales() != null ? condDto.getGastosIniciales() : BigDecimal.ZERO;
+            costoAdicional = condDto.getCostoAdicionalPorCuota() != null ? condDto.getCostoAdicionalPorCuota() : BigDecimal.ZERO;
+
+            if (condDto.getCantidadCuotas() != null) {
+                cantidadCuotas = condDto.getCantidadCuotas();
+                fechaPrimera = condDto.getFechaPrimeraCuota();
+            } else if (condDto.getFechaPrimeraCuota() != null && condDto.getFechaUltimaCuota() != null) {
+                cantidadCuotas = calendarioCuotas.contarCuotas(condDto.getFechaPrimeraCuota(), condDto.getFechaUltimaCuota());
+                fechaPrimera = condDto.getFechaPrimeraCuota();
+            } else {
+                throw new CalculoFinancieroException("Debe indicar cantidadCuotas o fechas en las condiciones");
+            }
+
+            if (modalidad == ModalidadCalculo.TASA_CONOCIDA) {
+                if (condDto.getTasaMensual() != null) {
+                    tasaMensualFraccion = condDto.getTasaMensual().divide(new BigDecimal("100"), MC);
+                } else if (condDto.getTasaAnualEfectiva() != null) {
+                    tasaMensualFraccion = calculoService.tasaAnualAMensual(condDto.getTasaAnualEfectiva().divide(new BigDecimal("100"), MC));
+                } else {
+                    throw new CalculoFinancieroException("TASA_CONOCIDA requiere tasaMensual o tasaAnualEfectiva");
+                }
+            } else if (modalidad == ModalidadCalculo.CUOTA_CONOCIDA) {
+                valorCuotaInput = condDto.getValorCuota();
+            }
+        } else {
+            // Compatibilidad
+            if (dto.getMontoTotal() == null || dto.getCantidadCuotas() == null) {
+                throw new IllegalArgumentException("Si no hay bloque condiciones, debe proporcionar montoTotal y cantidadCuotas");
+            }
+            montoCapital = dto.getMontoTotal();
+            cantidadCuotas = dto.getCantidadCuotas();
+        }
+        
+        if (deuda.getCuotasPagadasPrevias() >= cantidadCuotas) {
+            throw new IllegalArgumentException("cuotasPagadasPrevias (" + deuda.getCuotasPagadasPrevias() + 
+                ") no puede ser mayor o igual a cantidadCuotas (" + cantidadCuotas + ")");
+        }
+
+        CondicionesCredito condiciones = new CondicionesCredito(
+                modalidad, montoCapital, cantidadCuotas, tasaMensualFraccion, valorCuotaInput, gastosIniciales, costoAdicional
+        );
+
+        ResultadoCalculo resultado = calculoService.calcular(condiciones);
+
+        deuda.setModalidadCalculo(modalidad);
+        deuda.setMontoCapital(montoCapital);
+        deuda.setCantidadCuotas(cantidadCuotas);
+        deuda.setFechaPrimeraCuota(fechaPrimera);
+        deuda.setTasaMensual(resultado.tasaMensual()); // fracción
+        deuda.setValorCuota(resultado.valorCuota());
+        deuda.setGastosIniciales(gastosIniciales);
+        deuda.setCostoAdicionalPorCuota(costoAdicional);
+        deuda.setMontoTotal(resultado.montoTotal());
+        deuda.setCostoTotalCredito(resultado.costoTotalCredito());
+        deuda.setCargaAnualEquivalente(resultado.cargaAnualEquivalente());
+        
+        BigDecimal montoPagadoPrevio = BigDecimal.ZERO;
+        for (int i = 0; i < deuda.getCuotasPagadasPrevias(); i++) {
+            CuotaAmortizacion c = resultado.tabla().get(i);
+            montoPagadoPrevio = montoPagadoPrevio.add(c.cuota()).add(c.costoAdicional());
+        }
+        deuda.setMontoPagadoPrevio(montoPagadoPrevio);
+    }
+
     private DeudaResponseDTO convertirADeudaResponseDTO(Deuda deuda) {
         return deudaRepository.findDeudaDTOById(deuda.getId())
-                .orElseGet(() -> {
-                    DeudaResponseDTO dto = new DeudaResponseDTO();
-                    dto.setId(deuda.getId());
-                    dto.setNombre(deuda.getNombre());
-                    dto.setDescripcion(deuda.getDescripcion());
-                    dto.setMontoTotal(deuda.getMontoTotal());
-                    dto.setCantidadCuotas(deuda.getCantidadCuotas());
-                    dto.setEstado(deuda.getEstado());
-                    dto.setFechaCreacion(deuda.getFechaCreacion());
-                    dto.setMontoPagado(java.math.BigDecimal.ZERO);
-                    dto.setMontoRestante(deuda.getMontoTotal());
-                    dto.setCuotasPagadas(0);
-                    return dto;
-                });
+                .orElseThrow(() -> new IllegalStateException("Error al recuperar la deuda guardada"));
     }
 }

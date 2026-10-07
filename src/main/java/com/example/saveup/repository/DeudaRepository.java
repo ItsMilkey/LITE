@@ -17,19 +17,27 @@ public interface DeudaRepository extends JpaRepository<Deuda, Long> {
     // Consulta optimizada con proyección JPQL para evitar N+1 queries al listar deudas con agregaciones
     @Query("SELECT new com.example.saveup.dto.DeudaResponseDTO(" +
            "d.id, d.nombre, d.descripcion, d.montoTotal, d.cantidadCuotas, d.estado, d.fechaCreacion, " +
-           "COALESCE(SUM(m.monto), 0), COUNT(m)) " +
+           "COALESCE(SUM(m.monto), 0), COUNT(m), " +
+           "d.tipoDeuda, d.modalidadCalculo, d.montoCapital, d.tasaMensual, d.valorCuota, d.gastosIniciales, " +
+           "d.costoTotalCredito, d.cargaAnualEquivalente, d.fechaPrimeraCuota, d.cuotasPagadasPrevias, d.montoPagadoPrevio) " +
            "FROM Deuda d LEFT JOIN Movimiento m ON m.deuda.id = d.id AND m.tipoMovimiento = com.example.saveup.model.enums.TipoMovimiento.PAGO_DEUDA " +
            "WHERE d.usuario.rut = :rut " +
-           "GROUP BY d.id, d.nombre, d.descripcion, d.montoTotal, d.cantidadCuotas, d.estado, d.fechaCreacion")
+           "GROUP BY d.id, d.nombre, d.descripcion, d.montoTotal, d.cantidadCuotas, d.estado, d.fechaCreacion, " +
+           "d.tipoDeuda, d.modalidadCalculo, d.montoCapital, d.tasaMensual, d.valorCuota, d.gastosIniciales, " +
+           "d.costoTotalCredito, d.cargaAnualEquivalente, d.fechaPrimeraCuota, d.cuotasPagadasPrevias, d.montoPagadoPrevio")
     List<DeudaResponseDTO> findDeudasDTOByUsuarioRut(@Param("rut") String rut);
 
     // Consulta optimizada para una deuda específica
     @Query("SELECT new com.example.saveup.dto.DeudaResponseDTO(" +
            "d.id, d.nombre, d.descripcion, d.montoTotal, d.cantidadCuotas, d.estado, d.fechaCreacion, " +
-           "COALESCE(SUM(m.monto), 0), COUNT(m)) " +
+           "COALESCE(SUM(m.monto), 0), COUNT(m), " +
+           "d.tipoDeuda, d.modalidadCalculo, d.montoCapital, d.tasaMensual, d.valorCuota, d.gastosIniciales, " +
+           "d.costoTotalCredito, d.cargaAnualEquivalente, d.fechaPrimeraCuota, d.cuotasPagadasPrevias, d.montoPagadoPrevio) " +
            "FROM Deuda d LEFT JOIN Movimiento m ON m.deuda.id = d.id AND m.tipoMovimiento = com.example.saveup.model.enums.TipoMovimiento.PAGO_DEUDA " +
            "WHERE d.id = :deudaId " +
-           "GROUP BY d.id, d.nombre, d.descripcion, d.montoTotal, d.cantidadCuotas, d.estado, d.fechaCreacion")
+           "GROUP BY d.id, d.nombre, d.descripcion, d.montoTotal, d.cantidadCuotas, d.estado, d.fechaCreacion, " +
+           "d.tipoDeuda, d.modalidadCalculo, d.montoCapital, d.tasaMensual, d.valorCuota, d.gastosIniciales, " +
+           "d.costoTotalCredito, d.cargaAnualEquivalente, d.fechaPrimeraCuota, d.cuotasPagadasPrevias, d.montoPagadoPrevio")
     Optional<DeudaResponseDTO> findDeudaDTOById(@Param("deudaId") Long deudaId);
 
     // Consulta para calcular el total pagado por una deuda específica
