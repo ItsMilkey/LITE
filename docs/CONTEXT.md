@@ -20,6 +20,7 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 - /api/deudas: POST · GET me · POST {id}/pagar · PUT {id} · PATCH {id}/cancelar
 - /api/presupuestos: GET me · POST me · GET ejecucion/me (?month&year)
 - /api/reportes/movimientos/exportar (?alcance&formato&mes&anio)
+- /api/simulaciones: POST credito (simulación sin persistencia, motor financiero + resumen educativo)
 
 ## Reglas vigentes
 - Smart-Split: INGRESO_GENERAL con aplicarPresupuesto=true, config.activo, automatizarAhorroEnMetas y %ahorro>0 → un ABONO_META (negativo) por asignación. No guarda vínculo con el ingreso que lo originó.
@@ -34,5 +35,5 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 Dos usos con un mismo motor de cálculo: (1) simular un endeudamiento antes de contraerlo (cuánto cuesta, por cuánto tiempo, efecto de tasa y plazo, con fines de decisión y educación financiera) y (2) llevar la deuda real al detalle (cuánto falta, historial de pagos). Una deuda guardada = condiciones de una simulación + pagos.
 
 ## Tareas pendientes (docs/tareas/)
-[x] T0 BigDecimal · T1a motor financiero y calendario · T1b simulador (sin persistir) · T1c deuda con condiciones, fechas y cuotas previas · T2 pagos, imputación y saldos · T3 detalle de deuda (ficha, cronograma, historial) · T4 filtros y edición de movimientos · T5 presupuesto por categoría e historial · BACKLOG.md (diferido)
+[x] T0 BigDecimal · [x] T1a motor financiero y calendario · [x] T1b simulador (sin persistir) · T1c deuda con condiciones, fechas y cuotas previas · T2 pagos, imputación y saldos · T3 detalle de deuda (ficha, cronograma, historial) · T4 filtros y edición de movimientos · T5 presupuesto por categoría e historial · BACKLOG.md (diferido)
 Orden: [x] T0 → T1a → T1b (el frontend ya puede consumirlo) → T1c → T2 → T3. T4 y T5 solo dependen de T0.
