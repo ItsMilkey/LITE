@@ -3,10 +3,12 @@
             DOCUMENTACION TECNICA COMPLETA Y DETALLADA DEL PROYECTO
 ================================================================================
 Fecha de Generacion: 2026-09-29
+Ultima Actualizacion: 2026-10-05
 Version: 0.0.1-SNAPSHOT
 Framework Base: Spring Boot 3.3.0
 Lenguaje: Java 21 LTS
-Base de Datos: Oracle Cloud Autonomous Database 23c (con soporte PostgreSQL)
+Base de Datos: Oracle Cloud Autonomous Database 23c (dev) / PostgreSQL (prod)
+Migracion de Esquema: Flyway 10.x (gestionado por BOM Spring Boot 3.3)
 Repositorio: https://github.com/ItsMilkey/LITE
 Servicio en Produccion: https://lite-backend-1wn9.onrender.com/
 ================================================================================
@@ -27,6 +29,7 @@ TABLA DE CONTENIDOS:
    - Flujo 5: Ejecucion Presupuestaria (Regla 50/30/20)
    - Flujo 6: Generacion y Exportacion de Reportes (Strategy: PDF / CSV)
 9. CONFIGURACIONES, SEGURIDAD, DESPLIEGUE Y DEVOPS
+10. MIGRACION DE ESQUEMA Y DATOS CON FLYWAY (NUEVO)
 
 ================================================================================
 1. RESUMEN EJECUTIVO Y OBJETIVOS
@@ -85,7 +88,7 @@ Estructura de Directorios:
 src/main/java/com/example/saveup/
 ├── SaveupLiteApplication.java
 ├── config/
-│   ├── DataLoader.java                  (Poblado y normalizacion de categorias)
+│   ├── DataLoader.java                  (LEGACY - Deshabilitado; Flyway lo reemplaza)
 │   ├── DataSourceConfig.java            (Oracle UCP Pool y conexion segura con Wallet)
 │   ├── SecurityConfig.java              (Spring Security, BCrypt, CORS y rutas)
 │   └── WebConfig.java                   (Filtros y mapeos globales CORS)
@@ -145,6 +148,18 @@ src/main/java/com/example/saveup/
         ├── PdfReporteGenerator.java
         ├── ReporteGenerator.java         (Interfaz Strategy)
         └── ReporteService.java           (Contexto Strategy)
+
+src/main/resources/
+├── application.properties               (Config base: puerto, perfil activo, JWT)
+├── application-dev.properties           (Oracle + Flyway oracle + CORS dev)
+├── application-prod.properties          (PostgreSQL + Flyway postgresql + vars Render)
+└── db/migration/                        (Scripts versionados de Flyway)
+    ├── oracle/                          (Dialecto Oracle 23c - perfil dev)
+    │   ├── V1__init_schema.sql          (DDL completo: 7 tablas con constraints)
+    │   └── V2__seed_categories.sql      (10 categorias via MERGE INTO idempotente)
+    └── postgresql/                      (Dialecto PostgreSQL - perfil prod)
+        ├── V1__init_schema.sql          (DDL completo: 7 tablas con constraints)
+        └── V2__seed_categories.sql      (10 categorias via ON CONFLICT DO NOTHING)
 
 ================================================================================
 3. MODELO DE DATOS Y ESQUEMA DE ENTIDADES (JPA / HIBERNATE)
@@ -967,14 +982,22 @@ FLUJO 6: GENERACION Y EXPORTACION DE REPORTES (PATRON STRATEGY)
   * Metodos autorizados: GET, POST, PUT, DELETE, OPTIONS.
   * Cabeceras autorizadas: Authorization, Content-Type, X-Requested-With.
 
-9.2. POBLADO Y MIGRACION DE DATOS (DataLoader)
+9.2. POBLADO Y MIGRACION DE DATOS (DataLoader) — LEGACY / DESHABILITADO
 - Clase: com.example.saveup.config.DataLoader (CommandLineRunner)
-  * Si la tabla CATEGORIA esta vacia, puebla 10 categorias iniciales con iconos, 
-    colores hexadecimales y su tipo de presupuesto (Comida, Transporte, Sueldo, 
-    Cuentas y Servicios, Ocio, Salud, Ropa, Deudas, Ahorro, Otro).
-  * Si ya existen datos previos, ejecuta un proceso de normalizacion y saneamiento: 
-    revisa nombres normalizados y asigna el TipoPresupuesto correspondiente.
-  * Garantiza la existencia obligatoria de la categoria "Ahorro".
+- Estado actual: DESHABILITADO. La anotacion @Component fue comentada en el
+  commit 1da0dd3 (2026-10-01) al implementar Flyway como reemplazo definitivo.
+- Motivo de deshabilitacion: Flyway gestiona ahora tanto la creacion del esquema
+  (V1__init_schema.sql) como la poblacion inicial de categorias (V2__seed_categories.sql)
+  de forma versionada, reproducible e idempotente. El DataLoader imperativo queda
+  obsoleto porque:
+  1) No ofrece versionado de cambios (no hay historial de migraciones).
+  2) Depende de logica Java en tiempo de ejecucion, no de scripts SQL declarativos.
+  3) No garantiza idempotencia robusta en despliegues multi-instancia.
+- El archivo se conserva como referencia historica. Contenia:
+  * Poblado condicional de 10 categorias iniciales con iconos, colores y tipo.
+  * Normalizacion de categorias existentes sin TipoPresupuesto via switch/case.
+  * Garantia de existencia de la categoria "Ahorro".
+- Toda esta logica fue portada a los scripts Flyway V2 correspondientes.
 
 9.3. CONECTIVIDAD A ORACLE CLOUD CON WALLET
 - Clase: com.example.saveup.config.DataSourceConfig
@@ -1002,6 +1025,272 @@ FLUJO 6: GENERACION Y EXPORTACION DE REPORTES (PATRON STRATEGY)
   * Ejecuta una llamada `curl -I https://lite-backend-1wn9.onrender.com/` para 
     mantener caliente la instancia de Render y evitar el retardo del cold-start 
     de los planes gratuitos.
+
+================================================================================
+10. MIGRACION DE ESQUEMA Y DATOS CON FLYWAY
+================================================================================
+
+A partir del commit 1da0dd3 (2026-10-01, "Actualización e implementación de
+Flyway"), el proyecto adopta Flyway como sistema de migracion de esquema
+versionada. Este cambio reemplaza la creacion de tablas por Hibernate DDL-auto
+y el poblado imperativo del DataLoader, introduciendo un ciclo de vida
+declarativo, reproducible y auditable para el esquema de la base de datos.
+
+10.1. MOTIVACION Y JUSTIFICACION DEL CAMBIO
+--------------------------------------------------------------------------------
+Problemas resueltos:
+1) Hibernate ddl-auto=update generaba el esquema de forma implicita y no
+   dejaba registro versionado de los cambios. Cada despliegue podia alterar
+   columnas o constraints sin trazabilidad.
+2) El DataLoader (CommandLineRunner) ejecutaba logica Java imperativa para
+   poblar categorias. No era reproducible entre entornos y carecia de
+   idempotencia robusta en despliegues multi-instancia o rollbacks.
+3) El proyecto opera con dos motores de BD diferentes (Oracle en dev,
+   PostgreSQL en prod). Mantener scripts SQL separados y versionados por
+   dialecto es esencial para la portabilidad.
+
+Beneficios obtenidos:
+- Versionado explicito: Cada cambio de esquema es un script SQL numerado
+  (V1, V2, ...) rastreable en Git.
+- Idempotencia: Los scripts usan CREATE TABLE IF NOT EXISTS, MERGE INTO
+  (Oracle) y ON CONFLICT DO NOTHING (PostgreSQL) para ser re-ejecutables.
+- Separacion de dialectos: Carpetas independientes por motor, seleccionadas
+  automaticamente segun el perfil activo de Spring Boot.
+- Tabla de auditoria: Flyway crea y mantiene la tabla flyway_schema_history
+  con checksums, timestamps y estado de cada migracion aplicada.
+
+10.2. DEPENDENCIAS MAVEN (pom.xml)
+--------------------------------------------------------------------------------
+Se anadieron dos dependencias en el bloque de Flyway:
+
+  <!-- flyway-core: version gestionada por el BOM de Spring Boot 3.3 (Flyway 10.x) -->
+  <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+  </dependency>
+  <!-- Requerido en Flyway 10+ para soporte explicito de Oracle -->
+  <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-oracle</artifactId>
+  </dependency>
+
+Notas:
+- flyway-core no declara version explicita; hereda la version 10.x del BOM
+  de spring-boot-starter-parent 3.3.0.
+- flyway-database-oracle es obligatorio desde Flyway 10 para el soporte de
+  Oracle (antes estaba integrado en flyway-core).
+- Para PostgreSQL no se requiere modulo adicional; el soporte viene incluido
+  en flyway-core.
+
+10.3. CONFIGURACION POR PERFIL (application-*.properties)
+--------------------------------------------------------------------------------
+
+10.3.1. Perfil de Desarrollo (application-dev.properties)
+  # JPA: Hibernate solo VALIDA que el esquema coincida con las entidades.
+  # Flyway es el responsable de crear y evolucionar las tablas.
+  spring.jpa.hibernate.ddl-auto=validate
+
+  # Flyway apunta a scripts Oracle
+  spring.flyway.locations=classpath:db/migration/oracle
+  spring.flyway.baseline-on-migrate=true
+  spring.flyway.baseline-version=0
+  spring.flyway.validate-on-migrate=true
+
+10.3.2. Perfil de Produccion (application-prod.properties)
+  # JPA: Hibernate NO toca el esquema en absoluto.
+  # Flyway es el unico responsable de crear y migrar.
+  spring.jpa.hibernate.ddl-auto=none
+
+  # Flyway apunta a scripts PostgreSQL
+  spring.flyway.locations=classpath:db/migration/postgresql
+  spring.flyway.baseline-on-migrate=true
+  spring.flyway.baseline-version=0
+  spring.flyway.validate-on-migrate=true
+
+Explicacion de propiedades clave:
+- spring.flyway.locations: Ruta al classpath con los scripts SQL del dialecto
+  correspondiente. Permite que los mismos scripts V1, V2, etc. tengan sintaxis
+  nativa para cada motor sin colisiones.
+- spring.flyway.baseline-on-migrate=true: Si la BD ya existe (creada previamente
+  por Hibernate), Flyway la marca en la version baseline (V0) y aplica las
+  migraciones pendientes (V1, V2, ...) de forma incremental. Esto habilita la
+  adopcion de Flyway sobre bases de datos pre-existentes sin perder datos.
+- spring.flyway.baseline-version=0: La version de referencia es V0, lo que
+  significa que V1 sera la primera migracion real aplicada.
+- spring.flyway.validate-on-migrate=true: Antes de aplicar migraciones, Flyway
+  verifica que los checksums de los scripts ya aplicados no hayan cambiado.
+  Protege contra modificaciones accidentales de scripts historicos.
+
+Relacion Hibernate DDL-auto ↔ Flyway:
+- DEV:  ddl-auto=validate → Hibernate valida las entidades contra el esquema
+        que Flyway creo. Si hay discrepancias, el arranque falla tempranamente
+        detectando errores de mapeo antes de que lleguen a produccion.
+- PROD: ddl-auto=none → Hibernate no interfiere con el esquema. Flyway tiene
+        control exclusivo. Maximo nivel de seguridad para produccion.
+
+10.4. ESTRUCTURA DE SCRIPTS DE MIGRACION
+--------------------------------------------------------------------------------
+Ubicacion: src/main/resources/db/migration/
+
+  db/migration/
+  ├── oracle/                            ← Dialecto Oracle 23c (perfil dev)
+  │   ├── V1__init_schema.sql            (DDL: creacion de las 7 tablas)
+  │   └── V2__seed_categories.sql        (DML: 10 categorias con MERGE INTO)
+  └── postgresql/                        ← Dialecto PostgreSQL (perfil prod)
+      ├── V1__init_schema.sql            (DDL: creacion de las 7 tablas)
+      └── V2__seed_categories.sql        (DML: 10 categorias con ON CONFLICT)
+
+Convencion de nombrado Flyway:
+  V{version}__{descripcion}.sql
+  - V = Migracion versionada (aplicada una sola vez, en orden numerico).
+  - {version} = Numero entero secuencial (1, 2, 3, ...).
+  - __ = Doble guion bajo (separador obligatorio).
+  - {descripcion} = Nombre descriptivo en snake_case.
+
+10.5. DETALLE DE V1__init_schema.sql (CREACION DEL ESQUEMA)
+--------------------------------------------------------------------------------
+Crea las 7 tablas del modelo de datos de forma idempotente:
+
+Orden de creacion (respeta dependencias de Foreign Keys):
+  1. USUARIO           (sin FK, es la raiz del modelo)
+  2. CATEGORIA         (sin FK a otras tablas del modelo)
+  3. META_AHORRO       (FK → USUARIO)
+  4. DEUDA             (FK → USUARIO)
+  5. MOVIMIENTO        (FK → USUARIO, DEUDA, CATEGORIA, META_AHORRO)
+  6. CONFIGURACION_PRESUPUESTO  (FK → USUARIO, relacion 1:1)
+  7. ASIGNACION_META_PRESUPUESTO (FK → CONFIGURACION_PRESUPUESTO, META_AHORRO)
+
+Diferencias de dialectos entre scripts:
+  +-----------------------------+-----------------------+-------------------------+
+  | Aspecto                     | Oracle 23c            | PostgreSQL              |
+  +-----------------------------+-----------------------+-------------------------+
+  | Cadenas de texto            | VARCHAR2(n)           | VARCHAR(n)              |
+  | Numeros decimales           | NUMBER(19,2)          | NUMERIC(19,2)           |
+  | Enteros                     | NUMBER(10,0)          | INTEGER                 |
+  | Identidad auto-incremental  | NUMBER GEN BY DEF     | BIGINT GEN BY DEF       |
+  |                             | AS IDENTITY           | AS IDENTITY             |
+  | Booleanos                   | NUMBER(1) con 0/1     | BOOLEAN nativo          |
+  | Idempotencia DDL            | CREATE TABLE IF NOT   | CREATE TABLE IF NOT     |
+  |                             | EXISTS (Oracle 23c+)  | EXISTS (PG 9.1+)        |
+  +-----------------------------+-----------------------+-------------------------+
+
+Constraints implementados en ambos dialectos:
+  - Primary Keys (PK_*): Cada tabla tiene su PK nombrado explicitamente.
+  - Unique (UQ_*): USUARIO.email, CATEGORIA.nombre, CONFIGURACION.usuario_id.
+  - Foreign Keys (FK_*): Todas las relaciones entre tablas.
+  - Check (CHK_*): Validaciones de dominio a nivel de BD:
+    * CATEGORIA.tipo_presupuesto IN ('NECESIDAD','DESEO','AHORRO','OTROS')
+    * DEUDA.estado IN ('PENDIENTE','PAGADA','CANCELADA')
+    * MOVIMIENTO.tipo_movimiento IN ('INGRESO_GENERAL','GASTO_GENERAL',
+      'PAGO_DEUDA','ABONO_META','RETIRO_META')
+
+10.6. DETALLE DE V2__seed_categories.sql (POBLADO DE CATEGORIAS)
+--------------------------------------------------------------------------------
+Inserta las 10 categorias iniciales del catalogo de forma idempotente.
+Este script reemplaza la logica que antes ejecutaba DataLoader.run().
+
+Categorias insertadas:
+  +---+------------------------+----------------------+---------+-------------+
+  | # | Nombre                 | iconId               | Color   | Tipo        |
+  +---+------------------------+----------------------+---------+-------------+
+  | 1 | Sueldo                 | ic_work              | #009688 | OTROS       |
+  | 2 | Comida                 | ic_fastfood          | #FFC107 | NECESIDAD   |
+  | 3 | Transporte             | ic_directions_car    | #2196F3 | NECESIDAD   |
+  | 4 | Cuentas y Servicios    | ic_receipt_long      | #4CAF50 | NECESIDAD   |
+  | 5 | Ocio y Entretenimiento | ic_sports_esports    | #E91E63 | DESEO       |
+  | 6 | Salud y Bienestar      | ic_medical_services  | #F44336 | NECESIDAD   |
+  | 7 | Ropa y Accesorios      | ic_checkroom         | #9C27B0 | DESEO       |
+  | 8 | Deudas                 | ic_payment           | #795548 | NECESIDAD   |
+  | 9 | Ahorro                 | ic_savings           | #3F51B5 | AHORRO      |
+  |10 | Otro                   | ic_label             | #607D8B | OTROS       |
+  +---+------------------------+----------------------+---------+-------------+
+
+Estrategia de idempotencia por dialecto:
+  - Oracle 23c: Usa MERGE INTO ... USING (SELECT ... FROM DUAL) ON (nombre)
+    WHEN NOT MATCHED THEN INSERT. Este patron DML estandar Oracle evalua la
+    condicion de match sobre la restriccion UNIQUE del nombre y solo inserta
+    si el registro no existe.
+  - PostgreSQL: Usa INSERT INTO ... VALUES (...) ON CONFLICT (nombre) DO NOTHING.
+    Aprovecha la clausula nativa de PostgreSQL para inserciones condicionales
+    sin duplicados.
+
+10.7. DESHABILITACION DEL DATALOADER LEGACY
+--------------------------------------------------------------------------------
+Archivo: com.example.saveup.config.DataLoader
+Cambio realizado: La anotacion @Component fue comentada:
+
+  // @Component // Deshabilitado: Flyway ahora gestiona el esquema y la
+  //               poblacion inicial de datos.
+  public class DataLoader implements CommandLineRunner { ... }
+
+Implicaciones:
+  - Spring Boot ya no registra DataLoader como bean. El metodo run() nunca se
+    ejecuta durante el arranque de la aplicacion.
+  - La logica de poblado de categorias y normalizacion de TipoPresupuesto fue
+    absorbida por V2__seed_categories.sql.
+  - El archivo se conserva en el repositorio como referencia historica y para
+    facilitar la comprension de la logica de normalizacion original que incluia
+    un switch/case para mapear nombres de categorias a tipos de presupuesto.
+  - En caso de requerir migraciones de datos complejas en el futuro (ej.
+    normalizacion de registros existentes), se deben crear nuevos scripts
+    Flyway V3, V4, etc. en lugar de reactivar el DataLoader.
+
+10.8. FLUJO DE EJECUCION DE FLYWAY AL ARRANQUE
+--------------------------------------------------------------------------------
+
+[Spring Boot arranca]
+         |
+         v
+[Flyway se auto-configura (spring-boot-starter detecta flyway-core en classpath)]
+         |
+         v
+[¿Existe la tabla flyway_schema_history?]
+         |
+   +-----+-----+
+   |           |
+  (NO)        (SI)
+   |           |
+   v           v
+[¿baseline-on-migrate=true?]    [Leer versiones ya aplicadas]
+   |                                    |
+  (SI)                                  v
+   |                            [Calcular migraciones pendientes]
+   v                                    |
+[Crear flyway_schema_history]           v
+[Registrar baseline V0]         [Para cada Vn pendiente:]
+   |                            [  - Validar checksum]
+   v                            [  - Ejecutar script SQL]
+[Aplicar V1, V2, ...]          [  - Registrar en historial]
+   |                                    |
+   +----------+-------------------------+
+              |
+              v
+[Hibernate valida entidades vs esquema (ddl-auto=validate en dev)]
+              |
+              v
+[Aplicacion lista para recibir peticiones]
+
+10.9. GUIA PARA FUTURAS MIGRACIONES
+--------------------------------------------------------------------------------
+Para anadir cambios al esquema o datos semilla:
+
+1. Crear un nuevo script en AMBAS carpetas de dialecto:
+   - src/main/resources/db/migration/oracle/V3__descripcion.sql
+   - src/main/resources/db/migration/postgresql/V3__descripcion.sql
+
+2. Respetar la numeracion secuencial (V3, V4, V5, ...).
+
+3. NUNCA modificar scripts ya aplicados (V1, V2). Flyway valida checksums
+   y rechazara el arranque si detecta alteraciones.
+
+4. Para cambios de esquema:
+   - Usar ALTER TABLE para agregar/modificar columnas.
+   - Crear indices o constraints adicionales.
+
+5. Para datos semilla adicionales:
+   - Usar las mismas estrategias idempotentes (MERGE INTO / ON CONFLICT).
+
+6. Probar en el perfil dev (Oracle) antes de desplegar en prod (PostgreSQL).
 
 ================================================================================
 FIN DE LA DOCUMENTACION TECNICA DE SAVEUP LITE
