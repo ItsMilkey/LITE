@@ -152,4 +152,32 @@ class DeudaServiceTest {
         verify(movimientoRepository).save(any(Movimiento.class));
         verify(securityUtils).validarPropietario(usuario.getRut());
     }
+
+    @Test
+    @DisplayName("DeudaResponseDTO y registrarPago manejan centavos con precisión")
+    void registrarPago_conCentavos_calculaMontoRestanteExacto() {
+        deuda.setMontoTotal(new java.math.BigDecimal("1250.75"));
+
+        PagoDeudaDTO pagoDTO = new PagoDeudaDTO();
+        pagoDTO.setMonto(new java.math.BigDecimal("450.25"));
+        pagoDTO.setDescripcion("Pago parcial con centavos");
+
+        Categoria catDeudas = new Categoria(1L, "Deudas", "ic_payment", "#795548", TipoPresupuesto.NECESIDAD);
+
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(deuda));
+        when(categoriaRepository.findByNombre("Deudas")).thenReturn(Optional.of(catDeudas));
+        when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(new java.math.BigDecimal("-450.25"));
+        when(deudaRepository.save(any(Deuda.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        DeudaResponseDTO dtoEsperado = new DeudaResponseDTO(1L, "Crédito Universitario", "Cuotas", new java.math.BigDecimal("1250.75"), 10,
+                EstadoDeuda.PENDIENTE, new Date(), new java.math.BigDecimal("-450.25"), 1L);
+        when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(dtoEsperado));
+
+        DeudaResponseDTO result = deudaService.registrarPago(1L, pagoDTO);
+
+        assertNotNull(result);
+        assertEquals(0, new java.math.BigDecimal("450.25").compareTo(result.getMontoPagado()));
+        assertEquals(0, new java.math.BigDecimal("800.50").compareTo(result.getMontoRestante()));
+        assertEquals(EstadoDeuda.PENDIENTE, deuda.getEstado());
+    }
 }

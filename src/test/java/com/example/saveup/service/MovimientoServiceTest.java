@@ -105,4 +105,31 @@ class MovimientoServiceTest {
         assertNotNull(response);
         verifyNoInteractions(smartSplitProcessor);
     }
+
+    @Test
+    @DisplayName("obtenerSaldoActual retorna BigDecimal con centavos exactos")
+    void obtenerSaldoActual_conCentavos_retornaBigDecimalEscalaDos() {
+        when(usuarioRepository.existsById("12345678-9")).thenReturn(true);
+        when(movimientoRepository.findSaldoByUsuarioRut("12345678-9"))
+                .thenReturn(new java.math.BigDecimal("12345.67"));
+
+        java.math.BigDecimal saldo = movimientoService.obtenerSaldoActual("12345678-9");
+
+        assertNotNull(saldo);
+        assertEquals(0, new java.math.BigDecimal("12345.67").compareTo(saldo));
+        assertEquals(2, saldo.scale());
+    }
+
+    @Test
+    @DisplayName("obtenerSaldoActual cuando no hay movimientos retorna BigDecimal.ZERO con escala 2")
+    void obtenerSaldoActual_sinMovimientos_retornaCeroConEscalaDos() {
+        when(usuarioRepository.existsById("12345678-9")).thenReturn(true);
+        when(movimientoRepository.findSaldoByUsuarioRut("12345678-9")).thenReturn(null);
+
+        java.math.BigDecimal saldo = movimientoService.obtenerSaldoActual("12345678-9");
+
+        assertNotNull(saldo);
+        assertEquals(0, java.math.BigDecimal.ZERO.compareTo(saldo));
+        assertEquals(2, saldo.scale());
+    }
 }

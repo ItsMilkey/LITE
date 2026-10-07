@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 @RestController
@@ -28,7 +29,7 @@ public class SaldoController {
     public ResponseEntity<?> obtenerSaldoMe() {
         try {
             String rutAutenticado = securityUtils.getAuthenticatedRut();
-            Double saldo = movimientoService.obtenerSaldoActual(rutAutenticado);
+            BigDecimal saldo = movimientoService.obtenerSaldoActual(rutAutenticado);
             return ResponseEntity.ok(Map.of("saldo", saldo));
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);

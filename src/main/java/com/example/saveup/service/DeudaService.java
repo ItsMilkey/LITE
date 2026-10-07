@@ -89,7 +89,8 @@ public class DeudaService {
         movimientoRepository.save(pago);
 
         // Verificar si la deuda está completamente pagada después del nuevo pago
-        java.math.BigDecimal totalPagado = deudaRepository.findTotalPagadoPorDeuda(deuda.getId()).abs();
+        java.math.BigDecimal totalPagadoRaw = deudaRepository.findTotalPagadoPorDeuda(deuda.getId());
+        java.math.BigDecimal totalPagado = (totalPagadoRaw != null ? totalPagadoRaw : java.math.BigDecimal.ZERO).abs();
         if (totalPagado.compareTo(deuda.getMontoTotal()) >= 0) {
             deuda.setEstado(EstadoDeuda.PAGADA);
         }

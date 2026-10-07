@@ -1,6 +1,7 @@
 package com.example.saveup.dto;
 
 import com.example.saveup.model.enums.TipoMovimiento;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -10,6 +11,7 @@ import java.math.BigDecimal;
 public class MovimientoRegistroDTO {
 
     @NotNull(message = "El monto no puede ser nulo")
+    @Digits(integer = 17, fraction = 2, message = "El monto debe tener como máximo 17 enteros y 2 decimales")
     private BigDecimal monto;
 
     @NotBlank(message = "La descripción es obligatoria")

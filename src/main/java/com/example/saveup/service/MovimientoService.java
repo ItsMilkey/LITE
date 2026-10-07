@@ -23,6 +23,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -130,12 +132,12 @@ public class MovimientoService {
     }
 
     @Transactional(readOnly = true)
-    public Double obtenerSaldoActual(String rut) {
+    public BigDecimal obtenerSaldoActual(String rut) {
         if (!usuarioRepository.existsById(rut)) {
             throw new EntityNotFoundException("Usuario no encontrado con RUT: " + rut);
         }
-        java.math.BigDecimal saldo = movimientoRepository.findSaldoByUsuarioRut(rut);
-        return saldo == null ? 0.0 : saldo.doubleValue();
+        BigDecimal saldo = movimientoRepository.findSaldoByUsuarioRut(rut);
+        return saldo == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : saldo.setScale(2, RoundingMode.HALF_UP);
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.example.saveup.dto;
 
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
@@ -13,6 +14,7 @@ public class MetaAhorroCreacionDTO {
     private String nombre;
 
     @Positive(message = "El monto objetivo debe ser positivo")
+    @Digits(integer = 17, fraction = 2, message = "El monto objetivo debe tener como máximo 17 enteros y 2 decimales")
     private BigDecimal montoObjetivo;
 
     @Future(message = "La fecha límite debe ser en el futuro")

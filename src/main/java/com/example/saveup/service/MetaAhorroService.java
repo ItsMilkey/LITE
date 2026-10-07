@@ -93,7 +93,8 @@ public class MetaAhorroService {
 
         securityUtils.validarPropietario(meta.getUsuario().getRut());
 
-        java.math.BigDecimal totalAhorrado = metaAhorroRepository.findTotalAhorradoByMetaId(metaId).abs();
+        java.math.BigDecimal totalAhorradoRaw = metaAhorroRepository.findTotalAhorradoByMetaId(metaId);
+        java.math.BigDecimal totalAhorrado = (totalAhorradoRaw != null ? totalAhorradoRaw : java.math.BigDecimal.ZERO).abs();
         if (dto.getMonto().compareTo(totalAhorrado) > 0) {
             throw new IllegalStateException("El monto a retirar no puede ser mayor al total ahorrado.");
         }
@@ -129,7 +130,8 @@ public class MetaAhorroService {
             throw new IllegalStateException("La meta por defecto 'Ahorros' no se puede eliminar.");
         }
 
-        java.math.BigDecimal totalAhorrado = metaAhorroRepository.findTotalAhorradoByMetaId(metaId).abs();
+        java.math.BigDecimal totalAhorradoRaw = metaAhorroRepository.findTotalAhorradoByMetaId(metaId);
+        java.math.BigDecimal totalAhorrado = (totalAhorradoRaw != null ? totalAhorradoRaw : java.math.BigDecimal.ZERO).abs();
 
         if (totalAhorrado.compareTo(java.math.BigDecimal.ZERO) > 0) {
             // Devolver el dinero al saldo principal

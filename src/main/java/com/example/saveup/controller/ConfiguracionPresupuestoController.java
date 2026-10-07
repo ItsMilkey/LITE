@@ -186,9 +186,9 @@ public class ConfiguracionPresupuestoController {
         dto.setPorcentajeAhorroConfigurado(pSave);
 
         java.math.BigDecimal cien = new java.math.BigDecimal("100");
-        dto.setPresupuestoNecesidades(totalIncome.multiply(pNeed).divide(cien, 2, java.math.RoundingMode.HALF_EVEN));
-        dto.setPresupuestoDeseos(totalIncome.multiply(pWant).divide(cien, 2, java.math.RoundingMode.HALF_EVEN));
-        dto.setPresupuestoAhorro(totalIncome.multiply(pSave).divide(cien, 2, java.math.RoundingMode.HALF_EVEN));
+        dto.setPresupuestoNecesidades(totalIncome.multiply(pNeed).divide(cien, 2, java.math.RoundingMode.HALF_UP));
+        dto.setPresupuestoDeseos(totalIncome.multiply(pWant).divide(cien, 2, java.math.RoundingMode.HALF_UP));
+        dto.setPresupuestoAhorro(totalIncome.multiply(pSave).divide(cien, 2, java.math.RoundingMode.HALF_UP));
 
         dto.setGastoNecesidades(gastoNecesidad);
         dto.setGastoDeseos(gastoDeseos);

@@ -2,6 +2,7 @@ package com.example.saveup.dto;
 
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -22,5 +23,6 @@ public class AsignacionPresupuestoDTO {
     @NotNull(message = "El porcentaje de asignacion es obligatorio")
     @DecimalMin(value = "0.0", message = "El porcentaje debe ser mayor o igual a 0")
     @DecimalMax(value = "100.0", message = "El porcentaje no puede exceder 100")
+    @Digits(integer = 3, fraction = 2, message = "El porcentaje debe tener como máximo 3 enteros y 2 decimales")
     private BigDecimal porcentaje;
 }

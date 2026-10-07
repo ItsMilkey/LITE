@@ -17,6 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 /**
@@ -56,8 +58,8 @@ public class SmartSplitProcessor {
      * @param montoIngreso Monto total del ingreso percibido.
      */
     @Transactional
-    public void procesarDistribucion(Usuario usuario, java.math.BigDecimal montoIngreso) {
-        if (usuario == null || montoIngreso.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+    public void procesarDistribucion(Usuario usuario, BigDecimal montoIngreso) {
+        if (usuario == null || montoIngreso == null || montoIngreso.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
 
@@ -69,11 +71,16 @@ public class SmartSplitProcessor {
             if (Boolean.TRUE.equals(config.getActivo())
                     && Boolean.TRUE.equals(config.getAutomatizarAhorroEnMetas())
                     && config.getPorcentajeAhorro() != null
-                    && config.getPorcentajeAhorro().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                    && config.getPorcentajeAhorro().compareTo(BigDecimal.ZERO) > 0) {
 
                 // 1. Calcular Monto para Ahorro general según configuración
-                java.math.BigDecimal divisor = new java.math.BigDecimal("100");
-                java.math.BigDecimal montoAhorro = montoIngreso.multiply(config.getPorcentajeAhorro()).divide(divisor, 2, java.math.RoundingMode.HALF_EVEN);
+                BigDecimal divisor = new BigDecimal("100");
+                BigDecimal montoAhorro = montoIngreso.multiply(config.getPorcentajeAhorro())
+                        .divide(divisor, 2, RoundingMode.HALF_UP);
+
+                if (montoAhorro.compareTo(BigDecimal.ZERO) <= 0) {
+                    return;
+                }
 
                 // 2. Obtener las asignaciones porcentuales hacia cada meta
                 List<AsignacionMetaPresupuesto> asignaciones = asignacionMetaPresupuestoRepository
@@ -83,33 +90,54 @@ public class SmartSplitProcessor {
                     return;
                 }
 
+                List<AsignacionMetaPresupuesto> asignacionesValidas = asignaciones.stream()
+                        .filter(a -> a.getMeta() != null && a.getPorcentajeAsignacion() != null
+                                && a.getPorcentajeAsignacion().compareTo(BigDecimal.ZERO) > 0)
+                        .toList();
+
+                if (asignacionesValidas.isEmpty()) {
+                    return;
+                }
+
                 // Resolver categoría de ahorro una sola vez
                 Categoria catAhorro = resolverCategoriaAhorro();
 
-                for (AsignacionMetaPresupuesto asignacion : asignaciones) {
-                    if (asignacion.getPorcentajeAsignacion() != null && asignacion.getPorcentajeAsignacion().compareTo(java.math.BigDecimal.ZERO) > 0) {
-                        java.math.BigDecimal montoAbono = montoAhorro.multiply(asignacion.getPorcentajeAsignacion()).divide(divisor, 2, java.math.RoundingMode.HALF_EVEN);
-                        if (montoAbono.compareTo(java.math.BigDecimal.ZERO) > 0 && asignacion.getMeta() != null) {
-                            MetaAhorro meta = asignacion.getMeta();
+                BigDecimal sumaAbonos = BigDecimal.ZERO;
+                int total = asignacionesValidas.size();
 
-                            // Crear Movimiento de Abono a Meta (egreso contable del saldo corriente)
-                            Movimiento abonoMovimiento = new Movimiento();
-                            abonoMovimiento.setUsuario(usuario);
-                            abonoMovimiento.setMonto(montoAbono.negate());
-                            abonoMovimiento.setDescripcion("Abono Auto: " + meta.getNombre());
-                            abonoMovimiento.setTipoMovimiento(TipoMovimiento.ABONO_META);
-                            abonoMovimiento.setMetaAhorro(meta);
-                            if (catAhorro != null) {
-                                abonoMovimiento.setCategoria(catAhorro);
-                            }
+                for (int i = 0; i < total; i++) {
+                    AsignacionMetaPresupuesto asignacion = asignacionesValidas.get(i);
+                    BigDecimal montoAbono;
 
-                            // Actualizar saldo acumulado en la Meta
-                            meta.setMontoActual(meta.getMontoActual().add(montoAbono));
-                            metaAhorroRepository.save(meta);
+                    if (i == total - 1) {
+                        // El residuo de redondeo va a la última asignación para sumar exactamente montoAhorro
+                        montoAbono = montoAhorro.subtract(sumaAbonos);
+                    } else {
+                        montoAbono = montoAhorro.multiply(asignacion.getPorcentajeAsignacion())
+                                .divide(divisor, 2, RoundingMode.HALF_UP);
+                        sumaAbonos = sumaAbonos.add(montoAbono);
+                    }
 
-                            // Guardar sub-movimiento
-                            movimientoRepository.save(abonoMovimiento);
+                    if (montoAbono.compareTo(BigDecimal.ZERO) > 0) {
+                        MetaAhorro meta = asignacion.getMeta();
+
+                        // Crear Movimiento de Abono a Meta (egreso contable del saldo corriente)
+                        Movimiento abonoMovimiento = new Movimiento();
+                        abonoMovimiento.setUsuario(usuario);
+                        abonoMovimiento.setMonto(montoAbono.negate());
+                        abonoMovimiento.setDescripcion("Abono Auto: " + meta.getNombre());
+                        abonoMovimiento.setTipoMovimiento(TipoMovimiento.ABONO_META);
+                        abonoMovimiento.setMetaAhorro(meta);
+                        if (catAhorro != null) {
+                            abonoMovimiento.setCategoria(catAhorro);
                         }
+
+                        // Actualizar saldo acumulado en la Meta
+                        meta.setMontoActual(meta.getMontoActual().add(montoAbono));
+                        metaAhorroRepository.save(meta);
+
+                        // Guardar sub-movimiento
+                        movimientoRepository.save(abonoMovimiento);
                     }
                 }
             }

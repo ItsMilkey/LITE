@@ -35,16 +35,16 @@ public class DeudaResponseDTO {
         this.id = id;
         this.nombre = nombre;
         this.descripcion = descripcion;
-        this.montoTotal = montoTotal != null ? montoTotal.setScale(2, RoundingMode.HALF_EVEN) : BigDecimal.ZERO;
+        this.montoTotal = montoTotal != null ? montoTotal.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         this.cantidadCuotas = cantidadCuotas;
         this.estado = estado;
         this.fechaCreacion = fechaCreacion;
 
         BigDecimal pagado = montoPagadoRaw != null
-                ? montoPagadoRaw.abs().setScale(2, RoundingMode.HALF_EVEN)
-                : BigDecimal.ZERO;
+                ? montoPagadoRaw.abs().setScale(2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         this.montoPagado = pagado;
-        this.montoRestante = this.montoTotal.subtract(pagado).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_EVEN);
+        this.montoRestante = this.montoTotal.subtract(pagado).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
         this.cuotasPagadas = cuotasPagadas != null ? cuotasPagadas.intValue() : 0;
     }
 
