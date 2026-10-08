@@ -68,7 +68,7 @@ class SimulacionServiceTest {
         assertEquals(new BigDecimal("102000.00"), resp.getValorCuota());
         assertEquals(new BigDecimal("102000.00"), resp.getCostoTotalCredito());
         assertEquals(new BigDecimal("2000.00"), resp.getInteresesYCostos());
-        assertEquals(new BigDecimal("2.00"), resp.getCondiciones().getTasaMensual());
+        assertEquals(new BigDecimal("2.0000"), resp.getCondiciones().getTasaMensual());
         assertEquals(new BigDecimal("26.82"), resp.getCargaAnualEquivalente());
         assertEquals(new BigDecimal("102.00"), resp.getResumenEducativo().getCostoPorCada100());
         assertEquals(new BigDecimal("2.00"), resp.getResumenEducativo().getPorcentajeSobreCapital());
@@ -90,7 +90,7 @@ class SimulacionServiceTest {
         // Cuota ≈ 8884.88
         assertTrue(resp.getValorCuota().subtract(new BigDecimal("8884.88")).abs()
                 .compareTo(new BigDecimal("0.01")) <= 0);
-        assertEquals(new BigDecimal("1.00"), resp.getCondiciones().getTasaMensual());
+        assertEquals(new BigDecimal("1.0000"), resp.getCondiciones().getTasaMensual());
     }
 
     @Test
@@ -106,7 +106,7 @@ class SimulacionServiceTest {
         SimulacionCreditoResponseDTO resp = service.simularCredito(request);
 
         assertEquals(new BigDecimal("8884.88"), resp.getValorCuota());
-        assertEquals(new BigDecimal("1.00"), resp.getCondiciones().getTasaMensual());
+        assertEquals(new BigDecimal("1.0000"), resp.getCondiciones().getTasaMensual());
         assertNotNull(resp.getCargaAnualEquivalente());
         assertTrue(resp.getCargaAnualEquivalente().compareTo(BigDecimal.ZERO) > 0);
     }

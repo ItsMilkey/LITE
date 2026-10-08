@@ -27,6 +27,7 @@ public class DeudaResponseDTO {
     private BigDecimal tasaAnualEfectiva;
     private BigDecimal valorCuota;
     private BigDecimal gastosIniciales;
+    private BigDecimal costoAdicionalPorCuota;
     private BigDecimal costoTotalCredito;
     private BigDecimal cargaAnualEquivalente;
     private LocalDate fechaPrimeraCuota;
@@ -45,7 +46,7 @@ public class DeudaResponseDTO {
     public DeudaResponseDTO(Long id, String nombre, String descripcion, BigDecimal montoTotal, int cantidadCuotas,
                             EstadoDeuda estado, Date fechaCreacion, BigDecimal montoPagadoRaw, Long cuotasPagadas) {
         this(id, nombre, descripcion, montoTotal, cantidadCuotas, estado, fechaCreacion, montoPagadoRaw, cuotasPagadas,
-             TipoDeuda.OTRO, ModalidadCalculo.SIN_INTERES, montoTotal, BigDecimal.ZERO, null, BigDecimal.ZERO, montoTotal, BigDecimal.ZERO, null, 0, BigDecimal.ZERO);
+             TipoDeuda.OTRO, ModalidadCalculo.SIN_INTERES, montoTotal, BigDecimal.ZERO, null, BigDecimal.ZERO, BigDecimal.ZERO, montoTotal, BigDecimal.ZERO, null, 0, BigDecimal.ZERO);
     }
     
     public DeudaResponseDTO(Long id, String nombre, String descripcion, BigDecimal montoTotal, int cantidadCuotas,
@@ -61,7 +62,8 @@ public class DeudaResponseDTO {
                             EstadoDeuda estado, Date fechaCreacion, BigDecimal montoPagadoRaw, Long cuotasPagadas,
                             TipoDeuda tipoDeuda, ModalidadCalculo modalidadCalculo, BigDecimal montoCapital,
                             BigDecimal tasaMensual, BigDecimal valorCuota, BigDecimal gastosIniciales,
-                            BigDecimal costoTotalCredito, BigDecimal cargaAnualEquivalente, LocalDate fechaPrimeraCuota,
+                            BigDecimal costoAdicionalPorCuota, BigDecimal costoTotalCredito,
+                            BigDecimal cargaAnualEquivalente, LocalDate fechaPrimeraCuota,
                             int cuotasPagadasPrevias, BigDecimal montoPagadoPrevio) {
         this.id = id;
         this.nombre = nombre;
@@ -74,7 +76,7 @@ public class DeudaResponseDTO {
         this.tipoDeuda = tipoDeuda != null ? tipoDeuda : TipoDeuda.OTRO;
         this.modalidadCalculo = modalidadCalculo != null ? modalidadCalculo : ModalidadCalculo.SIN_INTERES;
         this.montoCapital = montoCapital != null ? montoCapital.setScale(2, RoundingMode.HALF_UP) : this.montoTotal;
-        this.tasaMensual = tasaMensual != null ? tasaMensual.multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        this.tasaMensual = tasaMensual != null ? tasaMensual.multiply(new BigDecimal("100")).setScale(4, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP);
         // Tasa Anual Efectiva: calculada desde la tasa mensual fraccionaria, en caso de ser > 0.
         BigDecimal tasaFraccion = tasaMensual != null ? tasaMensual : BigDecimal.ZERO;
         this.tasaAnualEfectiva = tasaFraccion.compareTo(BigDecimal.ZERO) > 0 ? 
@@ -84,6 +86,7 @@ public class DeudaResponseDTO {
         this.valorCuota = valorCuota != null ? valorCuota.setScale(2, RoundingMode.HALF_UP) : 
             (cantidadCuotas > 0 ? this.montoTotal.divide(BigDecimal.valueOf(cantidadCuotas), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
         this.gastosIniciales = gastosIniciales != null ? gastosIniciales.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        this.costoAdicionalPorCuota = costoAdicionalPorCuota != null ? costoAdicionalPorCuota.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         this.costoTotalCredito = costoTotalCredito != null ? costoTotalCredito.setScale(2, RoundingMode.HALF_UP) : this.montoTotal;
         this.cargaAnualEquivalente = cargaAnualEquivalente != null ? cargaAnualEquivalente.multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         this.fechaPrimeraCuota = fechaPrimeraCuota;

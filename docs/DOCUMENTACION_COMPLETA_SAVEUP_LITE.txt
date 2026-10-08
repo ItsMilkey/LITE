@@ -1073,14 +1073,19 @@ Se anadieron dos dependencias en el bloque de Flyway:
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-database-oracle</artifactId>
   </dependency>
+  <!-- Requerido en Flyway 10+ para soporte explicito de PostgreSQL -->
+  <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
+  </dependency>
 
 Notas:
 - flyway-core no declara version explicita; hereda la version 10.x del BOM
   de spring-boot-starter-parent 3.3.0.
 - flyway-database-oracle es obligatorio desde Flyway 10 para el soporte de
   Oracle (antes estaba integrado en flyway-core).
-- Para PostgreSQL no se requiere modulo adicional; el soporte viene incluido
-  en flyway-core.
+- flyway-database-postgresql es obligatorio desde Flyway 10 para el soporte
+  explicito de PostgreSQL (mismo motivo que Oracle).
 
 10.3. CONFIGURACION POR PERFIL (application-*.properties)
 --------------------------------------------------------------------------------

@@ -47,6 +47,7 @@ public class DeudaService {
 
     private final CalculoFinancieroService calculoService = new CalculoFinancieroService();
     private final CalendarioCuotas calendarioCuotas = new CalendarioCuotas();
+    private final ResolutorCondiciones resolutorCondiciones = new ResolutorCondiciones(calculoService, calendarioCuotas);
     private static final MathContext MC = MathContext.DECIMAL128;
 
     @Transactional
@@ -152,7 +153,7 @@ public class DeudaService {
                 deuda.getModalidadCalculo(),
                 deuda.getMontoCapital(),
                 deuda.getCantidadCuotas(),
-                deuda.getTasaMensual(),
+                deuda.getModalidadCalculo() == ModalidadCalculo.CUOTA_CONOCIDA ? null : deuda.getTasaMensual(),
                 deuda.getModalidadCalculo() == ModalidadCalculo.CUOTA_CONOCIDA ? deuda.getValorCuota() : null,
                 deuda.getGastosIniciales(),
                 deuda.getCostoAdicionalPorCuota()
@@ -192,70 +193,44 @@ public class DeudaService {
         }
 
         CondicionesCreditoDTO condDto = dto.getCondiciones();
-        int cantidadCuotas;
-        LocalDate fechaPrimera = null;
-        BigDecimal tasaMensualFraccion = BigDecimal.ZERO;
-        ModalidadCalculo modalidad = ModalidadCalculo.SIN_INTERES;
-        BigDecimal montoCapital;
-        BigDecimal valorCuotaInput = null;
-        BigDecimal gastosIniciales = BigDecimal.ZERO;
-        BigDecimal costoAdicional = BigDecimal.ZERO;
-
+        ResolutorCondiciones.ResultadoResolucion res;
+        
         if (condDto != null) {
-            modalidad = condDto.getModalidad();
-            montoCapital = condDto.getMontoCapital();
-            gastosIniciales = condDto.getGastosIniciales() != null ? condDto.getGastosIniciales() : BigDecimal.ZERO;
-            costoAdicional = condDto.getCostoAdicionalPorCuota() != null ? condDto.getCostoAdicionalPorCuota() : BigDecimal.ZERO;
-
-            if (condDto.getCantidadCuotas() != null) {
-                cantidadCuotas = condDto.getCantidadCuotas();
-                fechaPrimera = condDto.getFechaPrimeraCuota();
-            } else if (condDto.getFechaPrimeraCuota() != null && condDto.getFechaUltimaCuota() != null) {
-                cantidadCuotas = calendarioCuotas.contarCuotas(condDto.getFechaPrimeraCuota(), condDto.getFechaUltimaCuota());
-                fechaPrimera = condDto.getFechaPrimeraCuota();
-            } else {
-                throw new CalculoFinancieroException("Debe indicar cantidadCuotas o fechas en las condiciones");
-            }
-
-            if (modalidad == ModalidadCalculo.TASA_CONOCIDA) {
-                if (condDto.getTasaMensual() != null) {
-                    tasaMensualFraccion = condDto.getTasaMensual().divide(new BigDecimal("100"), MC);
-                } else if (condDto.getTasaAnualEfectiva() != null) {
-                    tasaMensualFraccion = calculoService.tasaAnualAMensual(condDto.getTasaAnualEfectiva().divide(new BigDecimal("100"), MC));
-                } else {
-                    throw new CalculoFinancieroException("TASA_CONOCIDA requiere tasaMensual o tasaAnualEfectiva");
-                }
-            } else if (modalidad == ModalidadCalculo.CUOTA_CONOCIDA) {
-                valorCuotaInput = condDto.getValorCuota();
-            }
+            res = resolutorCondiciones.resolver(condDto);
         } else {
             // Compatibilidad
             if (dto.getMontoTotal() == null || dto.getCantidadCuotas() == null) {
                 throw new IllegalArgumentException("Si no hay bloque condiciones, debe proporcionar montoTotal y cantidadCuotas");
             }
-            montoCapital = dto.getMontoTotal();
-            cantidadCuotas = dto.getCantidadCuotas();
+            CondicionesCreditoDTO compDto = CondicionesCreditoDTO.builder()
+                .modalidad(ModalidadCalculo.SIN_INTERES)
+                .montoCapital(dto.getMontoTotal())
+                .cantidadCuotas(dto.getCantidadCuotas())
+                .build();
+            res = resolutorCondiciones.resolver(compDto);
         }
         
-        if (deuda.getCuotasPagadasPrevias() >= cantidadCuotas) {
+        if (deuda.getCuotasPagadasPrevias() >= res.cantidadCuotas()) {
             throw new IllegalArgumentException("cuotasPagadasPrevias (" + deuda.getCuotasPagadasPrevias() + 
-                ") no puede ser mayor o igual a cantidadCuotas (" + cantidadCuotas + ")");
+                ") no puede ser mayor o igual a cantidadCuotas (" + res.cantidadCuotas() + ")");
         }
 
         CondicionesCredito condiciones = new CondicionesCredito(
-                modalidad, montoCapital, cantidadCuotas, tasaMensualFraccion, valorCuotaInput, gastosIniciales, costoAdicional
+                res.modalidad(), res.montoCapital(), res.cantidadCuotas(), 
+                res.tasaMensualFraccion(), res.valorCuotaInput(), 
+                res.gastosIniciales(), res.costoAdicionalPorCuota()
         );
 
         ResultadoCalculo resultado = calculoService.calcular(condiciones);
 
-        deuda.setModalidadCalculo(modalidad);
-        deuda.setMontoCapital(montoCapital);
-        deuda.setCantidadCuotas(cantidadCuotas);
-        deuda.setFechaPrimeraCuota(fechaPrimera);
+        deuda.setModalidadCalculo(res.modalidad());
+        deuda.setMontoCapital(res.montoCapital());
+        deuda.setCantidadCuotas(res.cantidadCuotas());
+        deuda.setFechaPrimeraCuota(res.fechaPrimeraCuota());
         deuda.setTasaMensual(resultado.tasaMensual()); // fracción
         deuda.setValorCuota(resultado.valorCuota());
-        deuda.setGastosIniciales(gastosIniciales);
-        deuda.setCostoAdicionalPorCuota(costoAdicional);
+        deuda.setGastosIniciales(res.gastosIniciales());
+        deuda.setCostoAdicionalPorCuota(res.costoAdicionalPorCuota());
         deuda.setMontoTotal(resultado.montoTotal());
         deuda.setCostoTotalCredito(resultado.costoTotalCredito());
         deuda.setCargaAnualEquivalente(resultado.cargaAnualEquivalente());
