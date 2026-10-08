@@ -116,11 +116,11 @@ class CalculoFinancieroServiceTest {
         assertEquals(0, r.tabla().getLast().saldo().compareTo(BigDecimal.ZERO),
                 "Saldo final debe ser 0");
 
-        // Monto total ≈ 106.618,56 (tolerancia 0.10)
+        // Monto total ≈ 106.618,53 (tolerancia 0.10)
         assertTrue(
-                r.montoTotal().subtract(new BigDecimal("106618.56")).abs()
+                r.montoTotal().subtract(new BigDecimal("106618.53")).abs()
                         .compareTo(new BigDecimal("0.10")) <= 0,
-                "Monto total esperado ≈ 106618.56, obtenido: " + r.montoTotal());
+                "Monto total esperado ≈ 106618.53, obtenido: " + r.montoTotal());
     }
 
     // ──────────────────────── Test 5: Conversión de tasas ────────────────────────
@@ -187,6 +187,20 @@ class CalculoFinancieroServiceTest {
                 "costoTotalCredito = montoTotal + gastosIniciales");
     }
 
+    @Test
+    @DisplayName("T6b: TASA_CONOCIDA 100.000, 1% mensual, 12 cuotas, gastos 99.000 → excepción (no hay raíz en el rango)")
+    void conGastosExcesivos_cae() {
+        CondicionesCredito c = new CondicionesCredito(
+                ModalidadCalculo.TASA_CONOCIDA,
+                new BigDecimal("100000"), 12, new BigDecimal("0.01"), null,
+                new BigDecimal("99000"), BigDecimal.ZERO);
+        
+        CalculoFinancieroException ex = assertThrows(CalculoFinancieroException.class,
+                () -> service.calcular(c));
+        assertTrue(ex.getMessage().toLowerCase().contains("no hay raíz en el rango"),
+                "Mensaje debe indicar que no hay raíz en el rango");
+    }
+
     // ──────────────────────── Test 7: CUOTA_CONOCIDA ────────────────────────
 
     @Nested
@@ -233,6 +247,19 @@ class CalculoFinancieroServiceTest {
                     () -> service.calcular(c));
             assertTrue(ex.getMessage().toLowerCase().contains("no cubren el capital"),
                     "Mensaje debe indicar que los pagos no cubren el capital");
+        }
+
+        @Test
+        @DisplayName("100.000 con 2 × 150.000 → error 'No hay raíz en el rango'")
+        void pagosExcesivos() {
+            CondicionesCredito c = new CondicionesCredito(
+                    ModalidadCalculo.CUOTA_CONOCIDA,
+                    new BigDecimal("100000"), 2, null, new BigDecimal("150000"));
+
+            CalculoFinancieroException ex = assertThrows(CalculoFinancieroException.class,
+                    () -> service.calcular(c));
+            assertTrue(ex.getMessage().toLowerCase().contains("no hay raíz en el rango"),
+                    "Mensaje debe indicar que no hay raíz en el rango");
         }
     }
 
@@ -405,15 +432,16 @@ class CalculoFinancieroServiceTest {
         }
     }
 
-    // ──────────────────────── Test 10: cifras de simulador oficial ────────────────────────
+    // ──────────────────────── Test 10: cifras de referencia independiente ────────────────────────
 
     @Nested
-    @DisplayName("T10: Cifras de simulador oficial")
+    @DisplayName("T10: Cifras de referencia independiente")
     class SimuladorOficialTests {
 
         @Test
         @DisplayName("Caso 1: TASA_CONOCIDA sin costos — 2M, 24 cuotas, 3,49% mensual")
         void caso1_sinCostos() {
+            // Referencia calculada de forma independiente (no es salida de un simulador comercial)
             CondicionesCredito c = new CondicionesCredito(
                     ModalidadCalculo.TASA_CONOCIDA,
                     new BigDecimal("2000000"), 24, new BigDecimal("0.0349"), null);
@@ -465,13 +493,14 @@ class CalculoFinancieroServiceTest {
             // CAE = TAE (sin costos)  ≈ 50,93%
             assertTrue(
                     r.cargaAnualEquivalente().subtract(new BigDecimal("0.5093")).abs()
-                            .compareTo(new BigDecimal("0.001")) < 0,
+                            .compareTo(new BigDecimal("0.0001")) <= 0,
                     "CAE esperado ≈ 50,93%, obtenido: " + r.cargaAnualEquivalente());
         }
 
         @Test
         @DisplayName("Caso 2: TASA_CONOCIDA + seguro mensual — 3M, 36 cuotas, 1,8%, costo 3.500")
         void caso2_conSeguroMensual() {
+            // Referencia calculada de forma independiente (no es salida de un simulador comercial)
             CondicionesCredito c = new CondicionesCredito(
                     ModalidadCalculo.TASA_CONOCIDA,
                     new BigDecimal("3000000"), 36, new BigDecimal("0.018"), null,
@@ -516,10 +545,10 @@ class CalculoFinancieroServiceTest {
                             .compareTo(new BigDecimal("0.0001")) < 0,
                     "TAE esperada ≈ 23,87%, obtenida: " + r.tasaAnualEfectiva());
 
-            // CAE ≈ 26,6292%  (tolerancia 0,01 pp)
+            // CAE ≈ 26,6292%  (tolerancia 0,0001 pp)
             assertTrue(
                     r.cargaAnualEquivalente().subtract(new BigDecimal("0.266292")).abs()
-                            .compareTo(new BigDecimal("0.001")) < 0,
+                            .compareTo(new BigDecimal("0.0001")) <= 0,
                     "CAE esperado ≈ 26,63%, obtenido: " + r.cargaAnualEquivalente());
 
             // CAE > TAE (porque hay costos)
@@ -530,6 +559,7 @@ class CalculoFinancieroServiceTest {
         @Test
         @DisplayName("Caso 3: TASA_CONOCIDA + gastos iniciales — 5M, 48 cuotas, 1,5%, gastos 120.000")
         void caso3_conGastosIniciales() {
+            // Referencia calculada de forma independiente (no es salida de un simulador comercial)
             CondicionesCredito c = new CondicionesCredito(
                     ModalidadCalculo.TASA_CONOCIDA,
                     new BigDecimal("5000000"), 48, new BigDecimal("0.015"), null,
@@ -580,10 +610,10 @@ class CalculoFinancieroServiceTest {
                             .compareTo(new BigDecimal("0.0001")) < 0,
                     "TAE esperada ≈ 19,56%, obtenida: " + r.tasaAnualEfectiva());
 
-            // CAE ≈ 21,1893%  (tolerancia 0,01 pp)
+            // CAE ≈ 21,1893%  (tolerancia 0,0001 pp)
             assertTrue(
                     r.cargaAnualEquivalente().subtract(new BigDecimal("0.211893")).abs()
-                            .compareTo(new BigDecimal("0.001")) < 0,
+                            .compareTo(new BigDecimal("0.0001")) <= 0,
                     "CAE esperado ≈ 21,19%, obtenido: " + r.cargaAnualEquivalente());
 
             // CAE > TAE (porque hay gastos iniciales)
@@ -594,6 +624,7 @@ class CalculoFinancieroServiceTest {
         @Test
         @DisplayName("Caso 4: CUOTA_CONOCIDA — compra en tienda, 399.990 en 12 cuotas de 38.000")
         void caso4_cuotaConocida_tienda() {
+            // Referencia calculada de forma independiente (no es salida de un simulador comercial)
             CondicionesCredito c = new CondicionesCredito(
                     ModalidadCalculo.CUOTA_CONOCIDA,
                     new BigDecimal("399990"), 12, null, new BigDecimal("38000"));
@@ -618,10 +649,10 @@ class CalculoFinancieroServiceTest {
                             .compareTo(new BigDecimal("0.00001")) < 0,
                     "tasa mensual esperada ≈ 2,0762%, obtenida: " + r.tasaMensual());
 
-            // CAE ≈ 27,9650%  (tolerancia 0,01 pp)
+            // CAE ≈ 27,9650%  (tolerancia 0,0001 pp)
             assertTrue(
                     r.cargaAnualEquivalente().subtract(new BigDecimal("0.279650")).abs()
-                            .compareTo(new BigDecimal("0.001")) < 0,
+                            .compareTo(new BigDecimal("0.0001")) <= 0,
                     "CAE esperado ≈ 27,97%, obtenido: " + r.cargaAnualEquivalente());
         }
     }

@@ -184,6 +184,44 @@ class SmartSplitProcessorTest {
     }
 
     @Test
+    @DisplayName("Smart-Split con asignaciones parciales (30% / 20%) reparte solo lo correspondiente y ajusta en la última")
+    void procesarDistribucion_conAsignacionesParciales_reparteTotalObjetivo() {
+        // Ingreso 1000.00 -> 10% ahorro = 100.00
+        config.setPorcentajeAhorro(new java.math.BigDecimal("10.00"));
+        java.math.BigDecimal montoIngreso = new java.math.BigDecimal("1000.00");
+
+        AsignacionMetaPresupuesto asig1 = new AsignacionMetaPresupuesto();
+        asig1.setMeta(meta1);
+        asig1.setPorcentajeAsignacion(new java.math.BigDecimal("30.00")); // 30% de 100 = 30.00
+
+        AsignacionMetaPresupuesto asig2 = new AsignacionMetaPresupuesto();
+        asig2.setMeta(meta2);
+        asig2.setPorcentajeAsignacion(new java.math.BigDecimal("20.00")); // 20% de 100 = 20.00
+
+        when(configuracionPresupuestoRepository.findByUsuarioRut("12345678-9")).thenReturn(Optional.of(config));
+        when(asignacionMetaPresupuestoRepository.findByConfiguracionId(1L)).thenReturn(List.of(asig1, asig2));
+        when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.of(catAhorro));
+
+        smartSplitProcessor.procesarDistribucion(usuario, montoIngreso);
+
+        // Verificamos que los movimientos suman exactamente 50.00 (el 50% de 100)
+        ArgumentCaptor<Movimiento> captor = ArgumentCaptor.forClass(Movimiento.class);
+        verify(movimientoRepository, times(2)).save(captor.capture());
+
+        List<Movimiento> movimientos = captor.getAllValues();
+        assertEquals(2, movimientos.size());
+
+        java.math.BigDecimal mov1Monto = movimientos.get(0).getMonto();
+        java.math.BigDecimal mov2Monto = movimientos.get(1).getMonto();
+
+        assertEquals(0, new java.math.BigDecimal("-30.00").compareTo(mov1Monto));
+        assertEquals(0, new java.math.BigDecimal("-20.00").compareTo(mov2Monto));
+
+        java.math.BigDecimal totalAbonado = mov1Monto.add(mov2Monto).abs();
+        assertEquals(0, new java.math.BigDecimal("50.00").compareTo(totalAbonado));
+    }
+
+    @Test
     @DisplayName("No debe hacer nada si la configuración presupuestaria está inactiva")
     void procesarDistribucion_conConfiguracionInactiva_noRealizaAccion() {
         config.setActivo(false);

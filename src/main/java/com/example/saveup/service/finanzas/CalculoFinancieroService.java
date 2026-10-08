@@ -64,14 +64,14 @@ public class CalculoFinancieroService {
         BigDecimal costoTotalCredito = montoTotal.add(gastos).setScale(ESCALA_DINERO, REDONDEO);
         BigDecimal interesesYCostos = costoTotalCredito.subtract(c.montoCapital()).setScale(ESCALA_DINERO, REDONDEO);
 
-        BigDecimal cae = calcularCAE(tabla, c.montoCapital(), gastos, c.costoAdicionalPorCuota());
+        BigDecimal cargaAnualEquivalente = calcularCargaAnualEquivalente(tabla, c.montoCapital(), tasaMensual, gastos, c.costoAdicionalPorCuota());
 
         BigDecimal tasaAnualEfectiva = tasaMensualAAnual(tasaMensual);
 
         return new ResultadoCalculo(
                 valorCuota, tasaMensual, tasaAnualEfectiva,
                 montoTotal, costoTotalCredito, interesesYCostos,
-                cae, tabla);
+                cargaAnualEquivalente, tabla);
     }
 
     /** Convierte tasa anual efectiva (fracción) a tasa mensual (fracción). */
@@ -247,6 +247,11 @@ public class CalculoFinancieroService {
             return BigDecimal.ZERO;
         }
 
+        BigDecimal vp1 = valorPresente(cuota, BigDecimal.ONE, n);
+        if (vp1.compareTo(capital) >= 0) {
+            throw new CalculoFinancieroException("No hay raíz en el rango");
+        }
+
         BigDecimal lo = BigDecimal.ZERO;
         BigDecimal hi = BigDecimal.ONE;
 
@@ -273,8 +278,8 @@ public class CalculoFinancieroService {
      * Sin costos: CAE = (1+i)^12 − 1.
      * Con costos: se resuelve r tal que Σ flujo_k / (1+r)^k = montoNeto, por bisección.
      */
-    private BigDecimal calcularCAE(
-            List<CuotaAmortizacion> tabla, BigDecimal capital,
+    private BigDecimal calcularCargaAnualEquivalente(
+            List<CuotaAmortizacion> tabla, BigDecimal capital, BigDecimal tasaMensual,
             BigDecimal gastosIniciales, BigDecimal costoAdicionalPorCuota) {
 
         BigDecimal gastos = gastosIniciales != null ? gastosIniciales : BigDecimal.ZERO;
@@ -284,12 +289,7 @@ public class CalculoFinancieroService {
                 || costoAdicional.compareTo(BigDecimal.ZERO) > 0;
 
         if (!hayCostos) {
-            // Sin costos: CAE = (1+i)^12 − 1 usando la tasa de la tabla
-            // La tasa se puede recuperar del primer flujo si capital > 0
-            BigDecimal tasa = tabla.isEmpty() ? BigDecimal.ZERO :
-                    (capital.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO :
-                            tabla.getFirst().interes().divide(capital, MC));
-            return tasaMensualAAnual(tasa);
+            return tasaMensualAAnual(tasaMensual);
         }
 
         // Con costos: resolver r tal que Σ flujo_k / (1+r)^k = montoNeto
@@ -311,6 +311,26 @@ public class CalculoFinancieroService {
 
     /** Resuelve r tal que Σ flujo_k / (1+r)^k = objetivo, por bisección en [0, 1]. */
     private BigDecimal resolverTasaPorBiseccion(List<BigDecimal> flujos, BigDecimal objetivo) {
+        BigDecimal vp0 = BigDecimal.ZERO;
+        for (BigDecimal flujo : flujos) {
+            vp0 = vp0.add(flujo);
+        }
+        if (vp0.compareTo(objetivo) < 0) {
+            throw new CalculoFinancieroException("Los pagos no cubren el capital");
+        }
+        if (vp0.compareTo(objetivo) == 0) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal vp1 = BigDecimal.ZERO;
+        for (int k = 0; k < flujos.size(); k++) {
+            BigDecimal divisor = BigDecimal.ONE.add(BigDecimal.ONE).pow(k + 1, MC);
+            vp1 = vp1.add(flujos.get(k).divide(divisor, MC));
+        }
+        if (vp1.compareTo(objetivo) >= 0) {
+            throw new CalculoFinancieroException("No hay raíz en el rango");
+        }
+
         BigDecimal lo = BigDecimal.ZERO;
         BigDecimal hi = BigDecimal.ONE;
 

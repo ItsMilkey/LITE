@@ -102,6 +102,13 @@ public class SmartSplitProcessor {
                 // Resolver categoría de ahorro una sola vez
                 Categoria catAhorro = resolverCategoriaAhorro();
 
+                BigDecimal sumaPorcentajes = asignacionesValidas.stream()
+                        .map(AsignacionMetaPresupuesto::getPorcentajeAsignacion)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                BigDecimal totalObjetivo = montoAhorro.multiply(sumaPorcentajes)
+                        .divide(divisor, 2, RoundingMode.HALF_UP);
+
                 BigDecimal sumaAbonos = BigDecimal.ZERO;
                 int total = asignacionesValidas.size();
 
@@ -110,8 +117,8 @@ public class SmartSplitProcessor {
                     BigDecimal montoAbono;
 
                     if (i == total - 1) {
-                        // El residuo de redondeo va a la última asignación para sumar exactamente montoAhorro
-                        montoAbono = montoAhorro.subtract(sumaAbonos);
+                        // El residuo de redondeo va a la última asignación para sumar exactamente totalObjetivo
+                        montoAbono = totalObjetivo.subtract(sumaAbonos);
                     } else {
                         montoAbono = montoAhorro.multiply(asignacion.getPorcentajeAsignacion())
                                 .divide(divisor, 2, RoundingMode.HALF_UP);
