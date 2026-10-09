@@ -8,12 +8,15 @@ import com.example.saveup.model.Deuda;
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.Usuario;
 import com.example.saveup.model.enums.EstadoDeuda;
+import com.example.saveup.model.enums.ModalidadCalculo;
+import com.example.saveup.model.enums.TipoDeuda;
 import com.example.saveup.model.enums.TipoPresupuesto;
 import com.example.saveup.repository.CategoriaRepository;
 import com.example.saveup.repository.DeudaRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.SecurityUtils;
+import com.example.saveup.service.finanzas.CalendarioCuotas;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,6 +25,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.lang.reflect.Field;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -179,5 +185,77 @@ class DeudaServiceTest {
         assertEquals(0, new java.math.BigDecimal("450.25").compareTo(result.getMontoPagado()));
         assertEquals(0, new java.math.BigDecimal("800.50").compareTo(result.getMontoRestante()));
         assertEquals(EstadoDeuda.PENDIENTE, deuda.getEstado());
+    }
+
+    // ──────────────────────── Bug 1: fechaUltimaCuota ────────────────────────
+
+    @Test
+    @DisplayName("DeudaResponseDTO calcula fechaUltimaCuota usando la misma lógica que CalendarioCuotas (fin de mes)")
+    void deudaResponseDTO_fechaUltimaCuota_usaLogicaCalendarioCuotas() {
+        CalendarioCuotas calendario = new CalendarioCuotas();
+
+        // Caso 1: 31-ene-2027 con 2 cuotas → última = 28-feb-2027 (no existe 31-feb)
+        LocalDate primera1 = LocalDate.of(2027, 1, 31);
+        DeudaResponseDTO dto1 = new DeudaResponseDTO(1L, "Test", "Desc", new BigDecimal("100000"), 2,
+                EstadoDeuda.PENDIENTE, new Date(), BigDecimal.ZERO, 0L,
+                TipoDeuda.OTRO, ModalidadCalculo.SIN_INTERES, new BigDecimal("100000"),
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO, BigDecimal.ZERO, primera1, 0, BigDecimal.ZERO);
+
+        LocalDate esperada1 = calendario.fechasVencimiento(primera1, 2).get(1);
+        assertEquals(esperada1, dto1.getFechaUltimaCuota(),
+                "fechaUltimaCuota debe coincidir con CalendarioCuotas para fin de mes");
+
+        // Caso 2: 31-ene-2027 con 3 cuotas → última = 31-mar-2027
+        LocalDate primera2 = LocalDate.of(2027, 1, 31);
+        DeudaResponseDTO dto2 = new DeudaResponseDTO(2L, "Test", "Desc", new BigDecimal("100000"), 3,
+                EstadoDeuda.PENDIENTE, new Date(), BigDecimal.ZERO, 0L,
+                TipoDeuda.OTRO, ModalidadCalculo.SIN_INTERES, new BigDecimal("100000"),
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO, BigDecimal.ZERO, primera2, 0, BigDecimal.ZERO);
+
+        LocalDate esperada2 = calendario.fechasVencimiento(primera2, 3).get(2);
+        assertEquals(esperada2, dto2.getFechaUltimaCuota(),
+                "fechaUltimaCuota debe coincidir con CalendarioCuotas");
+
+        // Caso 3: 31-ene-2027 con 1 cuota → última = 31-ene-2027
+        LocalDate primera3 = LocalDate.of(2027, 1, 31);
+        DeudaResponseDTO dto3 = new DeudaResponseDTO(3L, "Test", "Desc", new BigDecimal("100000"), 1,
+                EstadoDeuda.PENDIENTE, new Date(), BigDecimal.ZERO, 0L,
+                TipoDeuda.OTRO, ModalidadCalculo.SIN_INTERES, new BigDecimal("100000"),
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO, BigDecimal.ZERO, primera3, 0, BigDecimal.ZERO);
+
+        LocalDate esperada3 = calendario.fechasVencimiento(primera3, 1).get(0);
+        assertEquals(esperada3, dto3.getFechaUltimaCuota(),
+                "fechaUltimaCuota debe coincidir con CalendarioCuotas para 1 cuota");
+    }
+
+    // ──────────────────────── Bug 2: tasaMensual naming ────────────────────────
+
+    @Test
+    @DisplayName("DeudaResponseDTO expone tasaMensual como porcentaje con nombre tasaMensualPorcentaje")
+    void deudaResponseDTO_tasaMensualPorcentaje_existeYEsPorcentaje() throws NoSuchFieldException {
+        // Verificar que el campo tasaMensualPorcentaje existe
+        Field field = DeudaResponseDTO.class.getDeclaredField("tasaMensualPorcentaje");
+        assertNotNull(field, "DeudaResponseDTO debe tener el campo tasaMensualPorcentaje");
+
+        // Verificar que el campo tasaMensual NO existe (para evitar ambigüedad)
+        try {
+            DeudaResponseDTO.class.getDeclaredField("tasaMensual");
+            fail("DeudaResponseDTO NO debe tener el campo tasaMensual (ambiguo con la fracción del motor)");
+        } catch (NoSuchFieldException e) {
+            // Esperado: el campo tasaMensual no debe existir
+        }
+
+        // Verificar que el valor es un porcentaje (1.5, no 0.015)
+        DeudaResponseDTO dto = new DeudaResponseDTO(1L, "Test", "Desc", new BigDecimal("100000"), 12,
+                EstadoDeuda.PENDIENTE, new Date(), BigDecimal.ZERO, 0L,
+                TipoDeuda.OTRO, ModalidadCalculo.TASA_CONOCIDA, new BigDecimal("100000"),
+                new BigDecimal("0.015"), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO, BigDecimal.ZERO, LocalDate.of(2027, 1, 31), 0, BigDecimal.ZERO);
+
+        assertEquals(0, new BigDecimal("1.5000").compareTo(dto.getTasaMensualPorcentaje()),
+                "tasaMensualPorcentaje debe ser 1.5 (porcentaje), no 0.015 (fracción)");
     }
 }

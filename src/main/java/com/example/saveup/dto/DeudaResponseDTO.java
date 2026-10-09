@@ -3,6 +3,7 @@ package com.example.saveup.dto;
 import com.example.saveup.model.enums.EstadoDeuda;
 import com.example.saveup.model.enums.ModalidadCalculo;
 import com.example.saveup.model.enums.TipoDeuda;
+import com.example.saveup.service.finanzas.DeudaResponseMapper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -23,7 +24,7 @@ public class DeudaResponseDTO {
     private TipoDeuda tipoDeuda;
     private ModalidadCalculo modalidadCalculo;
     private BigDecimal montoCapital;
-    private BigDecimal tasaMensual;
+    private BigDecimal tasaMensualPorcentaje;
     private BigDecimal tasaAnualEfectiva;
     private BigDecimal valorCuota;
     private BigDecimal gastosIniciales;
@@ -57,6 +58,7 @@ public class DeudaResponseDTO {
 
     /**
      * Constructor utilizado para proyecciones JPQL con agregaciones directas en BD (evita N+1 queries).
+     * Los cálculos financieros delegan en {@link DeudaResponseMapper}.
      */
     public DeudaResponseDTO(Long id, String nombre, String descripcion, BigDecimal montoTotal, int cantidadCuotas,
                             EstadoDeuda estado, Date fechaCreacion, BigDecimal montoPagadoRaw, Long cuotasPagadas,
@@ -72,36 +74,20 @@ public class DeudaResponseDTO {
         this.cantidadCuotas = cantidadCuotas;
         this.estado = estado;
         this.fechaCreacion = fechaCreacion;
-        
+
         this.tipoDeuda = tipoDeuda != null ? tipoDeuda : TipoDeuda.OTRO;
         this.modalidadCalculo = modalidadCalculo != null ? modalidadCalculo : ModalidadCalculo.SIN_INTERES;
         this.montoCapital = montoCapital != null ? montoCapital.setScale(2, RoundingMode.HALF_UP) : this.montoTotal;
-        this.tasaMensual = tasaMensual != null ? tasaMensual.multiply(new BigDecimal("100")).setScale(4, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP);
-        // Tasa Anual Efectiva: calculada desde la tasa mensual fraccionaria, en caso de ser > 0.
-        BigDecimal tasaFraccion = tasaMensual != null ? tasaMensual : BigDecimal.ZERO;
-        this.tasaAnualEfectiva = tasaFraccion.compareTo(BigDecimal.ZERO) > 0 ? 
-            BigDecimal.ONE.add(tasaFraccion).pow(12).subtract(BigDecimal.ONE).multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP) : 
-            BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            
-        this.valorCuota = valorCuota != null ? valorCuota.setScale(2, RoundingMode.HALF_UP) : 
-            (cantidadCuotas > 0 ? this.montoTotal.divide(BigDecimal.valueOf(cantidadCuotas), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
         this.gastosIniciales = gastosIniciales != null ? gastosIniciales.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         this.costoAdicionalPorCuota = costoAdicionalPorCuota != null ? costoAdicionalPorCuota.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         this.costoTotalCredito = costoTotalCredito != null ? costoTotalCredito.setScale(2, RoundingMode.HALF_UP) : this.montoTotal;
         this.cargaAnualEquivalente = cargaAnualEquivalente != null ? cargaAnualEquivalente.multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         this.fechaPrimeraCuota = fechaPrimeraCuota;
-        if (fechaPrimeraCuota != null && cantidadCuotas > 0) {
-            this.fechaUltimaCuota = fechaPrimeraCuota.plusMonths(cantidadCuotas - 1);
-        }
         this.cuotasPagadasPrevias = cuotasPagadasPrevias;
 
-        BigDecimal pagado = montoPagadoRaw != null
-                ? montoPagadoRaw.abs().setScale(2, RoundingMode.HALF_UP)
-                : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        BigDecimal previo = montoPagadoPrevio != null ? montoPagadoPrevio.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        this.montoPagado = pagado.add(previo);
-        this.montoRestante = this.montoTotal.subtract(this.montoPagado).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
-        this.cuotasPagadas = (cuotasPagadas != null ? cuotasPagadas.intValue() : 0) + cuotasPagadasPrevias;
+        // Cálculos financieros delegados al mapper (evita feature envy)
+        DeudaResponseMapper.populateCalculatedFields(this, tasaMensual, montoTotal, cantidadCuotas,
+                valorCuota, fechaPrimeraCuota, montoPagadoRaw, montoPagadoPrevio, cuotasPagadas, cuotasPagadasPrevias);
     }
 
 

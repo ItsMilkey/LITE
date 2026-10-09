@@ -11,11 +11,17 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/**
+ * Entrada de condiciones de crédito desde la API.
+ * Difiere de {@link com.example.saveup.service.finanzas.CondicionesCredito} (record interno)
+ * en que aquí las tasas vienen en porcentaje (0–100) y los campos son opcionales
+ * (el resolutor se encarga de validar y normalizar).
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CondicionesCreditoDTO {
+public class CondicionesCreditoInput {
 
     @NotNull(message = "La modalidad es obligatoria")
     private ModalidadCalculo modalidad;

@@ -1,6 +1,6 @@
 package com.example.saveup.service;
 
-import com.example.saveup.dto.CondicionesCreditoDTO;
+import com.example.saveup.dto.CondicionesCreditoInput;
 import com.example.saveup.dto.DeudaCreacionDTO;
 import com.example.saveup.dto.DeudaResponseDTO;
 import com.example.saveup.dto.PagoDeudaDTO;
@@ -45,9 +45,7 @@ public class DeudaService {
     @Autowired
     private SecurityUtils securityUtils;
 
-    private final CalculoFinancieroService calculoService = new CalculoFinancieroService();
-    private final CalendarioCuotas calendarioCuotas = new CalendarioCuotas();
-    private final ResolutorCondiciones resolutorCondiciones = new ResolutorCondiciones(calculoService, calendarioCuotas);
+    private final MotorFinanciero motorFinanciero = new MotorFinanciero();
     private static final MathContext MC = MathContext.DECIMAL128;
 
     @Transactional
@@ -97,8 +95,8 @@ public class DeudaService {
 
         java.math.BigDecimal totalPagadoRaw = deudaRepository.findTotalPagadoPorDeuda(deuda.getId());
         java.math.BigDecimal totalPagado = (totalPagadoRaw != null ? totalPagadoRaw : java.math.BigDecimal.ZERO).abs();
-        java.math.BigDecimal prev = deuda.getMontoPagadoPrevio() != null ? deuda.getMontoPagadoPrevio() : BigDecimal.ZERO;
-        if (totalPagado.add(prev).compareTo(deuda.getMontoTotal()) >= 0) {
+        java.math.BigDecimal montoPagadoPrevio = deuda.getMontoPagadoPrevio() != null ? deuda.getMontoPagadoPrevio() : BigDecimal.ZERO;
+        if (totalPagado.add(montoPagadoPrevio).compareTo(deuda.getMontoTotal()) >= 0) {
             deuda.setEstado(EstadoDeuda.PAGADA);
         }
         Deuda deudaActualizada = deudaRepository.save(deuda);
@@ -159,26 +157,18 @@ public class DeudaService {
                 deuda.getCostoAdicionalPorCuota()
         );
 
-        ResultadoCalculo resultado = calculoService.calcular(condiciones);
-        
+        ResultadoCalculo resultado = motorFinanciero.calcular(condiciones);
+
         List<LocalDate> fechasVencimiento = null;
         if (deuda.getFechaPrimeraCuota() != null) {
-            fechasVencimiento = calendarioCuotas.fechasVencimiento(deuda.getFechaPrimeraCuota(), deuda.getCantidadCuotas());
+            fechasVencimiento = motorFinanciero.fechasVencimiento(deuda.getFechaPrimeraCuota(), deuda.getCantidadCuotas());
         }
 
         List<CuotaSimulacionDTO> tabla = new ArrayList<>(resultado.tabla().size());
         for (int i = 0; i < resultado.tabla().size(); i++) {
             CuotaAmortizacion c = resultado.tabla().get(i);
             LocalDate fv = fechasVencimiento != null ? fechasVencimiento.get(i) : null;
-            tabla.add(CuotaSimulacionDTO.builder()
-                    .numero(c.numero())
-                    .fechaVencimiento(fv)
-                    .cuota(c.cuota())
-                    .capital(c.capital())
-                    .interes(c.interes())
-                    .costoAdicional(c.costoAdicional())
-                    .saldo(c.saldo())
-                    .build());
+            tabla.add(CuotaSimulacionDTO.from(c, fv));
         }
         return tabla;
     }
@@ -192,22 +182,22 @@ public class DeudaService {
             deuda.setCuotasPagadasPrevias(dto.getCuotasPagadasPrevias());
         }
 
-        CondicionesCreditoDTO condDto = dto.getCondiciones();
+        CondicionesCreditoInput condDto = dto.getCondiciones();
         ResolutorCondiciones.ResultadoResolucion res;
-        
+
         if (condDto != null) {
-            res = resolutorCondiciones.resolver(condDto);
+            res = motorFinanciero.resolver(condDto);
         } else {
             // Compatibilidad
             if (dto.getMontoTotal() == null || dto.getCantidadCuotas() == null) {
                 throw new IllegalArgumentException("Si no hay bloque condiciones, debe proporcionar montoTotal y cantidadCuotas");
             }
-            CondicionesCreditoDTO compDto = CondicionesCreditoDTO.builder()
+            CondicionesCreditoInput compDto = CondicionesCreditoInput.builder()
                 .modalidad(ModalidadCalculo.SIN_INTERES)
                 .montoCapital(dto.getMontoTotal())
                 .cantidadCuotas(dto.getCantidadCuotas())
                 .build();
-            res = resolutorCondiciones.resolver(compDto);
+            res = motorFinanciero.resolver(compDto);
         }
         
         if (deuda.getCuotasPagadasPrevias() >= res.cantidadCuotas()) {
@@ -221,7 +211,7 @@ public class DeudaService {
                 res.gastosIniciales(), res.costoAdicionalPorCuota()
         );
 
-        ResultadoCalculo resultado = calculoService.calcular(condiciones);
+        ResultadoCalculo resultado = motorFinanciero.calcular(condiciones);
 
         deuda.setModalidadCalculo(res.modalidad());
         deuda.setMontoCapital(res.montoCapital());

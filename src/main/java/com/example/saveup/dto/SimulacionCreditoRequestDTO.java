@@ -31,6 +31,7 @@ public class SimulacionCreditoRequestDTO {
 
     private LocalDate fechaUltimaCuota;
 
+    /** Tasa mensual en porcentaje (0–100). Difiere de la fracción usada internamente (0–1). */
     private BigDecimal tasaMensual;
 
     private BigDecimal tasaAnualEfectiva;

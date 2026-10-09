@@ -1,6 +1,6 @@
 package com.example.saveup.service;
 
-import com.example.saveup.dto.CondicionesCreditoDTO;
+import com.example.saveup.dto.CondicionesCreditoInput;
 import com.example.saveup.dto.SimulacionCreditoRequestDTO;
 import com.example.saveup.dto.SimulacionCreditoResponseDTO;
 import com.example.saveup.dto.SimulacionCreditoResponseDTO.*;
@@ -31,34 +31,26 @@ public class SimulacionService {
     private static final String ADVERTENCIA_CAE = "El CAE mostrado es referencial; el oficial lo informa la institución financiera.";
     private static final String ADVERTENCIA_SOBRE_ENDEUDAMIENTO = "La cuota mensual compromete más del 30% de tus ingresos declarados (se recomienda un máximo de 30%).";
 
-    private final CalculoFinancieroService calculoService;
-    private final CalendarioCuotas calendarioCuotas;
-    private final ResolutorCondiciones resolutorCondiciones;
+    private final MotorFinanciero motorFinanciero;
 
     public SimulacionService() {
-        this(new CalculoFinancieroService(), new CalendarioCuotas());
+        this.motorFinanciero = new MotorFinanciero();
     }
 
-    public SimulacionService(CalculoFinancieroService calculoService, CalendarioCuotas calendarioCuotas) {
-        this(calculoService, calendarioCuotas, new ResolutorCondiciones(calculoService, calendarioCuotas));
-    }
-
-    public SimulacionService(CalculoFinancieroService calculoService, CalendarioCuotas calendarioCuotas, ResolutorCondiciones resolutorCondiciones) {
-        this.calculoService = calculoService;
-        this.calendarioCuotas = calendarioCuotas;
-        this.resolutorCondiciones = resolutorCondiciones;
+    public SimulacionService(MotorFinanciero motorFinanciero) {
+        this.motorFinanciero = motorFinanciero;
     }
 
     public SimulacionCreditoResponseDTO simularCredito(SimulacionCreditoRequestDTO request) {
         validarParametrosBasicos(request);
 
-        ResolutorCondiciones.ResultadoResolucion resResolucion = resolutorCondiciones.resolver(toCondicionesDTO(request));
+        ResolutorCondiciones.ResultadoResolucion resultadoResolucion = motorFinanciero.resolver(toCondicionesInput(request));
 
-        int cantidadCuotas = resResolucion.cantidadCuotas();
-        LocalDate fechaUltimaCuotaNormalizada = resResolucion.fechaUltimaCuota();
+        int cantidadCuotas = resultadoResolucion.cantidadCuotas();
+        LocalDate fechaUltimaCuotaNormalizada = resultadoResolucion.fechaUltimaCuota();
         List<LocalDate> fechasVencimiento = null;
-        if (resResolucion.fechaPrimeraCuota() != null) {
-            fechasVencimiento = calendarioCuotas.fechasVencimiento(resResolucion.fechaPrimeraCuota(), cantidadCuotas);
+        if (resultadoResolucion.fechaPrimeraCuota() != null) {
+            fechasVencimiento = motorFinanciero.fechasVencimiento(resultadoResolucion.fechaPrimeraCuota(), cantidadCuotas);
         }
 
         // 4. Validar cuotas alternativas
@@ -66,16 +58,16 @@ public class SimulacionService {
 
         // 5. Ejecutar cálculo con motor financiero
         CondicionesCredito condiciones = new CondicionesCredito(
-                resResolucion.modalidad(),
-                resResolucion.montoCapital().setScale(ESCALA_DINERO, REDONDEO),
+                resultadoResolucion.modalidad(),
+                resultadoResolucion.montoCapital().setScale(ESCALA_DINERO, REDONDEO),
                 cantidadCuotas,
-                resResolucion.tasaMensualFraccion(),
-                resResolucion.valorCuotaInput(),
-                resResolucion.gastosIniciales().setScale(ESCALA_DINERO, REDONDEO),
-                resResolucion.costoAdicionalPorCuota().setScale(ESCALA_DINERO, REDONDEO)
+                resultadoResolucion.tasaMensualFraccion(),
+                resultadoResolucion.valorCuotaInput(),
+                resultadoResolucion.gastosIniciales().setScale(ESCALA_DINERO, REDONDEO),
+                resultadoResolucion.costoAdicionalPorCuota().setScale(ESCALA_DINERO, REDONDEO)
         );
 
-        ResultadoCalculo resultado = calculoService.calcular(condiciones);
+        ResultadoCalculo resultado = motorFinanciero.calcular(condiciones);
 
         // 6. Construir condiciones normalizadas
         CondicionesSimulacionDTO condicionesNormalizadas = CondicionesSimulacionDTO.builder()
@@ -129,15 +121,7 @@ public class SimulacionService {
             for (int i = 0; i < resultado.tabla().size(); i++) {
                 CuotaAmortizacion c = resultado.tabla().get(i);
                 LocalDate fv = fechasVencimiento != null ? fechasVencimiento.get(i) : null;
-                tablaAmortizacion.add(CuotaSimulacionDTO.builder()
-                        .numero(c.numero())
-                        .fechaVencimiento(fv)
-                        .cuota(c.cuota())
-                        .capital(c.capital())
-                        .interes(c.interes())
-                        .costoAdicional(c.costoAdicional())
-                        .saldo(c.saldo())
-                        .build());
+                tablaAmortizacion.add(CuotaSimulacionDTO.from(c, fv));
             }
         }
 
@@ -155,7 +139,7 @@ public class SimulacionService {
                         condiciones.gastosIniciales(),
                         condiciones.costoAdicionalPorCuota()
                 );
-                ResultadoCalculo altRes = calculoService.calcular(altCond);
+                ResultadoCalculo altRes = motorFinanciero.calcular(altCond);
                 comparacionPlazos.add(ComparacionPlazoDTO.builder()
                         .cantidadCuotas(altCuotas)
                         .valorCuota(altRes.valorCuota())
@@ -177,7 +161,7 @@ public class SimulacionService {
                 .condiciones(condicionesNormalizadas)
                 .valorCuota(resultado.valorCuota())
                 .montoTotal(resultado.montoTotal())
-                .gastosIniciales(resResolucion.gastosIniciales().setScale(ESCALA_DINERO, REDONDEO))
+                .gastosIniciales(resultadoResolucion.gastosIniciales().setScale(ESCALA_DINERO, REDONDEO))
                 .costoTotalCredito(resultado.costoTotalCredito())
                 .interesesYCostos(resultado.interesesYCostos())
                 .cargaAnualEquivalente(toPorcentaje(resultado.cargaAnualEquivalente()))
@@ -197,8 +181,8 @@ public class SimulacionService {
         }
     }
 
-    private CondicionesCreditoDTO toCondicionesDTO(SimulacionCreditoRequestDTO req) {
-        return CondicionesCreditoDTO.builder()
+    private CondicionesCreditoInput toCondicionesInput(SimulacionCreditoRequestDTO req) {
+        return CondicionesCreditoInput.builder()
                 .modalidad(req.getModalidad())
                 .montoCapital(req.getMontoCapital())
                 .cantidadCuotas(req.getCantidadCuotas())

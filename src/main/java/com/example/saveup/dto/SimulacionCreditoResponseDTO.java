@@ -1,6 +1,7 @@
 package com.example.saveup.dto;
 
 import com.example.saveup.model.enums.ModalidadCalculo;
+import com.example.saveup.service.finanzas.CuotaAmortizacion;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -70,6 +71,22 @@ public class SimulacionCreditoResponseDTO {
         private BigDecimal interes;
         private BigDecimal costoAdicional;
         private BigDecimal saldo;
+
+        /**
+         * Construye un CuotaSimulacionDTO a partir de una fila de amortización
+         * y su fecha de vencimiento correspondiente.
+         */
+        public static CuotaSimulacionDTO from(CuotaAmortizacion fila, LocalDate fechaVencimiento) {
+            return CuotaSimulacionDTO.builder()
+                    .numero(fila.numero())
+                    .fechaVencimiento(fechaVencimiento)
+                    .cuota(fila.cuota())
+                    .capital(fila.capital())
+                    .interes(fila.interes())
+                    .costoAdicional(fila.costoAdicional())
+                    .saldo(fila.saldo())
+                    .build();
+        }
     }
 
     @Data

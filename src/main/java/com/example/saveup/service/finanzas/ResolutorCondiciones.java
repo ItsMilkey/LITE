@@ -1,6 +1,6 @@
 package com.example.saveup.service.finanzas;
 
-import com.example.saveup.dto.CondicionesCreditoDTO;
+import com.example.saveup.dto.CondicionesCreditoInput;
 import com.example.saveup.model.enums.ModalidadCalculo;
 
 import java.math.BigDecimal;
@@ -32,7 +32,7 @@ public class ResolutorCondiciones {
             BigDecimal costoAdicionalPorCuota
     ) {}
 
-    public ResultadoResolucion resolver(CondicionesCreditoDTO dto) {
+    public ResultadoResolucion resolver(CondicionesCreditoInput dto) {
         if (dto == null) {
             throw new CalculoFinancieroException("Las condiciones de crédito no pueden ser nulas");
         }
@@ -89,6 +89,10 @@ public class ResolutorCondiciones {
         BigDecimal tasaMensualFraccion = null;
         BigDecimal valorCuotaInput = null;
 
+        // Nota: no llamamos a validarReglasModalidad aquí porque la tasaMensual
+        // aún no se ha resuelto (viene en % en el DTO). Las reglas de "no admite tasa"
+        // se validan abajo con los campos del DTO directamente.
+
         switch (modalidad) {
             case SIN_INTERES -> {
                 if ((dto.getTasaMensual() != null && dto.getTasaMensual().compareTo(BigDecimal.ZERO) != 0)
@@ -123,17 +127,8 @@ public class ResolutorCondiciones {
                 }
             }
             case CUOTA_CONOCIDA -> {
-                if (dto.getTasaMensual() != null || dto.getTasaAnualEfectiva() != null) {
-                    throw new CalculoFinancieroException("CUOTA_CONOCIDA no admite tasa de interés");
-                }
                 if (dto.getValorCuota() == null || dto.getValorCuota().compareTo(BigDecimal.ZERO) <= 0) {
                     throw new CalculoFinancieroException("CUOTA_CONOCIDA requiere valorCuota mayor a 0");
-                }
-                if (gastosIniciales.compareTo(BigDecimal.ZERO) != 0) {
-                    throw new CalculoFinancieroException("CUOTA_CONOCIDA no admite gastosIniciales");
-                }
-                if (costoAdicional.compareTo(BigDecimal.ZERO) != 0) {
-                    throw new CalculoFinancieroException("CUOTA_CONOCIDA no admite costoAdicionalPorCuota");
                 }
                 valorCuotaInput = dto.getValorCuota();
             }

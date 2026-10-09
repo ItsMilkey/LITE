@@ -123,7 +123,7 @@ class DeudaControllerTest {
                 .andExpect(jsonPath("$.modalidadCalculo").value("SIN_INTERES"))
                 .andExpect(jsonPath("$.valorCuota").value(10000.00))
                 .andExpect(jsonPath("$.montoTotal").value(100000.00))
-                .andExpect(jsonPath("$.tasaMensual").value(0.0));
+                .andExpect(jsonPath("$.tasaMensualPorcentaje").value(0.0));
     }
 
     // ──────────────────────── 2. Una deuda por modalidad vs simulador ────────────────────────
@@ -147,7 +147,7 @@ class DeudaControllerTest {
         assertEquals(sim.getValorCuota(), dto.getValorCuota());
         assertEquals(sim.getMontoTotal(), dto.getMontoTotal());
         assertEquals(sim.getCostoTotalCredito(), dto.getCostoTotalCredito());
-        assertEquals(sim.getCondiciones().getTasaMensual(), dto.getTasaMensual());
+        assertEquals(sim.getCondiciones().getTasaMensual(), dto.getTasaMensualPorcentaje());
         assertEquals(sim.getCargaAnualEquivalente(), dto.getCargaAnualEquivalente());
     }
 
@@ -171,7 +171,7 @@ class DeudaControllerTest {
         assertEquals(sim.getValorCuota(), dto.getValorCuota());
         assertEquals(sim.getMontoTotal(), dto.getMontoTotal());
         assertEquals(sim.getCostoTotalCredito(), dto.getCostoTotalCredito());
-        assertEquals(sim.getCondiciones().getTasaMensual(), dto.getTasaMensual());
+        assertEquals(sim.getCondiciones().getTasaMensual(), dto.getTasaMensualPorcentaje());
         assertEquals(sim.getCargaAnualEquivalente(), dto.getCargaAnualEquivalente());
     }
 
@@ -195,7 +195,7 @@ class DeudaControllerTest {
         assertEquals(sim.getValorCuota(), dto.getValorCuota());
         assertEquals(sim.getMontoTotal(), dto.getMontoTotal());
         assertEquals(sim.getCostoTotalCredito(), dto.getCostoTotalCredito());
-        assertEquals(sim.getCondiciones().getTasaMensual(), dto.getTasaMensual());
+        assertEquals(sim.getCondiciones().getTasaMensual(), dto.getTasaMensualPorcentaje());
         assertEquals(sim.getCargaAnualEquivalente(), dto.getCargaAnualEquivalente());
     }
 

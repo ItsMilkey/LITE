@@ -7,6 +7,7 @@ import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Motor financiero puro (sin BD, sin Spring).
@@ -28,25 +29,9 @@ public class CalculoFinancieroService {
     public ResultadoCalculo calcular(CondicionesCredito c) {
         validar(c);
 
-        BigDecimal tasaMensual;
-        BigDecimal cuotaPura;
-
-        switch (c.modalidad()) {
-            case SIN_INTERES -> {
-                tasaMensual = BigDecimal.ZERO;
-                cuotaPura = c.montoCapital().divide(BigDecimal.valueOf(c.cantidadCuotas()), MC)
-                        .setScale(ESCALA_DINERO, REDONDEO);
-            }
-            case TASA_CONOCIDA -> {
-                tasaMensual = c.tasaMensual();
-                cuotaPura = cuotaFrancesa(c.montoCapital(), tasaMensual, c.cantidadCuotas());
-            }
-            case CUOTA_CONOCIDA -> {
-                cuotaPura = c.valorCuotaPublicada();
-                tasaMensual = calcularTasaImplicita(c.montoCapital(), cuotaPura, c.cantidadCuotas());
-            }
-            default -> throw new CalculoFinancieroException("Modalidad no soportada: " + c.modalidad());
-        }
+        TasaYCuota tasaYCuota = resolverTasaYCuota(c);
+        BigDecimal tasaMensual = tasaYCuota.tasaMensual();
+        BigDecimal cuotaPura = tasaYCuota.cuotaPura();
 
         List<CuotaAmortizacion> tabla = construirTabla(
                 c.montoCapital(), tasaMensual, cuotaPura, c.cantidadCuotas(),
@@ -87,20 +72,8 @@ public class CalculoFinancieroService {
         if (BigDecimal.ONE.add(hi).pow(MESES_POR_ANIO, MC).compareTo(objetivo) < 0) {
             hi = tasaAnual.multiply(BigDecimal.TWO);
         }
-
-        for (int i = 0; i < MAX_BISECCION; i++) {
-            BigDecimal mid = lo.add(hi).divide(BigDecimal.TWO, MC);
-            BigDecimal f = BigDecimal.ONE.add(mid).pow(MESES_POR_ANIO, MC).subtract(objetivo);
-            if (f.abs().compareTo(TOLERANCIA_BISECCION) < 0) {
-                return mid.setScale(ESCALA_TASA, REDONDEO);
-            }
-            if (f.compareTo(BigDecimal.ZERO) > 0) {
-                hi = mid;
-            } else {
-                lo = mid;
-            }
-        }
-        return lo.add(hi).divide(BigDecimal.TWO, MC).setScale(ESCALA_TASA, REDONDEO);
+        // Función normalizada: positivo ⇒ raíz a la derecha (subir tasa)
+        return biseccion(mid -> objetivo.subtract(BigDecimal.ONE.add(mid).pow(MESES_POR_ANIO, MC)), lo, hi);
     }
 
     /** Convierte tasa mensual (fracción) a tasa anual efectiva (fracción). */
@@ -127,51 +100,12 @@ public class CalculoFinancieroService {
         BigDecimal gastos = c.gastosIniciales() != null ? c.gastosIniciales() : BigDecimal.ZERO;
         BigDecimal costoAdicional = c.costoAdicionalPorCuota() != null ? c.costoAdicionalPorCuota() : BigDecimal.ZERO;
 
-        switch (c.modalidad()) {
-            case SIN_INTERES -> {
-                if (c.tasaMensual() != null && c.tasaMensual().compareTo(BigDecimal.ZERO) != 0) {
-                    throw new CalculoFinancieroException(
-                            "SIN_INTERES no admite tasaMensual");
-                }
-                if (c.valorCuotaPublicada() != null) {
-                    throw new CalculoFinancieroException(
-                            "SIN_INTERES no admite valorCuotaPublicada");
-                }
-            }
-            case TASA_CONOCIDA -> {
-                if (c.tasaMensual() == null) {
-                    throw new CalculoFinancieroException(
-                            "TASA_CONOCIDA requiere tasaMensual");
-                }
-                if (c.valorCuotaPublicada() != null) {
-                    throw new CalculoFinancieroException(
-                            "TASA_CONOCIDA no admite valorCuotaPublicada");
-                }
-            }
-            case CUOTA_CONOCIDA -> {
-                if (c.valorCuotaPublicada() == null) {
-                    throw new CalculoFinancieroException(
-                            "CUOTA_CONOCIDA requiere valorCuotaPublicada");
-                }
-                if (c.tasaMensual() != null && c.tasaMensual().compareTo(BigDecimal.ZERO) != 0) {
-                    throw new CalculoFinancieroException(
-                            "CUOTA_CONOCIDA no admite tasaMensual");
-                }
-                if (gastos.compareTo(BigDecimal.ZERO) != 0) {
-                    throw new CalculoFinancieroException(
-                            "CUOTA_CONOCIDA no admite gastosIniciales");
-                }
-                if (costoAdicional.compareTo(BigDecimal.ZERO) != 0) {
-                    throw new CalculoFinancieroException(
-                            "CUOTA_CONOCIDA no admite costoAdicionalPorCuota");
-                }
-            }
-        }
+        validarReglasModalidad(c.modalidad(), c.tasaMensualFraccion(), c.valorCuotaPublicada(), gastos, costoAdicional);
 
         // Rangos comunes
-        if (c.tasaMensual() != null) {
-            if (c.tasaMensual().compareTo(BigDecimal.ZERO) < 0
-                    || c.tasaMensual().compareTo(BigDecimal.ONE) > 0) {
+        if (c.tasaMensualFraccion() != null) {
+            if (c.tasaMensualFraccion().compareTo(BigDecimal.ZERO) < 0
+                    || c.tasaMensualFraccion().compareTo(BigDecimal.ONE) > 0) {
                 throw new CalculoFinancieroException(
                         "La tasa mensual debe estar entre 0 y 1 (fracción)");
             }
@@ -189,7 +123,71 @@ public class CalculoFinancieroService {
         }
     }
 
+    /**
+     * Reglas de validación específicas de cada modalidad.
+     * Compartida entre {@link #validar(CondicionesCredito)} y
+     * {@link ResolutorCondiciones#resolver(CondicionesCreditoInput)}.
+     */
+    static void validarReglasModalidad(ModalidadCalculo modalidad, BigDecimal tasaMensualFraccion,
+                                       BigDecimal valorCuotaPublicada, BigDecimal gastosIniciales,
+                                       BigDecimal costoAdicionalPorCuota) {
+        switch (modalidad) {
+            case SIN_INTERES -> {
+                if (tasaMensualFraccion != null && tasaMensualFraccion.compareTo(BigDecimal.ZERO) != 0) {
+                    throw new CalculoFinancieroException("SIN_INTERES no admite tasaMensual");
+                }
+                if (valorCuotaPublicada != null) {
+                    throw new CalculoFinancieroException("SIN_INTERES no admite valorCuotaPublicada");
+                }
+            }
+            case TASA_CONOCIDA -> {
+                if (tasaMensualFraccion == null) {
+                    throw new CalculoFinancieroException("TASA_CONOCIDA requiere tasaMensual");
+                }
+                if (valorCuotaPublicada != null) {
+                    throw new CalculoFinancieroException("TASA_CONOCIDA no admite valorCuotaPublicada");
+                }
+            }
+            case CUOTA_CONOCIDA -> {
+                if (valorCuotaPublicada == null) {
+                    throw new CalculoFinancieroException("CUOTA_CONOCIDA requiere valorCuotaPublicada");
+                }
+                if (tasaMensualFraccion != null && tasaMensualFraccion.compareTo(BigDecimal.ZERO) != 0) {
+                    throw new CalculoFinancieroException("CUOTA_CONOCIDA no admite tasaMensual");
+                }
+                if (gastosIniciales.compareTo(BigDecimal.ZERO) != 0) {
+                    throw new CalculoFinancieroException("CUOTA_CONOCIDA no admite gastosIniciales");
+                }
+                if (costoAdicionalPorCuota.compareTo(BigDecimal.ZERO) != 0) {
+                    throw new CalculoFinancieroException("CUOTA_CONOCIDA no admite costoAdicionalPorCuota");
+                }
+            }
+        }
+    }
+
     // ──────────────────────── Cálculos internos ────────────────────────
+
+    /** Par tasa mensual + cuota pura, resuelto según la modalidad. */
+    private record TasaYCuota(BigDecimal tasaMensual, BigDecimal cuotaPura) {}
+
+    /** Resuelve la tasa mensual y la cuota pura según la modalidad de cálculo. */
+    private TasaYCuota resolverTasaYCuota(CondicionesCredito c) {
+        return switch (c.modalidad()) {
+            case SIN_INTERES -> new TasaYCuota(
+                    BigDecimal.ZERO,
+                    c.montoCapital().divide(BigDecimal.valueOf(c.cantidadCuotas()), MC)
+                            .setScale(ESCALA_DINERO, REDONDEO));
+            case TASA_CONOCIDA -> new TasaYCuota(
+                    c.tasaMensualFraccion(),
+                    cuotaFrancesa(c.montoCapital(), c.tasaMensualFraccion(), c.cantidadCuotas()));
+            case CUOTA_CONOCIDA -> {
+                BigDecimal cuotaPura = c.valorCuotaPublicada();
+                BigDecimal tasaMensual = calcularTasaImplicita(c.montoCapital(), cuotaPura, c.cantidadCuotas());
+                yield new TasaYCuota(tasaMensual, cuotaPura);
+            }
+            default -> throw new CalculoFinancieroException("Modalidad no soportada: " + c.modalidad());
+        };
+    }
 
     /** Cuota francesa: C = P·i / (1 − (1+i)^−n). Si i == 0: C = P / n. */
     private BigDecimal cuotaFrancesa(BigDecimal capital, BigDecimal tasa, int n) {
@@ -254,23 +252,8 @@ public class CalculoFinancieroService {
 
         BigDecimal lo = BigDecimal.ZERO;
         BigDecimal hi = BigDecimal.ONE;
-
-        for (int i = 0; i < MAX_BISECCION; i++) {
-            BigDecimal mid = lo.add(hi).divide(BigDecimal.TWO, MC);
-            BigDecimal vp = valorPresente(cuota, mid, n);
-            BigDecimal diff = vp.subtract(capital);
-
-            if (diff.abs().compareTo(TOLERANCIA_BISECCION) < 0) {
-                return mid.setScale(ESCALA_TASA, REDONDEO);
-            }
-            if (diff.compareTo(BigDecimal.ZERO) > 0) {
-                // tasa muy baja → VP muy alto → subir tasa
-                lo = mid;
-            } else {
-                hi = mid;
-            }
-        }
-        return lo.add(hi).divide(BigDecimal.TWO, MC).setScale(ESCALA_TASA, REDONDEO);
+        // Función normalizada: positivo ⇒ raíz a la derecha (subir tasa)
+        return biseccion(mid -> valorPresente(cuota, mid, n).subtract(capital), lo, hi);
     }
 
     /**
@@ -331,21 +314,23 @@ public class CalculoFinancieroService {
             throw new CalculoFinancieroException("No hay raíz en el rango");
         }
 
-        BigDecimal lo = BigDecimal.ZERO;
-        BigDecimal hi = BigDecimal.ONE;
+        // Función normalizada: positivo ⇒ raíz a la derecha (subir tasa)
+        return biseccion(mid -> valorPresenteFlujos(flujos, mid).subtract(objetivo), BigDecimal.ZERO, BigDecimal.ONE);
+    }
 
+    /**
+     * Bisección genérica sobre [lo, hi].
+     * La función debe devolver un valor positivo cuando la raíz está a la derecha de mid
+     * (es decir, cuando hay que subir la tasa), y negativo cuando está a la izquierda.
+     */
+    private BigDecimal biseccion(Function<BigDecimal, BigDecimal> funcion, BigDecimal lo, BigDecimal hi) {
         for (int i = 0; i < MAX_BISECCION; i++) {
             BigDecimal mid = lo.add(hi).divide(BigDecimal.TWO, MC);
-            BigDecimal vp = BigDecimal.ZERO;
-            for (int k = 0; k < flujos.size(); k++) {
-                BigDecimal divisor = BigDecimal.ONE.add(mid).pow(k + 1, MC);
-                vp = vp.add(flujos.get(k).divide(divisor, MC));
-            }
-            BigDecimal diff = vp.subtract(objetivo);
-            if (diff.abs().compareTo(TOLERANCIA_BISECCION) < 0) {
+            BigDecimal f = funcion.apply(mid);
+            if (f.abs().compareTo(TOLERANCIA_BISECCION) < 0) {
                 return mid.setScale(ESCALA_TASA, REDONDEO);
             }
-            if (diff.compareTo(BigDecimal.ZERO) > 0) {
+            if (f.compareTo(BigDecimal.ZERO) > 0) {
                 lo = mid;
             } else {
                 hi = mid;
@@ -360,6 +345,16 @@ public class CalculoFinancieroService {
         for (int k = 1; k <= n; k++) {
             BigDecimal divisor = BigDecimal.ONE.add(tasa).pow(k, MC);
             vp = vp.add(pago.divide(divisor, MC));
+        }
+        return vp;
+    }
+
+    /** VP = Σ flujo_k / (1+r)^k para k = 1..n (flujos distintos por período). */
+    private BigDecimal valorPresenteFlujos(List<BigDecimal> flujos, BigDecimal tasa) {
+        BigDecimal vp = BigDecimal.ZERO;
+        for (int k = 0; k < flujos.size(); k++) {
+            BigDecimal divisor = BigDecimal.ONE.add(tasa).pow(k + 1, MC);
+            vp = vp.add(flujos.get(k).divide(divisor, MC));
         }
         return vp;
     }
