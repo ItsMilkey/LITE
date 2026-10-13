@@ -10,7 +10,7 @@ GET /api/movimientos/paginados/me acepta opcionales: desde, hasta (fecha ISO), t
 ## Edición y borrado
 - PUT /api/movimientos/{id} (descripcion, monto, categoriaId) y DELETE /api/movimientos/{id}. La fecha no se edita (updatable=false).
 - Solo INGRESO_GENERAL y GASTO_GENERAL sin deuda ni meta. Otros tipos → 409 ("se modifican desde su módulo").
-- Smart-Split no deja vínculo entre el ingreso y sus ABONO_META. Agrega la columna nullable movimiento_origen_id en MOVIMIENTO (migración en ambos dialectos) que SmartSplitProcessor rellena. Un ingreso con movimientos derivados no se puede editar ni borrar (409). Los movimientos antiguos sin vínculo quedan sin esa restricción (documéntalo en CONTEXT.md).
+- Smart-Split no deja vínculo entre el ingreso y sus ABONO_META. Agrega la columna nullable movimiento_origen_id en MOVIMIENTO (migración en postgresql) que SmartSplitProcessor rellena. Un ingreso con movimientos derivados no se puede editar ni borrar (409). Los movimientos antiguos sin vínculo quedan sin esa restricción (documéntalo en CONTEXT.md).
 - Respeta la convención de signo que ya usa POST /api/movimientos (revisa MovimientoService antes de implementar).
 
 ## Criterios de aceptación (tests)

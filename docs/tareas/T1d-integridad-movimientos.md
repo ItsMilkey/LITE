@@ -13,9 +13,9 @@ El saldo es SUM(MOVIMIENTO.monto). El signo lo decide cada productor y, en los g
 ## Cambios
 1. Clase pura SignoMovimiento con aplicar(TipoMovimiento, BigDecimal) → devuelve el monto con el signo canónico (abs o negate según el tipo; rechaza 0).
 2. Todos los productores de movimientos la usan: MovimientoService.registrarMovimiento, DeudaService.registrarPago, MetaAhorroService (abonar, retirar y el reintegro al eliminar una meta) y SmartSplitProcessor. Tras el cambio, ningún otro lugar hace .negate() sobre montos de movimientos (verifícalo con búsqueda).
-3. Migración nueva (oracle + postgresql; calcula el número mirando la última existente; V3 sigue sin aplicarse): constraint CHK_MOVIMIENTO_SIGNO sobre MOVIMIENTO:
+3. Migración nueva (postgresql; calcula el número mirando la última existente; V3 sigue sin aplicarse): constraint CHK_MOVIMIENTO_SIGNO sobre MOVIMIENTO:
    CHECK ((tipo_movimiento IN ('INGRESO_GENERAL','RETIRO_META') AND monto > 0) OR (tipo_movimiento IN ('GASTO_GENERAL','PAGO_DEUDA','ABONO_META') AND monto < 0))
-   Para no fallar con filas antiguas: Oracle `ENABLE NOVALIDATE`; PostgreSQL `NOT VALID`. Comprueba los nombres de columna reales en V1. Validar el histórico queda para después de revisar los datos (Oracle `MODIFY CONSTRAINT ... VALIDATE`, PostgreSQL `VALIDATE CONSTRAINT`).
+   Para no fallar con filas antiguas: agrega el CHECK con NOT VALID y valídalo después. Comprueba los nombres de columna reales en V1. Validar el histórico queda para después de revisar los datos (VALIDATE CONSTRAINT).
 4. La unificación de la ruta de pago de deuda (POST /api/movimientos con PAGO_DEUDA → DeudaService.registrarPago) NO va aquí: es T2, punto 4. No la dupliques.
 5. Actualiza docs/CONTEXT.md (regla de signo, CHECK, SignoMovimiento).
 
@@ -24,7 +24,7 @@ El saldo es SUM(MOVIMIENTO.monto). El signo lo decide cada productor y, en los g
 - Cada productor guarda el signo canónico (incluida la distribución de Smart-Split y el reintegro al eliminar una meta).
 - Escenario: ingreso 20.000; gasto enviado como +5.000 y otro como −5.000; ambos quedan en −5.000; saldo 10.000.
 - Invariante de metas: tras abonar, retirar, Smart-Split y eliminar, montoActual de la meta = −(suma de los movimientos de esa meta).
-- Los scripts de migración mantienen paridad entre dialectos (mismo nombre de constraint y misma condición).
+- El CHECK de signo se aplica solo en PostgreSQL (motor único del proyecto).
 
 ## Fuera de alcance
 Tabla de saldos o ledger, bloqueo de saldo negativo, bloqueo optimista, índices (ver BACKLOG), saldo por cuenta.

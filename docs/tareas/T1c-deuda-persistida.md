@@ -12,7 +12,7 @@ Una deuda guardada = las condiciones de una simulación + sus pagos. Reutiliza C
 - Sin mora ni reajustes. Solo cuotas mensuales.
 
 ## Cambios
-1. Migración V3 (oracle + postgresql) sobre DEUDA. Columnas nuevas: tipo_deuda (default 'OTRO'), modalidad_calculo (default 'SIN_INTERES'), monto_capital, gastos_iniciales (default 0), costo_adicional_por_cuota (default 0), tasa_mensual NUMERIC(12,8) (default 0), valor_cuota, fecha_primera_cuota (nullable), cuotas_pagadas_previas INTEGER (default 0, CHECK ≥ 0), monto_pagado_previo (default 0), carga_anual_equivalente NUMERIC(10,4) (default 0), costo_total_credito. CHECK sobre los valores de tipo_deuda y modalidad_calculo.
+1. Migración V3 (postgresql) sobre DEUDA. Columnas nuevas: tipo_deuda (default 'OTRO'), modalidad_calculo (default 'SIN_INTERES'), monto_capital, gastos_iniciales (default 0), costo_adicional_por_cuota (default 0), tasa_mensual NUMERIC(12,8) (default 0), valor_cuota, fecha_primera_cuota (nullable), cuotas_pagadas_previas INTEGER (default 0, CHECK ≥ 0), monto_pagado_previo (default 0), carga_anual_equivalente NUMERIC(10,4) (default 0), costo_total_credito. CHECK sobre los valores de tipo_deuda y modalidad_calculo.
    Backfill de filas existentes: monto_capital = monto_total; valor_cuota = ROUND(monto_total / cantidad_cuotas, 2); costo_total_credito = monto_total; el resto con los defaults.
 2. Entidad Deuda + enums TipoDeuda y ModalidadCalculo.
 3. DeudaCreacionDTO: nombre, descripcion, tipoDeuda, cuotasPagadasPrevias, bloque condiciones (el mismo CondicionesCreditoDTO de T1b, que admite cantidadCuotas O fechaPrimeraCuota + fechaUltimaCuota) y, por compatibilidad, montoTotal/cantidadCuotas de nivel superior cuando no viene el bloque.

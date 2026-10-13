@@ -32,7 +32,7 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 - Ejecución presupuestaria: presupuesto = ingresos del mes × %; gasto real = GASTO_GENERAL y PAGO_DEUDA clasificados por categoria.tipoPresupuesto; ahorroRealizado = SUM de ABONO_META del mes.
 - La categoría 'Deudas' (NECESIDAD) se asigna automáticamente a los pagos de deuda.
 - Seguridad: JWT HMAC-SHA256 stateless; SecurityUtils.validarPropietario(rut).
-- Esquema: 7 tablas; V1 (DDL), V2 (seed de 10 categorías) y V3 (deuda con condiciones de crédito) en db/migration/{oracle,postgresql}.
+- Esquema: 7 tablas; V1 (DDL), V2 (seed de 10 categorías) y V3 (deuda con condiciones de crédito) en db/migration/postgresql.
 
 ## Visión del módulo de deudas
 Dos usos con un mismo motor de cálculo: (1) simular un endeudamiento antes de contraerlo (cuánto cuesta, por cuánto tiempo, efecto de tasa y plazo, con fines de decisión y educación financiera) y (2) llevar la deuda real al detalle (cuánto falta, historial de pagos). Una deuda guardada = condiciones de una simulación + pagos.

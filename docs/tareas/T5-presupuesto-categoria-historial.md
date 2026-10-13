@@ -2,7 +2,7 @@
 Depende de: T0. Modelo sugerido: Gemini Flash (Sonnet si surgen dudas).
 
 ## Cambios
-1. Migración (ambos dialectos): PRESUPUESTO_CATEGORIA(id, usuario_rut FK, categoria_id FK, limite_mensual NUMERIC(19,2) con CHECK > 0, UNIQUE(usuario_rut, categoria_id)). El límite es mensual y recurrente.
+1. Migración (postgresql): PRESUPUESTO_CATEGORIA(id, usuario_rut FK, categoria_id FK, limite_mensual NUMERIC(19,2) con CHECK > 0, UNIQUE(usuario_rut, categoria_id)). El límite es mensual y recurrente.
 2. Endpoints:
    - GET /api/presupuestos/categorias/me
    - PUT /api/presupuestos/categorias/me (reemplaza el conjunto de límites; valida que las categorías existan y los límites sean > 0)
