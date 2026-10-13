@@ -88,7 +88,6 @@ Estructura de Directorios:
 src/main/java/com/example/saveup/
 ├── SaveupLiteApplication.java
 ├── config/
-│   ├── DataLoader.java                  (LEGACY - Deshabilitado; Flyway lo reemplaza)
 │   ├── DataSourceConfig.java            (Oracle UCP Pool y conexion segura con Wallet)
 │   ├── SecurityConfig.java              (Spring Security, BCrypt, CORS y rutas)
 │   └── WebConfig.java                   (Filtros y mapeos globales CORS)
@@ -982,22 +981,19 @@ FLUJO 6: GENERACION Y EXPORTACION DE REPORTES (PATRON STRATEGY)
   * Metodos autorizados: GET, POST, PUT, DELETE, OPTIONS.
   * Cabeceras autorizadas: Authorization, Content-Type, X-Requested-With.
 
-9.2. POBLADO Y MIGRACION DE DATOS (DataLoader) — LEGACY / DESHABILITADO
-- Clase: com.example.saveup.config.DataLoader (CommandLineRunner)
-- Estado actual: DESHABILITADO. La anotacion @Component fue comentada en el
-  commit 1da0dd3 (2026-10-01) al implementar Flyway como reemplazo definitivo.
-- Motivo de deshabilitacion: Flyway gestiona ahora tanto la creacion del esquema
-  (V1__init_schema.sql) como la poblacion inicial de categorias (V2__seed_categories.sql)
-  de forma versionada, reproducible e idempotente. El DataLoader imperativo queda
-  obsoleto porque:
-  1) No ofrece versionado de cambios (no hay historial de migraciones).
-  2) Depende de logica Java en tiempo de ejecucion, no de scripts SQL declarativos.
-  3) No garantiza idempotencia robusta en despliegues multi-instancia.
-- El archivo se conserva como referencia historica. Contenia:
-  * Poblado condicional de 10 categorias iniciales con iconos, colores y tipo.
-  * Normalizacion de categorias existentes sin TipoPresupuesto via switch/case.
-  * Garantia de existencia de la categoria "Ahorro".
-- Toda esta logica fue portada a los scripts Flyway V2 correspondientes.
+9.2. POBLADO Y MIGRACION DE DATOS (Flyway)
+- Responsable unico: los scripts Flyway versionados.
+  * Esquema: V1__init_schema.sql (DDL de las tablas).
+  * Poblado inicial de las 10 categorias con iconos, colores y tipo:
+    V2__seed_categories.sql.
+- Las semillas son idempotentes: usan ON CONFLICT DO NOTHING, por lo que
+  re-ejecutar la migracion no duplica filas.
+- No existe ninguna clase Java CommandLineRunner que pueble datos en tiempo de
+  ejecucion. El antiguo DataLoader imperativo fue eliminado: su logica quedo
+  cubierta por V2 y su enfoque (codigo Java en el arranque) no era versionado
+  ni reproducible entre instancias.
+- Para cambiar las categorias base, agrega un script V{n+1}; no reactives
+  cargadores imperativos.
 
 9.3. CONECTIVIDAD A ORACLE CLOUD CON WALLET
 - Clase: com.example.saveup.config.DataSourceConfig
@@ -1219,26 +1215,24 @@ Estrategia de idempotencia por dialecto:
     Aprovecha la clausula nativa de PostgreSQL para inserciones condicionales
     sin duplicados.
 
-10.7. DESHABILITACION DEL DATALOADER LEGACY
+10.7. ELIMINACION DEL DATALOADER LEGACY
 --------------------------------------------------------------------------------
-Archivo: com.example.saveup.config.DataLoader
-Cambio realizado: La anotacion @Component fue comentada:
+Archivo eliminado: com.example.saveup.config.DataLoader (CommandLineRunner)
 
-  // @Component // Deshabilitado: Flyway ahora gestiona el esquema y la
-  //               poblacion inicial de datos.
-  public class DataLoader implements CommandLineRunner { ... }
+Historial: la clase poblabo las 10 categorias iniciales y normalizaba el
+TipoPresupuesto de categorias existentes mediante un switch/case. Primero se
+deshabilito (se comento la anotacion @Component) al adoptar Flyway, y finalmente
+se elimino del repositorio porque su logica quedo cubierta por
+V2__seed_categories.sql.
 
 Implicaciones:
-  - Spring Boot ya no registra DataLoader como bean. El metodo run() nunca se
-    ejecuta durante el arranque de la aplicacion.
-  - La logica de poblado de categorias y normalizacion de TipoPresupuesto fue
+  - Spring Boot no registra ningun CommandLineRunner de poblado: el metodo run()
+    nunca se ejecuta durante el arranque de la aplicacion.
+  - La logica de poblado de categorias y normalizacion de TipoPresupuesto queda
     absorbida por V2__seed_categories.sql.
-  - El archivo se conserva en el repositorio como referencia historica y para
-    facilitar la comprension de la logica de normalizacion original que incluia
-    un switch/case para mapear nombres de categorias a tipos de presupuesto.
-  - En caso de requerir migraciones de datos complejas en el futuro (ej.
-    normalizacion de registros existentes), se deben crear nuevos scripts
-    Flyway V3, V4, etc. en lugar de reactivar el DataLoader.
+  - Si en el futuro se requiere una migracion de datos compleja (ej.
+    normalizacion de registros existentes), se crea un nuevo script Flyway
+    (V3, V4, ...); nunca se reactiva un cargador imperativo en Java.
 
 10.8. FLUJO DE EJECUCION DE FLYWAY AL ARRANQUE
 --------------------------------------------------------------------------------
