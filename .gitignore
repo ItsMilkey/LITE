@@ -34,3 +34,8 @@ build/
 
 ### Antigravity / AGY ###
 .agents/
+
+### Restos de diffs / artefactos ###
+diff.txt
+*.orig
+*.rej
