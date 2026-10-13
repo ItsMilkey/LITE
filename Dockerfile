@@ -15,13 +15,6 @@ FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
-# ---- LÍNEAS NUEVAS Y CLAVE ----
-# 1. Crea un directorio fijo y predecible para la wallet dentro del contenedor final.
-RUN mkdir -p /opt/oracle/wallet
-# 2. Copia la carpeta 'wallet' desde la etapa de construcción a este nuevo directorio.
-COPY --from=build /app/src/main/resources/wallet /opt/oracle/wallet/
-# ---- FIN DE LAS LÍNEAS NUEVAS ----
-
 # Copia el JAR ya compilado desde la etapa de construcción
 COPY --from=build /app/target/*.jar app.jar
 
