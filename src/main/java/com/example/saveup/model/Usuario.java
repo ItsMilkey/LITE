@@ -1,9 +1,11 @@
 package com.example.saveup.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import lombok.ToString;
 import java.util.Date;
 
 @Entity
@@ -27,6 +29,8 @@ public class Usuario {
     private String email;
     
     @Column(name = "CONTRASENA_HASH", nullable = false, length = 100)
+    @JsonIgnore // El hash nunca sale en una respuesta JSON.
+    @ToString.Exclude // Ni en cualquier log que imprima un Usuario (@Data genera toString()).
     private String contrasena;
 
     @Column(name = "FECHA_REGISTRO", nullable = false, updatable = false)

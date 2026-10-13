@@ -28,12 +28,11 @@ public class UsuarioService {
      * Valida la existencia, codifica la contraseña y guarda el nuevo usuario.
      *
      * @param usuarioDTO Datos del usuario provenientes del frontend.
-     * @return El usuario guardado en la base de datos.
      * @throws IllegalStateException si el RUT o el email ya están en uso.
      */
 
     @Transactional
-    public Usuario registrarUsuario(UsuarioRegistroDTO usuarioDTO) {
+    public void registrarUsuario(UsuarioRegistroDTO usuarioDTO) {
         if (usuarioRepository.existsById(usuarioDTO.getRut())) {
             throw new IllegalStateException("El RUT ingresado ya está registrado.");
         }
@@ -48,7 +47,7 @@ public class UsuarioService {
         nuevoUsuario.setEmail(usuarioDTO.getEmail());
         nuevoUsuario.setContrasena(passwordEncoder.encode(usuarioDTO.getContrasena()));
 
-        // 1. Guardar el usuario y capturar la entidad guardada
+        // 1. Guardar el usuario
         Usuario usuarioGuardado = usuarioRepository.save(nuevoUsuario);
 
         // 2. Crear la meta de ahorro por defecto usando el usuario ya guardado
@@ -56,9 +55,6 @@ public class UsuarioService {
         metaPorDefecto.setNombre("Ahorros");
         metaPorDefecto.setUsuario(usuarioGuardado);
         metaAhorroRepository.save(metaPorDefecto);
-
-        // 3. Devolver el usuario al final del método
-        return usuarioGuardado;
     }
 
     /**
