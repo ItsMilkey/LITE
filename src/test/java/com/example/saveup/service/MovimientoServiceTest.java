@@ -132,4 +132,116 @@ class MovimientoServiceTest {
         assertEquals(0, java.math.BigDecimal.ZERO.compareTo(saldo));
         assertEquals(2, saldo.scale());
     }
+
+    // ─────────────────── Signo canónico (T1d) ───────────────────
+
+    @Test
+    @DisplayName("T1d: un gasto enviado con signo POSITIVO se guarda negativo (el signo lo fija el tipo)")
+    void registrarMovimiento_gastoConSignoPosativo_seGuardaNegativo() {
+        MovimientoRegistroDTO dto = new MovimientoRegistroDTO();
+        dto.setMonto(new java.math.BigDecimal("35000.00")); // el cliente manda positivo
+        dto.setDescripcion("Compra supermercado");
+        dto.setTipoMovimiento(TipoMovimiento.GASTO_GENERAL);
+
+        when(securityUtils.getAuthenticatedRut()).thenReturn("12345678-9");
+        when(usuarioRepository.findById("12345678-9")).thenReturn(Optional.of(usuario));
+        when(movimientoRepository.save(any(Movimiento.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        MovimientoResponseDTO response = movimientoService.registrarMovimiento(dto);
+
+        assertEquals(0, new java.math.BigDecimal("-35000.00").compareTo(response.getMonto()),
+                "El saldo debe bajar: el gasto se guarda negativo aunque el cliente lo envíe positivo");
+    }
+
+    @Test
+    @DisplayName("T1d: un ingreso enviado con signo NEGATIVO se guarda positivo")
+    void registrarMovimiento_ingresoConSignoNegativo_seGuardaPositivo() {
+        MovimientoRegistroDTO dto = new MovimientoRegistroDTO();
+        dto.setMonto(new java.math.BigDecimal("-500000.00"));
+        dto.setDescripcion("Sueldo mensual");
+        dto.setTipoMovimiento(TipoMovimiento.INGRESO_GENERAL);
+
+        when(securityUtils.getAuthenticatedRut()).thenReturn("12345678-9");
+        when(usuarioRepository.findById("12345678-9")).thenReturn(Optional.of(usuario));
+        when(movimientoRepository.save(any(Movimiento.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        MovimientoResponseDTO response = movimientoService.registrarMovimiento(dto);
+
+        assertEquals(0, new java.math.BigDecimal("500000.00").compareTo(response.getMonto()));
+    }
+
+    @Test
+    @DisplayName("T1d: ABONO_META se rechaza con 400 (se registra solo desde /api/metas)")
+    void registrarMovimiento_abonoMeta_rechazado() {
+        MovimientoRegistroDTO dto = new MovimientoRegistroDTO();
+        dto.setMonto(new java.math.BigDecimal("50000.00"));
+        dto.setDescripcion("Abono directo");
+        dto.setTipoMovimiento(TipoMovimiento.ABONO_META);
+
+        when(securityUtils.getAuthenticatedRut()).thenReturn("12345678-9");
+        when(usuarioRepository.findById("12345678-9")).thenReturn(Optional.of(usuario));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> movimientoService.registrarMovimiento(dto));
+
+        assertTrue(ex.getMessage().contains("/api/metas"),
+                "El mensaje debe indicar dónde sí se registra este tipo");
+        verifyNoInteractions(movimientoRepository);
+    }
+
+    @Test
+    @DisplayName("T1d: RETIRO_META se rechaza con 400 (se registra solo desde /api/metas)")
+    void registrarMovimiento_retiroMeta_rechazado() {
+        MovimientoRegistroDTO dto = new MovimientoRegistroDTO();
+        dto.setMonto(new java.math.BigDecimal("50000.00"));
+        dto.setDescripcion("Retiro directo");
+        dto.setTipoMovimiento(TipoMovimiento.RETIRO_META);
+
+        when(securityUtils.getAuthenticatedRut()).thenReturn("12345678-9");
+        when(usuarioRepository.findById("12345678-9")).thenReturn(Optional.of(usuario));
+
+        assertThrows(IllegalArgumentException.class, () -> movimientoService.registrarMovimiento(dto));
+        verifyNoInteractions(movimientoRepository);
+    }
+
+    @Test
+    @DisplayName("T1d: monto 0 se rechaza (no puede existir un movimiento sin efecto en el saldo)")
+    void registrarMovimiento_montoCero_rechazado() {
+        MovimientoRegistroDTO dto = new MovimientoRegistroDTO();
+        dto.setMonto(java.math.BigDecimal.ZERO);
+        dto.setDescripcion("Movimiento vacío");
+        dto.setTipoMovimiento(TipoMovimiento.GASTO_GENERAL);
+
+        when(securityUtils.getAuthenticatedRut()).thenReturn("12345678-9");
+        when(usuarioRepository.findById("12345678-9")).thenReturn(Optional.of(usuario));
+
+        assertThrows(IllegalArgumentException.class, () -> movimientoService.registrarMovimiento(dto));
+        verifyNoInteractions(movimientoRepository);
+    }
+
+    @Test
+    @DisplayName("T1d: PAGO_DEUDA se normaliza a negativo y se compara contra el total de la deuda")
+    void registrarMovimiento_pagoDeuda_seNormalizaNegativo() {
+        MovimientoRegistroDTO dto = new MovimientoRegistroDTO();
+        dto.setMonto(new java.math.BigDecimal("20000.00")); // positivo, el cliente no sabe la convención
+        dto.setDescripcion("Cuota");
+        dto.setTipoMovimiento(TipoMovimiento.PAGO_DEUDA);
+        dto.setDeudaId(7L);
+
+        com.example.saveup.model.Deuda deuda = new com.example.saveup.model.Deuda();
+        deuda.setId(7L);
+        deuda.setUsuario(usuario);
+        deuda.setMontoTotal(new java.math.BigDecimal("100000.00"));
+
+        when(securityUtils.getAuthenticatedRut()).thenReturn("12345678-9");
+        when(usuarioRepository.findById("12345678-9")).thenReturn(Optional.of(usuario));
+        when(deudaRepository.findById(7L)).thenReturn(Optional.of(deuda));
+        when(deudaRepository.findTotalPagadoPorDeuda(7L)).thenReturn(java.math.BigDecimal.ZERO);
+        when(movimientoRepository.save(any(Movimiento.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        MovimientoResponseDTO response = movimientoService.registrarMovimiento(dto);
+
+        assertEquals(0, new java.math.BigDecimal("-20000.00").compareTo(response.getMonto()));
+        verify(securityUtils).validarPropietario("12345678-9");
+    }
 }

@@ -20,9 +20,8 @@ public class MovimientoRegistroDTO {
     @NotNull(message = "El tipo de movimiento es obligatorio")
     private TipoMovimiento tipoMovimiento;
 
-    // Opcional: Se usarán cuando implementemos deudas y metas
+    // Opcional: se usa cuando el movimiento es un pago de deuda
     private Long deudaId;
-    private Long metaId;
 
     private Long categoriaId; // ID de la categoría seleccionada
 

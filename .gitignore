@@ -32,8 +32,7 @@ build/
 ### VS Code ###
 .vscode/
 
-### Antigravity / AGY ###
-.agents/
+### Antigravity / AGY ### .agents/
 
 ### Restos de diffs / artefactos ###
 diff.txt

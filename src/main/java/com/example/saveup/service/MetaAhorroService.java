@@ -11,6 +11,7 @@ import com.example.saveup.repository.MetaAhorroRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.SecurityUtils;
+import com.example.saveup.service.movimiento.SignoMovimiento;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -71,7 +72,7 @@ public class MetaAhorroService {
         abono.setUsuario(meta.getUsuario());
         abono.setMetaAhorro(meta);
         abono.setTipoMovimiento(TipoMovimiento.ABONO_META);
-        abono.setMonto(dto.getMonto().negate()); // El dinero "sale" del saldo principal
+        abono.setMonto(SignoMovimiento.aplicar(TipoMovimiento.ABONO_META, dto.getMonto())); // El dinero "sale" del saldo principal
         abono.setDescripcion(dto.getDescripcion());
 
         // ASIGNAR CATEGORÍA AHORRO
@@ -103,7 +104,7 @@ public class MetaAhorroService {
         retiro.setUsuario(meta.getUsuario());
         retiro.setMetaAhorro(meta);
         retiro.setTipoMovimiento(TipoMovimiento.RETIRO_META);
-        retiro.setMonto(dto.getMonto()); // El dinero "vuelve" al saldo principal
+        retiro.setMonto(SignoMovimiento.aplicar(TipoMovimiento.RETIRO_META, dto.getMonto())); // El dinero "vuelve" al saldo principal
         retiro.setDescripcion(dto.getDescripcion());
 
         // ASIGNAR CATEGORÍA AHORRO
@@ -138,7 +139,7 @@ public class MetaAhorroService {
             Movimiento devolucion = new Movimiento();
             devolucion.setUsuario(meta.getUsuario());
             devolucion.setTipoMovimiento(TipoMovimiento.RETIRO_META);
-            devolucion.setMonto(totalAhorrado);
+            devolucion.setMonto(SignoMovimiento.aplicar(TipoMovimiento.RETIRO_META, totalAhorrado));
             devolucion.setDescripcion("Devolución de fondos por eliminar meta: " + meta.getNombre());
             movimientoRepository.save(devolucion);
         }

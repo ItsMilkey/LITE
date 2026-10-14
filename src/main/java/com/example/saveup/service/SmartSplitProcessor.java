@@ -13,6 +13,7 @@ import com.example.saveup.repository.CategoriaRepository;
 import com.example.saveup.repository.ConfiguracionPresupuestoRepository;
 import com.example.saveup.repository.MetaAhorroRepository;
 import com.example.saveup.repository.MovimientoRepository;
+import com.example.saveup.service.movimiento.SignoMovimiento;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -131,7 +132,8 @@ public class SmartSplitProcessor {
                         // Crear Movimiento de Abono a Meta (egreso contable del saldo corriente)
                         Movimiento abonoMovimiento = new Movimiento();
                         abonoMovimiento.setUsuario(usuario);
-                        abonoMovimiento.setMonto(montoAbono.negate());
+                        abonoMovimiento.setMonto(
+                                SignoMovimiento.aplicar(TipoMovimiento.ABONO_META, montoAbono));
                         abonoMovimiento.setDescripcion("Abono Auto: " + meta.getNombre());
                         abonoMovimiento.setTipoMovimiento(TipoMovimiento.ABONO_META);
                         abonoMovimiento.setMetaAhorro(meta);

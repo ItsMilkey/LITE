@@ -19,6 +19,7 @@ import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.finanzas.*;
+import com.example.saveup.service.movimiento.SignoMovimiento;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -87,7 +88,7 @@ public class DeudaService {
         Movimiento pago = new Movimiento();
         pago.setUsuario(deuda.getUsuario());
         pago.setDeuda(deuda);
-        pago.setMonto(pagoDTO.getMonto().negate());
+        pago.setMonto(SignoMovimiento.aplicar(TipoMovimiento.PAGO_DEUDA, pagoDTO.getMonto()));
         pago.setDescripcion(pagoDTO.getDescripcion());
         pago.setTipoMovimiento(TipoMovimiento.PAGO_DEUDA);
         pago.setCategoria(categoriaDeudas);

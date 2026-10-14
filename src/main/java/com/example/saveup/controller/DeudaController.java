@@ -63,6 +63,8 @@ public class DeudaController {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
         } catch (IllegalStateException e) {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.CONFLICT);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
         }
     }
     

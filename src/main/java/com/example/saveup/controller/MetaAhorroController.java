@@ -51,6 +51,8 @@ public class MetaAhorroController {
             return ResponseEntity.ok(metaActualizada);
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -63,6 +65,8 @@ public class MetaAhorroController {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
         } catch (IllegalStateException e) {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.CONFLICT);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
         }
     }
 

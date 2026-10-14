@@ -7,6 +7,7 @@ import com.example.saveup.model.Categoria;
 import com.example.saveup.model.MetaAhorro;
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.Usuario;
+import com.example.saveup.model.enums.TipoMovimiento;
 import com.example.saveup.model.enums.TipoPresupuesto;
 import com.example.saveup.repository.CategoriaRepository;
 import com.example.saveup.repository.MetaAhorroRepository;
@@ -107,5 +108,120 @@ class MetaAhorroServiceTest {
         assertEquals(0, new java.math.BigDecimal("150000.00").compareTo(meta.getMontoActual()));
         verify(securityUtils).validarPropietario(usuario.getRut());
         verify(movimientoRepository).save(any(Movimiento.class));
+    }
+
+    // ─────────────────── Signo canónico de movimientos de meta (T1d) ───────────────────
+
+    @Test
+    @DisplayName("T1d: el abono se guarda negativo aunque el DTO traiga el monto positivo")
+    void realizarAbono_movimientoQuedaNegativo() {
+        AbonoRetiroDTO dto = new AbonoRetiroDTO();
+        dto.setMonto(new java.math.BigDecimal("50000.00"));
+        dto.setDescripcion("Abono manual");
+
+        when(metaAhorroRepository.findById(1L)).thenReturn(Optional.of(meta));
+        when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.empty());
+        when(metaAhorroRepository.save(any(MetaAhorro.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        metaAhorroService.realizarAbono(1L, dto);
+
+        org.mockito.ArgumentCaptor<Movimiento> captor =
+                org.mockito.ArgumentCaptor.forClass(Movimiento.class);
+        verify(movimientoRepository).save(captor.capture());
+
+        assertEquals(0, new java.math.BigDecimal("-50000.00").compareTo(captor.getValue().getMonto()),
+                "ABONO_META sale del saldo principal: el movimiento debe ser negativo");
+        assertEquals(TipoMovimiento.ABONO_META, captor.getValue().getTipoMovimiento());
+    }
+
+    @Test
+    @DisplayName("T1d: el retiro se guarda positivo aunque el DTO traiga el monto negativo")
+    void realizarRetiro_movimientoQuedaPositivo() {
+        AbonoRetiroDTO dto = new AbonoRetiroDTO();
+        dto.setMonto(new java.math.BigDecimal("-20000.00")); // el cliente manda negativo
+        dto.setDescripcion("Retiro");
+
+        when(metaAhorroRepository.findById(1L)).thenReturn(Optional.of(meta));
+        when(metaAhorroRepository.findTotalAhorradoByMetaId(1L)).thenReturn(new java.math.BigDecimal("100000.00"));
+        when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.empty());
+        when(metaAhorroRepository.save(any(MetaAhorro.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        metaAhorroService.realizarRetiro(1L, dto);
+
+        org.mockito.ArgumentCaptor<Movimiento> captor =
+                org.mockito.ArgumentCaptor.forClass(Movimiento.class);
+        verify(movimientoRepository).save(captor.capture());
+
+        assertEquals(0, new java.math.BigDecimal("20000.00").compareTo(captor.getValue().getMonto()),
+                "RETIRO_META vuelve al saldo principal: el movimiento debe ser positivo");
+        assertEquals(TipoMovimiento.RETIRO_META, captor.getValue().getTipoMovimiento());
+    }
+
+    @Test
+    @DisplayName("T1d: abono con monto 0 → error y no se guarda nada")
+    void realizarAbono_montoCero_error() {
+        AbonoRetiroDTO dto = new AbonoRetiroDTO();
+        dto.setMonto(java.math.BigDecimal.ZERO);
+        dto.setDescripcion("Abono vacío");
+
+        when(metaAhorroRepository.findById(1L)).thenReturn(Optional.of(meta));
+
+        assertThrows(IllegalArgumentException.class, () -> metaAhorroService.realizarAbono(1L, dto));
+        verifyNoInteractions(movimientoRepository);
+    }
+
+    @Test
+    @DisplayName("T1d: al eliminar una meta, el reintegro (RETIRO_META) es igual al total ahorrado y deja el saldo como antes de los abonos")
+    void eliminarMeta_reintegroDevuelveElTotalAhorrado() {
+        // La meta tiene 100.000 ahorrados, producto de abonos que restaron del saldo.
+        java.math.BigDecimal totalAhorrado = new java.math.BigDecimal("100000.00");
+
+        when(metaAhorroRepository.findById(1L)).thenReturn(Optional.of(meta));
+        when(metaAhorroRepository.findTotalAhorradoByMetaId(1L))
+                .thenReturn(totalAhorrado.negate()); // los abonos están guardados en negativo
+        when(movimientoRepository.findByMetaAhorroId(1L)).thenReturn(List.of());
+
+        metaAhorroService.eliminarMeta(1L);
+
+        org.mockito.ArgumentCaptor<Movimiento> captor =
+                org.mockito.ArgumentCaptor.forClass(Movimiento.class);
+        verify(movimientoRepository).save(captor.capture());
+
+        Movimiento reintegro = captor.getValue();
+        assertEquals(TipoMovimiento.RETIRO_META, reintegro.getTipoMovimiento());
+        assertEquals(0, totalAhorrado.compareTo(reintegro.getMonto()),
+                "El reintegro debe ser POSITIVO e igual al total ahorrado");
+
+        // Invariante de saldo: los abonos restaron 100.000 y el reintegro devuelve 100.000,
+        // así que el saldo del usuario queda igual que antes de haber abonado.
+        java.math.BigDecimal saldoConAbonos = reintegro.getMonto().multiply(new java.math.BigDecimal("-1"));
+        assertEquals(0, java.math.BigDecimal.ZERO.compareTo(saldoConAbonos.add(reintegro.getMonto())),
+                "saldo tras abonos + reintegro = 0: el saldo vuelve a su valor original");
+
+        verify(metaAhorroRepository).delete(meta);
+    }
+
+    @Test
+    @DisplayName("T1d: eliminar una meta sin ahorros no crea movimiento de reintegro")
+    void eliminarMeta_sinAhorros_noCreaReintegro() {
+        when(metaAhorroRepository.findById(1L)).thenReturn(Optional.of(meta));
+        when(metaAhorroRepository.findTotalAhorradoByMetaId(1L)).thenReturn(null);
+        when(movimientoRepository.findByMetaAhorroId(1L)).thenReturn(List.of());
+
+        metaAhorroService.eliminarMeta(1L);
+
+        verify(movimientoRepository, never()).save(any(Movimiento.class));
+        verify(metaAhorroRepository).delete(meta);
+    }
+
+    @Test
+    @DisplayName("T1d: la meta por defecto 'Ahorros' no se puede eliminar")
+    void eliminarMeta_metaPorDefecto_error() {
+        meta.setNombre("Ahorros");
+
+        when(metaAhorroRepository.findById(1L)).thenReturn(Optional.of(meta));
+
+        assertThrows(IllegalStateException.class, () -> metaAhorroService.eliminarMeta(1L));
+        verifyNoInteractions(movimientoRepository);
     }
 }

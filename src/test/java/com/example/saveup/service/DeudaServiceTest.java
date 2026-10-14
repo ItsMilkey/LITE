@@ -258,4 +258,47 @@ class DeudaServiceTest {
         assertEquals(0, new BigDecimal("1.5000").compareTo(dto.getTasaMensualPorcentaje()),
                 "tasaMensualPorcentaje debe ser 1.5 (porcentaje), no 0.015 (fracción)");
     }
+
+    // ──────────────────────── T1d: signo canónico del pago ────────────────────────
+
+    @Test
+    @DisplayName("T1d: el pago se guarda negativo aunque el DTO traiga el monto positivo")
+    void registrarPago_movimientoQuedaNegativo() {
+        PagoDeudaDTO pagoDTO = new PagoDeudaDTO();
+        pagoDTO.setMonto(new java.math.BigDecimal("20000.00")); // positivo: el cliente no sabe la convención
+        pagoDTO.setDescripcion("Cuota 1");
+
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(deuda));
+        when(categoriaRepository.findByNombre("Deudas"))
+                .thenReturn(Optional.of(new Categoria(1L, "Deudas", "ic_payment", "#795548", TipoPresupuesto.NECESIDAD)));
+        when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(new java.math.BigDecimal("-20000.00"));
+        when(deudaRepository.save(any(Deuda.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(
+                new DeudaResponseDTO(1L, "Crédito Universitario", "Cuotas", new BigDecimal("100000.00"), 10,
+                        EstadoDeuda.PENDIENTE, new Date(), new BigDecimal("-20000.00"), 1L)));
+
+        deudaService.registrarPago(1L, pagoDTO);
+
+        org.mockito.ArgumentCaptor<Movimiento> captor =
+                org.mockito.ArgumentCaptor.forClass(Movimiento.class);
+        verify(movimientoRepository).save(captor.capture());
+
+        assertEquals(0, new java.math.BigDecimal("-20000.00").compareTo(captor.getValue().getMonto()),
+                "PAGO_DEUDA baja el saldo: el movimiento debe quedar negativo");
+    }
+
+    @Test
+    @DisplayName("T1d: pago con monto 0 → error y no se guarda nada")
+    void registrarPago_montoCero_error() {
+        PagoDeudaDTO pagoDTO = new PagoDeudaDTO();
+        pagoDTO.setMonto(java.math.BigDecimal.ZERO);
+        pagoDTO.setDescripcion("Cuota inválida");
+
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(deuda));
+        when(categoriaRepository.findByNombre("Deudas"))
+                .thenReturn(Optional.of(new Categoria(1L, "Deudas", "ic_payment", "#795548", TipoPresupuesto.NECESIDAD)));
+
+        assertThrows(IllegalArgumentException.class, () -> deudaService.registrarPago(1L, pagoDTO));
+        verifyNoInteractions(movimientoRepository);
+    }
 }

@@ -222,6 +222,45 @@ class SmartSplitProcessorTest {
     }
 
     @Test
+    @DisplayName("T1d: los abonos automáticos quedan negativos y suman EXACTAMENTE el monto de ahorro (el saldo baja lo debido)")
+    void procesarDistribucion_abonosNegativos_sumanExactamenteElAhorro() {
+        config.setPorcentajeAhorro(new java.math.BigDecimal("33.00")); // 33% de 300.000 = 99.000
+        java.math.BigDecimal montoIngreso = new java.math.BigDecimal("300000.00");
+
+        AsignacionMetaPresupuesto asig1 = new AsignacionMetaPresupuesto();
+        asig1.setMeta(meta1);
+        asig1.setPorcentajeAsignacion(new java.math.BigDecimal("33.33")); // 33% no divisible exactamente
+
+        AsignacionMetaPresupuesto asig2 = new AsignacionMetaPresupuesto();
+        asig2.setMeta(meta2);
+        asig2.setPorcentajeAsignacion(new java.math.BigDecimal("33.33"));
+
+        AsignacionMetaPresupuesto asig3 = new AsignacionMetaPresupuesto();
+        asig3.setMeta(meta2);
+        asig3.setPorcentajeAsignacion(new java.math.BigDecimal("33.34"));
+
+        when(configuracionPresupuestoRepository.findByUsuarioRut("12345678-9")).thenReturn(Optional.of(config));
+        when(asignacionMetaPresupuestoRepository.findByConfiguracionId(1L))
+                .thenReturn(List.of(asig1, asig2, asig3));
+        when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.of(catAhorro));
+
+        smartSplitProcessor.procesarDistribucion(usuario, montoIngreso);
+
+        ArgumentCaptor<Movimiento> captor = ArgumentCaptor.forClass(Movimiento.class);
+        verify(movimientoRepository, times(3)).save(captor.capture());
+
+        java.math.BigDecimal suma = java.math.BigDecimal.ZERO;
+        for (Movimiento m : captor.getAllValues()) {
+            assertTrue(m.getMonto().signum() < 0,
+                    "Todo ABONO_META debe guardarse negativo (T1d)");
+            suma = suma.add(m.getMonto());
+        }
+
+        assertEquals(0, new java.math.BigDecimal("-99000.00").compareTo(suma),
+                "La suma de los abonos debe ser exactamente el monto de ahorro (99.000), en negativo");
+    }
+
+    @Test
     @DisplayName("No debe hacer nada si la configuración presupuestaria está inactiva")
     void procesarDistribucion_conConfiguracionInactiva_noRealizaAccion() {
         config.setActivo(false);

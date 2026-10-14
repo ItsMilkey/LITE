@@ -15,6 +15,7 @@ import com.example.saveup.repository.DeudaRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.SecurityUtils;
+import com.example.saveup.service.movimiento.SignoMovimiento;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -26,10 +27,22 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 public class MovimientoService {
+
+    /**
+     * Tipos que se pueden registrar directamente por este endpoint. Los movimientos
+     * hacia y desde metas (ABONO_META, RETIRO_META) solo se crean desde
+     * /api/metas/{id}/abonar y /api/metas/{id}/retirar, para que siempre exista la
+     * meta que los respalda.
+     */
+    private static final Set<TipoMovimiento> TIPOS_PERMITIDOS = Set.of(
+            TipoMovimiento.INGRESO_GENERAL,
+            TipoMovimiento.GASTO_GENERAL,
+            TipoMovimiento.PAGO_DEUDA);
 
     @Autowired
     private MovimientoRepository movimientoRepository;
@@ -56,10 +69,15 @@ public class MovimientoService {
         Usuario usuario = usuarioRepository.findById(rut)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con RUT: " + rut));
 
-        // 2. Crear la entidad Movimiento a partir del DTO.
+        // 2. Solo los tipos de este módulo se registran aquí. El signo lo fija el
+        // tipo, no el cliente (SignoMovimiento).
+        validarTipoRegistrable(dto.getTipoMovimiento());
+        BigDecimal montoCanonico = SignoMovimiento.aplicar(dto.getTipoMovimiento(), dto.getMonto());
+
+        // 3. Crear la entidad Movimiento a partir del DTO.
         Movimiento movimiento = new Movimiento();
         movimiento.setUsuario(usuario);
-        movimiento.setMonto(dto.getMonto());
+        movimiento.setMonto(montoCanonico);
         movimiento.setDescripcion(dto.getDescripcion());
         movimiento.setTipoMovimiento(dto.getTipoMovimiento());
         // La fecha se establece automáticamente gracias a @PrePersist.
@@ -78,7 +96,7 @@ public class MovimientoService {
             movimiento.setDeuda(deuda);
 
             java.math.BigDecimal nuevoTotalPagado = deudaRepository.findTotalPagadoPorDeuda(deuda.getId()).abs()
-                    .add(dto.getMonto().abs());
+                    .add(montoCanonico.abs());
             if (nuevoTotalPagado.compareTo(deuda.getMontoTotal()) >= 0) {
                 deuda.setEstado(EstadoDeuda.PAGADA);
                 deudaRepository.save(deuda);
@@ -96,7 +114,7 @@ public class MovimientoService {
         // LÓGICA SMART-SPLIT: Delegada a un servicio de dominio especializado
         if (Boolean.TRUE.equals(dto.getAplicarPresupuesto())
                 && dto.getTipoMovimiento() == TipoMovimiento.INGRESO_GENERAL) {
-            smartSplitProcessor.procesarDistribucion(usuario, dto.getMonto());
+            smartSplitProcessor.procesarDistribucion(usuario, montoCanonico);
         }
 
         // 3. Guardar la entidad en la base de datos.
@@ -165,6 +183,21 @@ public class MovimientoService {
         respuesta.setTotalPages(paginaMovimientos.getTotalPages());
 
         return respuesta;
+    }
+
+    /**
+     * Rechaza los tipos que no corresponden a este endpoint. Los movimientos hacia y
+     * desde metas se crean solo desde /api/metas, donde existe la meta que los respalda.
+     */
+    private void validarTipoRegistrable(TipoMovimiento tipo) {
+        if (tipo == null) {
+            throw new IllegalArgumentException("El tipo de movimiento es obligatorio.");
+        }
+        if (!TIPOS_PERMITIDOS.contains(tipo)) {
+            throw new IllegalArgumentException(
+                    "El tipo " + tipo + " no se registra por este endpoint: "
+                            + "los movimientos hacia y desde metas se crean desde /api/metas.");
+        }
     }
 
     private MovimientoResponseDTO convertirAEntidadResponseDTO(Movimiento movimiento) {
