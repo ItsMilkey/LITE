@@ -2,15 +2,11 @@ package com.example.saveup.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "ASIGNACION_META_PRESUPUESTO")
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class AsignacionMetaPresupuesto {
 
     @Id
@@ -32,4 +28,14 @@ public class AsignacionMetaPresupuesto {
      */
     @Column(name = "PORCENTAJE_ASIGNACION", nullable = false, precision = 5, scale = 2)
     private BigDecimal porcentajeAsignacion;
+
+    public AsignacionMetaPresupuesto() {
+    }
+
+    public AsignacionMetaPresupuesto(Long id, ConfiguracionPresupuesto configuracion, MetaAhorro meta, BigDecimal porcentajeAsignacion) {
+        this.id = id;
+        this.configuracion = configuracion;
+        this.meta = meta;
+        this.porcentajeAsignacion = porcentajeAsignacion;
+    }
 }

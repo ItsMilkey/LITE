@@ -4,7 +4,9 @@ import com.example.saveup.dto.CondicionesCreditoInput;
 import com.example.saveup.dto.DeudaCreacionDTO;
 import com.example.saveup.dto.DeudaResponseDTO;
 import com.example.saveup.dto.MovimientoResponseDTO;
+import com.example.saveup.dto.PageResponseDTO;
 import com.example.saveup.dto.PagoDeudaDTO;
+import com.example.saveup.dto.PagoDeudaResponseDTO;
 import com.example.saveup.dto.SimulacionCreditoResponseDTO.CuotaSimulacionDTO;
 import com.example.saveup.model.Categoria;
 import com.example.saveup.model.Deuda;
@@ -38,7 +40,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Servicio de deudas. Es el único productor de movimientos PAGO_DEUDA y el
@@ -201,10 +205,7 @@ public class DeudaService {
         Deuda deuda = deudaRepository.findById(deudaId)
                 .orElseThrow(() -> new EntityNotFoundException("Deuda no encontrada con ID: " + deudaId));
 
-        String rut = securityUtils.getAuthenticatedRut();
-        if (!deuda.getUsuario().getRut().equals(rut)) {
-            throw new SecurityException("No tiene permisos para acceder a esta deuda");
-        }
+        securityUtils.validarPropietario(deuda.getUsuario().getRut());
 
         CondicionesCredito condiciones = new CondicionesCredito(
                 deuda.getModalidadCalculo(),
@@ -223,13 +224,130 @@ public class DeudaService {
             fechasVencimiento = motorFinanciero.fechasVencimiento(deuda.getFechaPrimeraCuota(), deuda.getCantidadCuotas());
         }
 
-        List<CuotaSimulacionDTO> tabla = new ArrayList<>(resultado.tabla().size());
-        for (int i = 0; i < resultado.tabla().size(); i++) {
-            CuotaAmortizacion c = resultado.tabla().get(i);
-            LocalDate fv = fechasVencimiento != null ? fechasVencimiento.get(i) : null;
-            tabla.add(CuotaSimulacionDTO.from(c, fv));
+        List<CuotaSimulacionDTO> tabla = CuotaSimulacionDTO.from(resultado.tabla(), fechasVencimiento);
+
+        // Estado de cada cuota por la imputación de los pagos reales (regla 40).
+        BigDecimal pagosReales = totalPagadoReal(deudaId);
+        List<ImputacionPagos.ImputacionCuota> imputacion = ImputacionPagos.imputar(
+                resultado.tabla(), deuda.getCuotasPagadasPrevias(), pagosReales);
+        for (int i = 0; i < tabla.size(); i++) {
+            ImputacionPagos.ImputacionCuota fila = imputacion.get(i);
+            tabla.get(i).setEstado(fila.estado());
+            tabla.get(i).setMontoPagado(fila.pagado());
+            tabla.get(i).setPrevia(fila.previa());
         }
         return tabla;
+    }
+
+    /** Detalle de una deuda del usuario autenticado, con todos los derivados. */
+    @Transactional(readOnly = true)
+    public DeudaResponseDTO obtenerDeuda(Long deudaId) {
+        Deuda deuda = deudaRepository.findById(deudaId)
+                .orElseThrow(() -> new EntityNotFoundException("Deuda no encontrada con ID: " + deudaId));
+
+        securityUtils.validarPropietario(deuda.getUsuario().getRut());
+
+        DeudaResponseDTO dto = deudaRepository.findDeudaDTOById(deudaId)
+                .orElseThrow(() -> new EntityNotFoundException("Deuda no encontrada con ID: " + deudaId));
+        return enriquecer(dto);
+    }
+
+    /**
+     * Historial de pagos reales de una deuda, paginado y en orden descendente
+     * por fecha. El desglose de cada pago se calcula en memoria con
+     * {@link ImputacionPagos}: imputación acumulada tras ese pago menos la del
+     * pago anterior (regla 40). No se persiste y se usa una sola consulta.
+     *
+     * @throws IllegalArgumentException si page o size no son válidos (400)
+     */
+    @Transactional(readOnly = true)
+    public PageResponseDTO<PagoDeudaResponseDTO> obtenerPagos(Long deudaId, int page, int size) {
+        if (page < 0 || size < 1) {
+            throw new IllegalArgumentException("page debe ser >= 0 y size >= 1.");
+        }
+
+        Deuda deuda = deudaRepository.findById(deudaId)
+                .orElseThrow(() -> new EntityNotFoundException("Deuda no encontrada con ID: " + deudaId));
+
+        securityUtils.validarPropietario(deuda.getUsuario().getRut());
+
+        List<Movimiento> pagos = movimientoRepository
+                .findByDeudaIdAndTipoMovimientoOrderByFechaAscIdAsc(deudaId, TipoMovimiento.PAGO_DEUDA);
+
+        List<PagoDeudaResponseDTO> historial = desglosarPagos(
+                tablaAmortizacion(deuda), deuda.getCuotasPagadasPrevias(), pagos);
+        Collections.reverse(historial); // la API expone lo más reciente primero
+
+        int total = historial.size();
+
+        PageResponseDTO<PagoDeudaResponseDTO> respuesta = new PageResponseDTO<>();
+        respuesta.setCurrentPage(page);
+        respuesta.setTotalItems(total);
+        respuesta.setTotalPages((total + size - 1) / size);
+
+        // (long) evita el desbordamiento de int con page grandes: si el offset cae
+        // fuera del historial devolvemos una página vacía en lugar de un 500.
+        long offset = (long) page * size;
+        if (offset >= total) {
+            respuesta.setContent(List.of());
+            return respuesta;
+        }
+
+        respuesta.setContent(historial.subList((int) offset, (int) Math.min(offset + size, total)));
+        return respuesta;
+    }
+
+    /**
+     * Calcula el desglose capital/interés/costos de cada pago real, en orden de
+     * imputación, como la imputación acumulada tras ese pago menos la del pago
+     * anterior. La primera imputación de referencia es la de las cuotas previas.
+     */
+    private List<PagoDeudaResponseDTO> desglosarPagos(List<CuotaAmortizacion> tabla, int cuotasPagadasPrevias,
+                                                      List<Movimiento> pagos) {
+        List<PagoDeudaResponseDTO> salida = new ArrayList<>(pagos.size());
+        List<ImputacionPagos.ImputacionCuota> anterior =
+                ImputacionPagos.imputar(tabla, cuotasPagadasPrevias, BigDecimal.ZERO);
+        BigDecimal acumulado = BigDecimal.ZERO;
+
+        for (Movimiento pago : pagos) {
+            BigDecimal monto = (pago.getMonto() != null ? pago.getMonto() : BigDecimal.ZERO)
+                    .abs().setScale(ESCALA_DINERO, REDONDEO);
+            acumulado = acumulado.add(monto);
+
+            List<ImputacionPagos.ImputacionCuota> actual =
+                    ImputacionPagos.imputar(tabla, cuotasPagadasPrevias, acumulado);
+
+            salida.add(new PagoDeudaResponseDTO(
+                    pago.getId(),
+                    pago.getFecha(),
+                    monto,
+                    desglose(actual, anterior, ImputacionPagos.ImputacionCuota::capital),
+                    desglose(actual, anterior, ImputacionPagos.ImputacionCuota::interes),
+                    desglose(actual, anterior, ImputacionPagos.ImputacionCuota::costos),
+                    pago.getDescripcion()));
+
+            anterior = actual;
+        }
+        return salida;
+    }
+
+    /** Diferencia de un componente entre dos imputaciones acumuladas. */
+    private BigDecimal desglose(List<ImputacionPagos.ImputacionCuota> actual,
+                                List<ImputacionPagos.ImputacionCuota> anterior,
+                                Function<ImputacionPagos.ImputacionCuota, BigDecimal> componente) {
+        return totalComponente(actual, componente)
+                .subtract(totalComponente(anterior, componente))
+                .setScale(ESCALA_DINERO, REDONDEO);
+    }
+
+    /** Suma un componente (capital, interés o costos) de una imputación completa. */
+    private BigDecimal totalComponente(List<ImputacionPagos.ImputacionCuota> imputacion,
+                                       Function<ImputacionPagos.ImputacionCuota, BigDecimal> componente) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (ImputacionPagos.ImputacionCuota fila : imputacion) {
+            total = total.add(componente.apply(fila));
+        }
+        return total.setScale(ESCALA_DINERO, REDONDEO);
     }
 
     private void aplicarCalculoGuardar(Deuda deuda, DeudaCreacionDTO dto) {
@@ -417,10 +535,38 @@ public class DeudaService {
         dto.setSaldoCapital(dto.getMontoCapital().subtract(capitalImputado)
                 .max(BigDecimal.ZERO).setScale(ESCALA_DINERO, REDONDEO));
         dto.setCuotasPagadas(ImputacionPagos.contarPagadas(imputacion));
+        dto.setInteresesPagados(totalComponente(imputacion, ImputacionPagos.ImputacionCuota::interes));
+        aplicarProximaCuota(dto, tabla, imputacion);
 
         if (dto.getEstado() == EstadoDeuda.PENDIENTE && totalPorPagar.signum() == 0) {
             dto.setEstado(EstadoDeuda.PAGADA);
         }
+    }
+
+    /** Próxima cuota impaga (número, lo pendiente y su vencimiento) desde la imputación. */
+    private void aplicarProximaCuota(DeudaResponseDTO dto, List<CuotaAmortizacion> tabla,
+                                     List<ImputacionPagos.ImputacionCuota> imputacion) {
+        for (int i = 0; i < imputacion.size(); i++) {
+            ImputacionPagos.ImputacionCuota fila = imputacion.get(i);
+            if (fila.estado() != ImputacionPagos.EstadoCuota.PAGADA) {
+                dto.setProximaCuotaNumero(fila.numero());
+                // El monto pendiente lo reutiliza de la clase pura: no se re-deriva aquí.
+                dto.setProximaCuotaMontoPendiente(ImputacionPagos.montoProximaCuotaImpaga(
+                        tabla, dto.getCuotasPagadasPrevias(), dto.getMontoPagadoReal()));
+                dto.setProximaFechaVencimiento(fechaVencimiento(dto, i));
+                return;
+            }
+        }
+    }
+
+    /** Fecha de vencimiento de la cuota en la posición indicada (null si no hay calendario). */
+    private LocalDate fechaVencimiento(DeudaResponseDTO dto, int indice) {
+        if (dto.getFechaPrimeraCuota() == null || dto.getCantidadCuotas() <= 0) {
+            return null;
+        }
+        return motorFinanciero.calendarioCuotas()
+                .fechasVencimiento(dto.getFechaPrimeraCuota(), dto.getCantidadCuotas())
+                .get(indice);
     }
 
     private BigDecimal divisionCuota(BigDecimal montoTotal, int cantidadCuotas) {

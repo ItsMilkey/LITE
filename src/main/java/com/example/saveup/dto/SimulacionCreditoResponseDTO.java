@@ -2,6 +2,7 @@ package com.example.saveup.dto;
 
 import com.example.saveup.model.enums.ModalidadCalculo;
 import com.example.saveup.service.finanzas.CuotaAmortizacion;
+import com.example.saveup.service.finanzas.ImputacionPagos;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,6 +11,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -72,6 +74,11 @@ public class SimulacionCreditoResponseDTO {
         private BigDecimal costoAdicional;
         private BigDecimal saldo;
 
+        // Campos del cronograma de una deuda real (los completa DeudaService con ImputacionPagos).
+        private ImputacionPagos.EstadoCuota estado;
+        private BigDecimal montoPagado;
+        private Boolean previa;
+
         /**
          * Construye un CuotaSimulacionDTO a partir de una fila de amortización
          * y su fecha de vencimiento correspondiente.
@@ -86,6 +93,22 @@ public class SimulacionCreditoResponseDTO {
                     .costoAdicional(fila.costoAdicional())
                     .saldo(fila.saldo())
                     .build();
+        }
+
+        /**
+         * Mapper compartido por el simulador y el detalle de deuda: convierte la
+         * tabla de amortización en DTOs, asociando a cada cuota su fecha de
+         * vencimiento (nula si no hay calendario). Evita duplicar el bucle.
+         */
+        public static List<CuotaSimulacionDTO> from(List<CuotaAmortizacion> tabla, List<LocalDate> fechasVencimiento) {
+            List<CuotaSimulacionDTO> salida = new ArrayList<>(tabla.size());
+            for (int i = 0; i < tabla.size(); i++) {
+                LocalDate fecha = fechasVencimiento != null && i < fechasVencimiento.size()
+                        ? fechasVencimiento.get(i)
+                        : null;
+                salida.add(from(tabla.get(i), fecha));
+            }
+            return salida;
         }
     }
 

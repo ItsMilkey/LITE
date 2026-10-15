@@ -2,6 +2,7 @@ package com.example.saveup.repository;
 
 import com.example.saveup.model.Deuda;
 import com.example.saveup.model.Movimiento;
+import com.example.saveup.model.enums.TipoMovimiento;
 import org.springframework.data.domain.Page; // <-- ¡CAMBIO!
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -24,6 +25,12 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
     java.math.BigDecimal findSaldoByUsuarioRut(@Param("rut") String rut);
 
     List<Movimiento> findByDeuda(Deuda deuda);
+
+    /**
+     * Historial de pagos de una deuda en orden de imputación (fecha ascendente,
+     * id como desempate). Una sola consulta por endpoint: nada de N+1.
+     */
+    List<Movimiento> findByDeudaIdAndTipoMovimientoOrderByFechaAscIdAsc(Long deudaId, TipoMovimiento tipoMovimiento);
 
     List<Movimiento> findByMetaAhorroId(Long metaId);
 

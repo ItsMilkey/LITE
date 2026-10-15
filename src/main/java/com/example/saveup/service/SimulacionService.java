@@ -117,12 +117,7 @@ public class SimulacionService {
         List<CuotaSimulacionDTO> tablaAmortizacion = null;
         boolean incluirTabla = request.getIncluirTabla() == null || Boolean.TRUE.equals(request.getIncluirTabla());
         if (incluirTabla) {
-            tablaAmortizacion = new ArrayList<>(resultado.tabla().size());
-            for (int i = 0; i < resultado.tabla().size(); i++) {
-                CuotaAmortizacion c = resultado.tabla().get(i);
-                LocalDate fv = fechasVencimiento != null ? fechasVencimiento.get(i) : null;
-                tablaAmortizacion.add(CuotaSimulacionDTO.from(c, fv));
-            }
+            tablaAmortizacion = CuotaSimulacionDTO.from(resultado.tabla(), fechasVencimiento);
         }
 
         // 9. Comparación de plazos (si se solicitaron cuotas alternativas)

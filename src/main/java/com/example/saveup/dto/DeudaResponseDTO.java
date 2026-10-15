@@ -74,6 +74,14 @@ public class DeudaResponseDTO {
     private BigDecimal saldoCapital;
     /** Cuotas en estado PAGADA según la imputación (incluye las previas). */
     private int cuotasPagadas;
+    /** Número de la próxima cuota impaga (null si no queda ninguna). */
+    private Integer proximaCuotaNumero;
+    /** Lo que falta para cubrir la próxima cuota impaga (incluye su costo adicional). */
+    private BigDecimal proximaCuotaMontoPendiente;
+    /** Vencimiento de la próxima cuota impaga (null si no hay fechaPrimeraCuota). */
+    private LocalDate proximaFechaVencimiento;
+    /** Interés imputado a los pagos reales y a las cuotas previas. */
+    private BigDecimal interesesPagados;
 
     /**
      * Constructor de la proyección JPQL (ver {@code DeudaRepository}). Solo

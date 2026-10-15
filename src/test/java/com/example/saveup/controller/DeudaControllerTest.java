@@ -3,10 +3,12 @@ package com.example.saveup.controller;
 import com.example.saveup.dto.DeudaResponseDTO;
 import com.example.saveup.dto.SimulacionCreditoRequestDTO;
 import com.example.saveup.model.Deuda;
+import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.Usuario;
 import com.example.saveup.model.enums.EstadoDeuda;
 import com.example.saveup.model.enums.ModalidadCalculo;
 import com.example.saveup.model.enums.TipoDeuda;
+import com.example.saveup.model.enums.TipoMovimiento;
 import com.example.saveup.repository.DeudaRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
@@ -26,6 +28,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -294,7 +297,7 @@ class DeudaControllerTest {
         mockMvc.perform(get("/api/deudas/1/amortizacion")
                         .header("Authorization", "Bearer " + validToken))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.title").value("Forbidden"));
     }
 
     // ──────────────────────── 8. Amortización CUOTA_CONOCIDA → 200 ────────────────────────
@@ -320,5 +323,106 @@ class DeudaControllerTest {
                 .andExpect(jsonPath("$.length()").value(10))
                 .andExpect(jsonPath("$[0].numero").value(1))
                 .andExpect(jsonPath("$[9].numero").value(10));
+    }
+
+    // ──────────────────────── 9. Detalle propio → 200 ────────────────────────
+
+    @Test
+    @DisplayName("GET /api/deudas/{id} propio → 200 con la próxima cuota")
+    void obtenerDeuda_propia_retorna200() throws Exception {
+        crearYObtenerDTO("""
+                {"nombre":"Deuda Detalle","condiciones":{"modalidad":"SIN_INTERES","montoCapital":100000,"cantidadCuotas":10}}
+                """);
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(savedDeudaRef.get()));
+
+        mockMvc.perform(get("/api/deudas/1")
+                        .header("Authorization", "Bearer " + validToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.proximaCuotaNumero").value(1))
+                .andExpect(jsonPath("$.proximaCuotaMontoPendiente").value(10000.00))
+                .andExpect(jsonPath("$.totalPorPagar").value(100000.00));
+    }
+
+    // ──────────────────────── 10. Detalle ajeno → 403 (anti-IDOR) ────────────────────────
+
+    @Test
+    @DisplayName("GET /api/deudas/{id} de otro usuario → 403 Forbidden")
+    void obtenerDeuda_ajena_retorna403() throws Exception {
+        Usuario otro = new Usuario();
+        otro.setRut("99999999-9");
+        otro.setNombre("Otro");
+
+        Deuda ajena = new Deuda();
+        ajena.setId(1L);
+        ajena.setUsuario(otro);
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(ajena));
+
+        mockMvc.perform(get("/api/deudas/1")
+                        .header("Authorization", "Bearer " + validToken))
+                .andExpect(status().isForbidden());
+    }
+
+    // ──────────────────────── 11. Historial de pagos ────────────────────────
+
+    @Test
+    @DisplayName("GET /api/deudas/{id}/pagos devuelve el historial con desglose, lo más reciente primero")
+    void obtenerPagos_retornaHistorial() throws Exception {
+        Deuda deudaPagos = new Deuda();
+        deudaPagos.setId(1L);
+        deudaPagos.setUsuario(usuario);
+        deudaPagos.setModalidadCalculo(ModalidadCalculo.SIN_INTERES);
+        deudaPagos.setMontoCapital(new BigDecimal("100000"));
+        deudaPagos.setCantidadCuotas(10);
+        deudaPagos.setTasaMensual(BigDecimal.ZERO);
+        deudaPagos.setValorCuota(new BigDecimal("10000"));
+        deudaPagos.setGastosIniciales(BigDecimal.ZERO);
+        deudaPagos.setCostoAdicionalPorCuota(BigDecimal.ZERO);
+        deudaPagos.setCuotasPagadasPrevias(0);
+        deudaPagos.setMontoPagadoPrevio(BigDecimal.ZERO);
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(deudaPagos));
+
+        Movimiento p1 = new Movimiento();
+        p1.setId(1L);
+        p1.setMonto(new BigDecimal("-10000.00"));
+        p1.setFecha(new Date(1_000L));
+        p1.setDescripcion("Cuota 1");
+        p1.setTipoMovimiento(TipoMovimiento.PAGO_DEUDA);
+
+        Movimiento p2 = new Movimiento();
+        p2.setId(2L);
+        p2.setMonto(new BigDecimal("-5000.00"));
+        p2.setFecha(new Date(2_000L));
+        p2.setDescripcion("Abono");
+        p2.setTipoMovimiento(TipoMovimiento.PAGO_DEUDA);
+
+        when(movimientoRepository.findByDeudaIdAndTipoMovimientoOrderByFechaAscIdAsc(1L, TipoMovimiento.PAGO_DEUDA))
+                .thenReturn(List.of(p1, p2));
+
+        mockMvc.perform(get("/api/deudas/1/pagos")
+                        .header("Authorization", "Bearer " + validToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalItems").value(2))
+                .andExpect(jsonPath("$.currentPage").value(0))
+                .andExpect(jsonPath("$.content[0].id").value(2))
+                .andExpect(jsonPath("$.content[0].capital").value(5000.00))
+                .andExpect(jsonPath("$.content[1].capital").value(10000.00));
+    }
+
+    @Test
+    @DisplayName("GET /api/deudas/{id}/pagos de otro usuario → 403 Forbidden (anti-IDOR)")
+    void obtenerPagos_ajena_retorna403() throws Exception {
+        Usuario otro = new Usuario();
+        otro.setRut("99999999-9");
+        otro.setNombre("Otro");
+
+        Deuda ajena = new Deuda();
+        ajena.setId(1L);
+        ajena.setUsuario(otro);
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(ajena));
+
+        mockMvc.perform(get("/api/deudas/1/pagos")
+                        .header("Authorization", "Bearer " + validToken))
+                .andExpect(status().isForbidden());
     }
 }

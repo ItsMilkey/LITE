@@ -2,7 +2,10 @@ package com.example.saveup.service;
 
 import com.example.saveup.dto.DeudaCreacionDTO;
 import com.example.saveup.dto.DeudaResponseDTO;
+import com.example.saveup.dto.PageResponseDTO;
 import com.example.saveup.dto.PagoDeudaDTO;
+import com.example.saveup.dto.PagoDeudaResponseDTO;
+import com.example.saveup.dto.SimulacionCreditoResponseDTO.CuotaSimulacionDTO;
 import com.example.saveup.model.Categoria;
 import com.example.saveup.model.Deuda;
 import com.example.saveup.model.Movimiento;
@@ -19,6 +22,8 @@ import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.finanzas.CondicionesCredito;
+import com.example.saveup.service.finanzas.CuotaAmortizacion;
+import com.example.saveup.service.finanzas.ImputacionPagos;
 import com.example.saveup.service.finanzas.MotorFinanciero;
 import com.example.saveup.service.finanzas.ResultadoCalculo;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,8 +32,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
@@ -664,5 +671,276 @@ class DeudaServiceTest {
         assertEquals(0, BigDecimal.ZERO.compareTo(result.deuda().getSaldoCapital()));
         assertEquals(12, result.deuda().getCuotasPagadas(),
                 "Al cubrir el total, las 12 cuotas quedan imputadas como PAGADA");
+    }
+
+    // ──────────────────────── detalle y pagos (T3) ────────────────────────
+
+    private static Movimiento pago(long id, String monto, long fechaMillis) {
+        Movimiento m = new Movimiento();
+        m.setId(id);
+        m.setMonto(new BigDecimal(monto));
+        m.setFecha(new Date(fechaMillis));
+        m.setDescripcion("Pago " + id);
+        m.setTipoMovimiento(TipoMovimiento.PAGO_DEUDA);
+        return m;
+    }
+
+    private void stubPagos(Movimiento... pagos) {
+        when(movimientoRepository.findByDeudaIdAndTipoMovimientoOrderByFechaAscIdAsc(1L, TipoMovimiento.PAGO_DEUDA))
+                .thenReturn(List.of(pagos));
+    }
+
+    private static BigDecimal suma(List<ImputacionPagos.ImputacionCuota> filas,
+                                   java.util.function.Function<ImputacionPagos.ImputacionCuota, BigDecimal> componente) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (ImputacionPagos.ImputacionCuota fila : filas) {
+            total = total.add(componente.apply(fila));
+        }
+        return total.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    @Test
+    @DisplayName("obtenerDeuda valida la propiedad y devuelve el DTO enriquecido")
+    void obtenerDeuda_propia_devuelveEnriquecida() {
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(deuda));
+        when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(
+                proyeccion(1L, new BigDecimal("100000.00"), 10, BigDecimal.ZERO)));
+
+        DeudaResponseDTO dto = deudaService.obtenerDeuda(1L);
+
+        assertNotNull(dto);
+        assertEquals(0, new BigDecimal("100000.00").compareTo(dto.getTotalPorPagar()));
+        verify(securityUtils).validarPropietario(RUT);
+    }
+
+    @Test
+    @DisplayName("Anti-IDOR: obtenerDeuda de una deuda ajena propaga AccessDeniedException (403)")
+    void obtenerDeuda_ajena_deniega() {
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(deuda));
+        doThrow(new AccessDeniedException("Acceso denegado")).when(securityUtils).validarPropietario(RUT);
+
+        assertThrows(AccessDeniedException.class, () -> deudaService.obtenerDeuda(1L));
+        verify(deudaRepository, never()).findDeudaDTOById(any());
+    }
+
+    @Test
+    @DisplayName("Anti-IDOR: obtenerPagos de una deuda ajena propaga AccessDeniedException (403)")
+    void obtenerPagos_ajena_deniega() {
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(deuda));
+        doThrow(new AccessDeniedException("Acceso denegado")).when(securityUtils).validarPropietario(RUT);
+
+        assertThrows(AccessDeniedException.class, () -> deudaService.obtenerPagos(1L, 0, 20));
+        verify(movimientoRepository, never())
+                .findByDeudaIdAndTipoMovimientoOrderByFechaAscIdAsc(any(), any());
+    }
+
+    @Test
+    @DisplayName("Anti-IDOR: obtenerAmortizacion de una deuda ajena propaga AccessDeniedException (403)")
+    void obtenerAmortizacion_ajena_deniega() {
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(deuda));
+        doThrow(new AccessDeniedException("Acceso denegado")).when(securityUtils).validarPropietario(RUT);
+
+        assertThrows(AccessDeniedException.class, () -> deudaService.obtenerAmortizacion(1L));
+    }
+
+    @Test
+    @DisplayName("Tras un pago parcial, el detalle expone la próxima cuota impaga y lo que le falta")
+    void obtenerDeuda_pagoParcial_muestraProximaCuota() {
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(deuda));
+        // 25.000 pagados de 10 cuotas de 10.000: la cuota 3 queda PARCIAL con 5.000
+        when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(
+                proyeccion(1L, new BigDecimal("100000.00"), 10, new BigDecimal("-25000.00"))));
+
+        DeudaResponseDTO dto = deudaService.obtenerDeuda(1L);
+
+        assertEquals(3, dto.getProximaCuotaNumero());
+        assertEquals(0, new BigDecimal("5000.00").compareTo(dto.getProximaCuotaMontoPendiente()));
+        assertNull(dto.getProximaFechaVencimiento());
+        assertEquals(0, BigDecimal.ZERO.compareTo(dto.getInteresesPagados()));
+    }
+
+    @Test
+    @DisplayName("La próxima cuota impaga expone su vencimiento cuando hay calendario")
+    void obtenerDeuda_conFecha_muestraVencimientoProximo() {
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(deuda));
+        when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(
+                proyeccion(1L, new BigDecimal("100000.00"), 10, EstadoDeuda.PENDIENTE,
+                        new BigDecimal("-20000.00"), 2L, ModalidadCalculo.SIN_INTERES,
+                        new BigDecimal("100000.00"), BigDecimal.ZERO, new BigDecimal("10000.00"),
+                        0, BigDecimal.ZERO, LocalDate.of(2026, 1, 31))));
+
+        DeudaResponseDTO dto = deudaService.obtenerDeuda(1L);
+
+        assertEquals(3, dto.getProximaCuotaNumero());
+        assertEquals(0, new BigDecimal("10000.00").compareTo(dto.getProximaCuotaMontoPendiente()));
+        assertEquals(LocalDate.of(2026, 3, 31), dto.getProximaFechaVencimiento());
+    }
+
+    @Test
+    @DisplayName("interesesPagados suma el interés imputado, incluidas las cuotas previas")
+    void obtenerDeuda_interesesPagados_incluyePrevias() {
+        Deuda conTasa = deudaDelMotor(ModalidadCalculo.TASA_CONOCIDA, new BigDecimal("100000"), 12,
+                new BigDecimal("0.015"), null);
+        conTasa.setCuotasPagadasPrevias(2);
+
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(conTasa));
+        when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(
+                proyeccion(1L, conTasa.getMontoTotal(), 12, EstadoDeuda.PENDIENTE,
+                        new BigDecimal("-15000.00"), 1L, ModalidadCalculo.TASA_CONOCIDA,
+                        new BigDecimal("100000"), new BigDecimal("0.015"), conTasa.getValorCuota(),
+                        2, BigDecimal.ZERO, null)));
+
+        DeudaResponseDTO dto = deudaService.obtenerDeuda(1L);
+
+        List<CuotaAmortizacion> tabla = new MotorFinanciero().calcular(new CondicionesCredito(
+                ModalidadCalculo.TASA_CONOCIDA, new BigDecimal("100000"), 12,
+                new BigDecimal("0.015"), null, BigDecimal.ZERO, BigDecimal.ZERO)).tabla();
+        BigDecimal esperado = suma(ImputacionPagos.imputar(tabla, 2, new BigDecimal("15000")),
+                ImputacionPagos.ImputacionCuota::interes);
+
+        assertEquals(0, esperado.compareTo(dto.getInteresesPagados()));
+        assertTrue(dto.getInteresesPagados().signum() > 0, "Con tasa conocida debe haber interés pagado");
+    }
+
+    @Test
+    @DisplayName("El cronograma marca estado, monto pagado y previa según la imputación")
+    void obtenerAmortizacion_marcaEstadosYPrevias() {
+        Deuda conTasa = deudaDelMotor(ModalidadCalculo.TASA_CONOCIDA, new BigDecimal("100000"), 12,
+                new BigDecimal("0.015"), null);
+        conTasa.setCuotasPagadasPrevias(2);
+
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(conTasa));
+        when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(new BigDecimal("-15000.00"));
+
+        List<CuotaSimulacionDTO> tabla = deudaService.obtenerAmortizacion(1L);
+
+        assertEquals(12, tabla.size());
+        assertTrue(tabla.get(0).getPrevia(), "La cuota 1 es previa");
+        assertTrue(tabla.get(1).getPrevia(), "La cuota 2 es previa");
+        assertEquals(ImputacionPagos.EstadoCuota.PAGADA, tabla.get(0).getEstado());
+        assertFalse(tabla.get(11).getPrevia());
+        assertEquals(ImputacionPagos.EstadoCuota.PENDIENTE, tabla.get(11).getEstado());
+        // Los 15.000 reales cubren la cuota 3 y dejan la 4 en PARCIAL.
+        assertEquals(ImputacionPagos.EstadoCuota.PARCIAL, tabla.get(3).getEstado());
+        assertTrue(tabla.get(3).getMontoPagado().signum() > 0);
+    }
+
+    @Test
+    @DisplayName("Deuda sin pagos: historial paginado vacío")
+    void obtenerPagos_sinPagos_listaVacia() {        when(deudaRepository.findById(1L)).thenReturn(Optional.of(deuda));
+        stubPagos();
+
+        PageResponseDTO<PagoDeudaResponseDTO> page = deudaService.obtenerPagos(1L, 0, 20);
+
+        assertTrue(page.getContent().isEmpty());
+        assertEquals(0, page.getTotalItems());
+        assertEquals(0, page.getTotalPages());
+        verify(securityUtils).validarPropietario(RUT);
+    }
+
+    @Test
+    @DisplayName("Historial ordenado por fecha desc, con el desglose capital/interés/costos de cada pago")
+    void obtenerPagos_ordenDescYDesglose() {
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(deuda));
+        stubPagos(
+                pago(1L, "-25000.00", 1_000L),
+                pago(2L, "-5000.00", 2_000L));
+
+        PageResponseDTO<PagoDeudaResponseDTO> page = deudaService.obtenerPagos(1L, 0, 20);
+
+        assertEquals(2, page.getContent().size());
+        assertEquals(2L, page.getContent().get(0).getId(), "El pago más reciente va primero");
+        assertEquals(0, new BigDecimal("5000.00").compareTo(page.getContent().get(0).getCapital()));
+        assertEquals(0, new BigDecimal("25000.00").compareTo(page.getContent().get(1).getCapital()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(page.getContent().get(0).getInteres()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(page.getContent().get(0).getCostos()));
+        assertEquals(0, new BigDecimal("5000.00").compareTo(page.getContent().get(0).getMonto()));
+        assertEquals(2, page.getTotalItems());
+        assertEquals(1, page.getTotalPages());
+    }
+
+    @Test
+    @DisplayName("El historial pagina en memoria y respeta page/size")
+    void obtenerPagos_paginacion() {
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(deuda));
+        stubPagos(
+                pago(1L, "-10000.00", 1_000L),
+                pago(2L, "-10000.00", 2_000L),
+                pago(3L, "-10000.00", 3_000L));
+
+        PageResponseDTO<PagoDeudaResponseDTO> primera = deudaService.obtenerPagos(1L, 0, 2);
+        PageResponseDTO<PagoDeudaResponseDTO> segunda = deudaService.obtenerPagos(1L, 1, 2);
+
+        assertEquals(2, primera.getContent().size());
+        assertEquals(3L, primera.getContent().get(0).getId());
+        assertEquals(2L, primera.getContent().get(1).getId());
+        assertEquals(2, primera.getTotalPages());
+        assertEquals(3, segunda.getTotalItems());
+        assertEquals(1, segunda.getContent().size());
+        assertEquals(1L, segunda.getContent().get(0).getId());
+    }
+
+    @Test
+    @DisplayName("Una página fuera de rango devuelve contenido vacío sin romper (no 500)")
+    void obtenerPagos_paginaFueraDeRango_vacia() {
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(deuda));
+        stubPagos(pago(1L, "-10000.00", 1_000L));
+
+        PageResponseDTO<PagoDeudaResponseDTO> page = deudaService.obtenerPagos(1L, Integer.MAX_VALUE, 20);
+
+        assertTrue(page.getContent().isEmpty());
+        assertEquals(1, page.getTotalItems());
+        assertEquals(1, page.getTotalPages());
+        assertEquals(Integer.MAX_VALUE, page.getCurrentPage());
+    }
+
+    @Test
+    @DisplayName("Invariante T3: Σ desgloses de los pagos + imputado a las previas == imputación total del cronograma")
+    void obtenerPagos_sumaDesglosesMasPrevias_igualaImputacionTotal() {
+        Deuda conTasa = deudaDelMotor(ModalidadCalculo.TASA_CONOCIDA, new BigDecimal("100000"), 12,
+                new BigDecimal("0.015"), null);
+        conTasa.setCuotasPagadasPrevias(1);
+
+        when(deudaRepository.findById(1L)).thenReturn(Optional.of(conTasa));
+        stubPagos(
+                pago(1L, "-15000.00", 1_000L),
+                pago(2L, "-20000.00", 2_000L));
+
+        PageResponseDTO<PagoDeudaResponseDTO> page = deudaService.obtenerPagos(1L, 0, 20);
+
+        BigDecimal capitalPagos = BigDecimal.ZERO;
+        BigDecimal interesPagos = BigDecimal.ZERO;
+        BigDecimal costosPagos = BigDecimal.ZERO;
+        for (PagoDeudaResponseDTO p : page.getContent()) {
+            capitalPagos = capitalPagos.add(p.getCapital());
+            interesPagos = interesPagos.add(p.getInteres());
+            costosPagos = costosPagos.add(p.getCostos());
+        }
+
+        List<CuotaAmortizacion> tabla = new MotorFinanciero().calcular(new CondicionesCredito(
+                ModalidadCalculo.TASA_CONOCIDA, new BigDecimal("100000"), 12,
+                new BigDecimal("0.015"), null, BigDecimal.ZERO, BigDecimal.ZERO)).tabla();
+        List<ImputacionPagos.ImputacionCuota> total = ImputacionPagos.imputar(tabla, 1, new BigDecimal("35000"));
+
+        BigDecimal capitalPrevias = BigDecimal.ZERO;
+        BigDecimal interesPrevias = BigDecimal.ZERO;
+        BigDecimal costosPrevias = BigDecimal.ZERO;
+        for (ImputacionPagos.ImputacionCuota fila : total) {
+            if (fila.previa()) {
+                capitalPrevias = capitalPrevias.add(fila.capital());
+                interesPrevias = interesPrevias.add(fila.interes());
+                costosPrevias = costosPrevias.add(fila.costos());
+            }
+        }
+
+        assertEquals(0, suma(total, ImputacionPagos.ImputacionCuota::capital)
+                        .compareTo(capitalPagos.add(capitalPrevias)),
+                "Σ capital desglosado + previas = capital imputado total");
+        assertEquals(0, suma(total, ImputacionPagos.ImputacionCuota::interes)
+                        .compareTo(interesPagos.add(interesPrevias)),
+                "Σ interés desglosado + previas = interés imputado total");
+        assertEquals(0, suma(total, ImputacionPagos.ImputacionCuota::costos)
+                        .compareTo(costosPagos.add(costosPrevias)),
+                "Σ costos desglosado + previas = costos imputados totales");
     }
 }

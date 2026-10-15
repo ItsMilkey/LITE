@@ -104,9 +104,34 @@ public class DeudaController {
             return ResponseEntity.ok(amortizacion);
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (SecurityException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.FORBIDDEN);
         } catch (CalculoFinancieroException | IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    // Endpoint para obtener el detalle de una deuda (valida propiedad → 403)
+    @GetMapping("/{deudaId}")
+    public ResponseEntity<?> obtenerDeuda(@PathVariable Long deudaId) {
+        try {
+            DeudaResponseDTO deuda = deudaService.obtenerDeuda(deudaId);
+            return ResponseEntity.ok(deuda);
+        } catch (EntityNotFoundException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+        } catch (CalculoFinancieroException | IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    // Endpoint paginado con el historial de pagos y su desglose capital/interés/costos
+    @GetMapping("/{deudaId}/pagos")
+    public ResponseEntity<?> obtenerPagos(@PathVariable Long deudaId,
+                                          @RequestParam(defaultValue = "0") int page,
+                                          @RequestParam(defaultValue = "20") int size) {
+        try {
+            return ResponseEntity.ok(deudaService.obtenerPagos(deudaId, page, size));
+        } catch (EntityNotFoundException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+        } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
         }
     }
