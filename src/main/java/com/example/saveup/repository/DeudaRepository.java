@@ -14,30 +14,28 @@ public interface DeudaRepository extends JpaRepository<Deuda, Long> {
     // Encuentra todas las deudas de un usuario
     List<Deuda> findByUsuarioRut(String rut);
 
-    // Consulta optimizada con proyección JPQL para evitar N+1 queries al listar deudas con agregaciones
-    @Query("SELECT new com.example.saveup.dto.DeudaResponseDTO(" +
+    /**
+     * SELECT + FROM comunes a las dos consultas con proyección a DeudaResponseDTO.
+     * El WHERE y el GROUP BY se agregan en cada consulta.
+     */
+    String PROYECCION_DEUDA = "SELECT new com.example.saveup.dto.DeudaResponseDTO(" +
            "d.id, d.nombre, d.descripcion, d.montoTotal, d.cantidadCuotas, d.estado, d.fechaCreacion, " +
            "COALESCE(SUM(m.monto), 0), COUNT(m), " +
            "d.tipoDeuda, d.modalidadCalculo, d.montoCapital, d.tasaMensual, d.valorCuota, d.gastosIniciales, d.costoAdicionalPorCuota, " +
            "d.costoTotalCredito, d.cargaAnualEquivalente, d.fechaPrimeraCuota, d.cuotasPagadasPrevias, d.montoPagadoPrevio) " +
-           "FROM Deuda d LEFT JOIN Movimiento m ON m.deuda.id = d.id AND m.tipoMovimiento = com.example.saveup.model.enums.TipoMovimiento.PAGO_DEUDA " +
-           "WHERE d.usuario.rut = :rut " +
-           "GROUP BY d.id, d.nombre, d.descripcion, d.montoTotal, d.cantidadCuotas, d.estado, d.fechaCreacion, " +
+           "FROM Deuda d LEFT JOIN Movimiento m ON m.deuda.id = d.id AND m.tipoMovimiento = com.example.saveup.model.enums.TipoMovimiento.PAGO_DEUDA ";
+
+    /** Agrupamiento por todas las columnas proyectadas de la deuda. */
+    String AGRUPAMIENTO_DEUDA = "GROUP BY d.id, d.nombre, d.descripcion, d.montoTotal, d.cantidadCuotas, d.estado, d.fechaCreacion, " +
            "d.tipoDeuda, d.modalidadCalculo, d.montoCapital, d.tasaMensual, d.valorCuota, d.gastosIniciales, d.costoAdicionalPorCuota, " +
-           "d.costoTotalCredito, d.cargaAnualEquivalente, d.fechaPrimeraCuota, d.cuotasPagadasPrevias, d.montoPagadoPrevio")
+           "d.costoTotalCredito, d.cargaAnualEquivalente, d.fechaPrimeraCuota, d.cuotasPagadasPrevias, d.montoPagadoPrevio";
+
+    // Consulta optimizada con proyección JPQL para evitar N+1 queries al listar deudas con agregaciones
+    @Query(PROYECCION_DEUDA + "WHERE d.usuario.rut = :rut " + AGRUPAMIENTO_DEUDA)
     List<DeudaResponseDTO> findDeudasDTOByUsuarioRut(@Param("rut") String rut);
 
     // Consulta optimizada para una deuda específica
-    @Query("SELECT new com.example.saveup.dto.DeudaResponseDTO(" +
-           "d.id, d.nombre, d.descripcion, d.montoTotal, d.cantidadCuotas, d.estado, d.fechaCreacion, " +
-           "COALESCE(SUM(m.monto), 0), COUNT(m), " +
-           "d.tipoDeuda, d.modalidadCalculo, d.montoCapital, d.tasaMensual, d.valorCuota, d.gastosIniciales, d.costoAdicionalPorCuota, " +
-           "d.costoTotalCredito, d.cargaAnualEquivalente, d.fechaPrimeraCuota, d.cuotasPagadasPrevias, d.montoPagadoPrevio) " +
-           "FROM Deuda d LEFT JOIN Movimiento m ON m.deuda.id = d.id AND m.tipoMovimiento = com.example.saveup.model.enums.TipoMovimiento.PAGO_DEUDA " +
-           "WHERE d.id = :deudaId " +
-           "GROUP BY d.id, d.nombre, d.descripcion, d.montoTotal, d.cantidadCuotas, d.estado, d.fechaCreacion, " +
-           "d.tipoDeuda, d.modalidadCalculo, d.montoCapital, d.tasaMensual, d.valorCuota, d.gastosIniciales, d.costoAdicionalPorCuota, " +
-           "d.costoTotalCredito, d.cargaAnualEquivalente, d.fechaPrimeraCuota, d.cuotasPagadasPrevias, d.montoPagadoPrevio")
+    @Query(PROYECCION_DEUDA + "WHERE d.id = :deudaId " + AGRUPAMIENTO_DEUDA)
     Optional<DeudaResponseDTO> findDeudaDTOById(@Param("deudaId") Long deudaId);
 
     // Consulta para calcular el total pagado por una deuda específica

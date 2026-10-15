@@ -34,6 +34,9 @@ public class MovimientoController {
             return new ResponseEntity<>(nuevoMovimiento, HttpStatus.CREATED);
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+        } catch (IllegalStateException e) {
+            // Regla de negocio violada (p. ej. sobrepago o deuda cerrada): mismo 409 que /api/deudas/{id}/pagar.
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.CONFLICT);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {

@@ -23,6 +23,9 @@ public class MovimientoRegistroDTO {
     // Opcional: se usa cuando el movimiento es un pago de deuda
     private Long deudaId;
 
+    // Opcional: se usará cuando se implemente el vínculo explícito con metas (ver T3/T4)
+    private Long metaId;
+
     private Long categoriaId; // ID de la categoría seleccionada
 
     private Boolean aplicarPresupuesto = false; // Nuevo campo para Smart-Split

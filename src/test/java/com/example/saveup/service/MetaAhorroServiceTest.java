@@ -224,4 +224,58 @@ class MetaAhorroServiceTest {
         assertThrows(IllegalStateException.class, () -> metaAhorroService.eliminarMeta(1L));
         verifyNoInteractions(movimientoRepository);
     }
+
+    @Test
+    @DisplayName("T1d: invariante — montoActual de la meta = −(suma de sus movimientos)")
+    void invariante_montoActual_esNegativoDeLaSumaDeMovimientos() {
+        // La meta arranca en 0 para poder comprobar la invariante tal cual la define T1d
+        meta.setMontoActual(java.math.BigDecimal.ZERO);
+
+        when(metaAhorroRepository.findById(1L)).thenReturn(Optional.of(meta));
+        when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.empty());
+        when(metaAhorroRepository.save(any(MetaAhorro.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(movimientoRepository.save(any(Movimiento.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AbonoRetiroDTO abono = new AbonoRetiroDTO();
+        abono.setMonto(new java.math.BigDecimal("-50000.00")); // el cliente manda negativo
+        abono.setDescripcion("Abono");
+        metaAhorroService.realizarAbono(1L, abono);
+
+        when(metaAhorroRepository.findTotalAhorradoByMetaId(1L))
+                .thenReturn(new java.math.BigDecimal("-50000.00")); // el abono quedó negativo
+        AbonoRetiroDTO retiro = new AbonoRetiroDTO();
+        retiro.setMonto(new java.math.BigDecimal("-20000.00")); // el cliente manda negativo
+        retiro.setDescripcion("Retiro");
+        metaAhorroService.realizarRetiro(1L, retiro);
+
+        org.mockito.ArgumentCaptor<Movimiento> captor =
+                org.mockito.ArgumentCaptor.forClass(Movimiento.class);
+        verify(movimientoRepository, times(2)).save(captor.capture());
+
+        java.math.BigDecimal sumaMovimientos = captor.getAllValues().stream()
+                .map(Movimiento::getMonto)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        assertEquals(0, sumaMovimientos.negate().compareTo(meta.getMontoActual()),
+                "montoActual debe ser el negativo de la suma de los movimientos de la meta");
+        assertEquals(0, new java.math.BigDecimal("30000.00").compareTo(meta.getMontoActual()),
+                "50000 abonados − 20000 retirados = 30000, con las dos entradas en negativo");
+    }
+
+    @Test
+    @DisplayName("T1d: un retiro mayor al total ahorrado sigue rechazándose aunque el monto venga negativo")
+    void realizarRetiro_mayorAlAhorrado_error() {
+        meta.setMontoActual(new java.math.BigDecimal("100000.00"));
+
+        AbonoRetiroDTO dto = new AbonoRetiroDTO();
+        dto.setMonto(new java.math.BigDecimal("-150000.00")); // negativo, pero mayor al ahorrado
+        dto.setDescripcion("Retiro excesivo");
+
+        when(metaAhorroRepository.findById(1L)).thenReturn(Optional.of(meta));
+        when(metaAhorroRepository.findTotalAhorradoByMetaId(1L))
+                .thenReturn(new java.math.BigDecimal("100000.00"));
+
+        assertThrows(IllegalStateException.class, () -> metaAhorroService.realizarRetiro(1L, dto));
+        verifyNoInteractions(movimientoRepository);
+    }
 }

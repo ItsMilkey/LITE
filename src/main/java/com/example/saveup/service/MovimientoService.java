@@ -4,20 +4,18 @@ import com.example.saveup.dto.CategoriaDTO;
 import com.example.saveup.dto.MovimientoRegistroDTO;
 import com.example.saveup.dto.MovimientoResponseDTO;
 import com.example.saveup.dto.PageResponseDTO;
+import com.example.saveup.dto.PagoDeudaDTO;
 import com.example.saveup.model.Categoria;
-import com.example.saveup.model.Deuda;
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.Usuario;
-import com.example.saveup.model.enums.EstadoDeuda;
+import com.example.saveup.model.enums.ModoPago;
 import com.example.saveup.model.enums.TipoMovimiento;
 import com.example.saveup.repository.CategoriaRepository;
-import com.example.saveup.repository.DeudaRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.movimiento.SignoMovimiento;
 import jakarta.persistence.EntityNotFoundException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -44,64 +42,55 @@ public class MovimientoService {
             TipoMovimiento.GASTO_GENERAL,
             TipoMovimiento.PAGO_DEUDA);
 
-    @Autowired
-    private MovimientoRepository movimientoRepository;
+    private final MovimientoRepository movimientoRepository;
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    @Autowired
-    private DeudaRepository deudaRepository;
+    private final CategoriaRepository categoriaRepository;
 
-    @Autowired
-    private CategoriaRepository categoriaRepository;
+    private final SmartSplitProcessor smartSplitProcessor;
 
-    @Autowired
-    private SmartSplitProcessor smartSplitProcessor;
+    private final SecurityUtils securityUtils;
 
-    @Autowired
-    private SecurityUtils securityUtils;
+    private final DeudaService deudaService;
+
+    public MovimientoService(MovimientoRepository movimientoRepository, UsuarioRepository usuarioRepository,
+                             CategoriaRepository categoriaRepository, SmartSplitProcessor smartSplitProcessor,
+                             SecurityUtils securityUtils, DeudaService deudaService) {
+        this.movimientoRepository = movimientoRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.categoriaRepository = categoriaRepository;
+        this.smartSplitProcessor = smartSplitProcessor;
+        this.securityUtils = securityUtils;
+        this.deudaService = deudaService;
+    }
 
     @Transactional
     public MovimientoResponseDTO registrarMovimiento(MovimientoRegistroDTO dto) {
         // 1. Obtener identidad segura desde el token JWT
         String rut = securityUtils.getAuthenticatedRut();
-        Usuario usuario = usuarioRepository.findById(rut)
-                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con RUT: " + rut));
 
         // 2. Solo los tipos de este módulo se registran aquí. El signo lo fija el
         // tipo, no el cliente (SignoMovimiento).
         validarTipoRegistrable(dto.getTipoMovimiento());
+
+        // 3. Los pagos de deuda tienen un único productor: DeudaService.registrarPago.
+        if (dto.getTipoMovimiento() == TipoMovimiento.PAGO_DEUDA) {
+            return registrarPagoDeuda(dto);
+        }
+
+        Usuario usuario = usuarioRepository.findById(rut)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con RUT: " + rut));
+
         BigDecimal montoCanonico = SignoMovimiento.aplicar(dto.getTipoMovimiento(), dto.getMonto());
 
-        // 3. Crear la entidad Movimiento a partir del DTO.
+        // 4. Crear la entidad Movimiento a partir del DTO.
         Movimiento movimiento = new Movimiento();
         movimiento.setUsuario(usuario);
         movimiento.setMonto(montoCanonico);
         movimiento.setDescripcion(dto.getDescripcion());
         movimiento.setTipoMovimiento(dto.getTipoMovimiento());
         // La fecha se establece automáticamente gracias a @PrePersist.
-
-        // --- LÓGICA DE ASOCIACIÓN CON DEUDAS ---
-        if (dto.getDeudaId() != null) {
-            if (dto.getTipoMovimiento() != TipoMovimiento.PAGO_DEUDA) {
-                throw new IllegalArgumentException(
-                        "El campo 'deudaId' solo es válido para movimientos de tipo PAGO_DEUDA.");
-            }
-            Deuda deuda = deudaRepository.findById(dto.getDeudaId())
-                    .orElseThrow(() -> new EntityNotFoundException("Deuda no encontrada con ID: " + dto.getDeudaId()));
-
-            // Validación de propiedad de la deuda
-            securityUtils.validarPropietario(deuda.getUsuario().getRut());
-            movimiento.setDeuda(deuda);
-
-            java.math.BigDecimal nuevoTotalPagado = deudaRepository.findTotalPagadoPorDeuda(deuda.getId()).abs()
-                    .add(montoCanonico.abs());
-            if (nuevoTotalPagado.compareTo(deuda.getMontoTotal()) >= 0) {
-                deuda.setEstado(EstadoDeuda.PAGADA);
-                deudaRepository.save(deuda);
-            }
-        }
 
         // ASOCIACIÓN DE CATEGORÍA
         if (dto.getCategoriaId() != null) {
@@ -117,17 +106,39 @@ public class MovimientoService {
             smartSplitProcessor.procesarDistribucion(usuario, montoCanonico);
         }
 
-        // 3. Guardar la entidad en la base de datos.
+        // 5. Guardar la entidad en la base de datos.
         Movimiento movimientoGuardado = movimientoRepository.save(movimiento);
 
-        // 4. Convertir la entidad guardada a un DTO de respuesta y devolverla.
+        // 6. Convertir la entidad guardada a un DTO de respuesta y devolverla.
         return convertirAEntidadResponseDTO(movimientoGuardado);
+    }
+
+    /**
+     * Delega el pago de deuda en {@link DeudaService#registrarPago}, que es el
+     * único camino para crear un PAGO_DEUDA (misma validación, mismo signo y
+     * mismo estado de la deuda). El monto viaja en positivo: el signo lo aplica
+     * el servicio con SignoMovimiento.
+     */
+    private MovimientoResponseDTO registrarPagoDeuda(MovimientoRegistroDTO dto) {
+        if (dto.getDeudaId() == null) {
+            throw new IllegalArgumentException("El campo 'deudaId' es obligatorio para movimientos de tipo PAGO_DEUDA.");
+        }
+        if (dto.getMonto() == null) {
+            throw new IllegalArgumentException("El monto del pago es obligatorio.");
+        }
+
+        PagoDeudaDTO pago = new PagoDeudaDTO();
+        pago.setMonto(dto.getMonto().abs());
+        pago.setDescripcion(dto.getDescripcion());
+        pago.setModoPago(ModoPago.MONTO_PERSONALIZADO);
+
+        return deudaService.registrarPago(dto.getDeudaId(), pago).movimiento();
     }
 
     /**
      * Obtiene el historial de movimientos de un usuario.
      * Si se proporciona un límite, devuelve solo esa cantidad de movimientos recientes.
-     * Si no, devuelve el historial completo.
+     * Si no, el historial completo.
      */
     @Transactional(readOnly = true)
     public List<MovimientoResponseDTO> obtenerMovimientosPorUsuario(String rut, Integer limit) {
@@ -170,12 +181,12 @@ public class MovimientoService {
         // 1. Obtenemos la página de entidades desde el repositorio
         Page<Movimiento> paginaMovimientos = movimientoRepository.findByUsuarioRutOrderByFechaDesc(rut, pageable);
 
-        // 2. Convertimos el contenido de la página a una lista de DTOs
+        // 2. Convertimos el contenido de la página de entidades a una lista de DTO
         List<MovimientoResponseDTO> contenidoDTO = paginaMovimientos.getContent().stream()
                 .map(this::convertirAEntidadResponseDTO)
                 .collect(Collectors.toList());
 
-        // 3. Creamos y devolvemos nuestro DTO de respuesta de página
+        // 3. Creamos y devolvemos un DTO de respuesta de página
         PageResponseDTO<MovimientoResponseDTO> respuesta = new PageResponseDTO<>();
         respuesta.setContent(contenidoDTO);
         respuesta.setCurrentPage(paginaMovimientos.getNumber());
@@ -201,23 +212,6 @@ public class MovimientoService {
     }
 
     private MovimientoResponseDTO convertirAEntidadResponseDTO(Movimiento movimiento) {
-        MovimientoResponseDTO dto = new MovimientoResponseDTO();
-        dto.setId(movimiento.getId());
-        dto.setMonto(movimiento.getMonto());
-        dto.setDescripcion(movimiento.getDescripcion());
-        dto.setFecha(movimiento.getFecha());
-        dto.setTipoMovimiento(movimiento.getTipoMovimiento());
-
-        if (movimiento.getCategoria() != null) {
-            CategoriaDTO categoriaDTO = new CategoriaDTO();
-            categoriaDTO.setId(movimiento.getCategoria().getId());
-            categoriaDTO.setNombre(movimiento.getCategoria().getNombre());
-            categoriaDTO.setIconId(movimiento.getCategoria().getIconId());
-            categoriaDTO.setColorHex(movimiento.getCategoria().getColorHex());
-            categoriaDTO.setTipoPresupuesto(movimiento.getCategoria().getTipoPresupuesto());
-            dto.setCategoria(categoriaDTO);
-        }
-
-        return dto;
+        return MovimientoResponseDTO.from(movimiento);
     }
 }

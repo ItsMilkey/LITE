@@ -15,7 +15,7 @@
 -- invertido fallará hasta que se corrija el dato.
 
 ALTER TABLE MOVIMIENTO
-    ADD CONSTRAINT chk_movimiento_signo
+    ADD CONSTRAINT CHK_MOVIMIENTO_SIGNO
     CHECK (
         (tipo_movimiento IN ('INGRESO_GENERAL', 'RETIRO_META') AND monto > 0)
         OR (tipo_movimiento IN ('GASTO_GENERAL', 'PAGO_DEUDA', 'ABONO_META') AND monto < 0)
@@ -40,7 +40,7 @@ ALTER TABLE MOVIMIENTO
 
 -- Una vez revisado y corregido el histórico, validar el constraint:
 --
--- ALTER TABLE MOVIMIENTO VALIDATE CONSTRAINT chk_movimiento_signo;
+-- ALTER TABLE MOVIMIENTO VALIDATE CONSTRAINT CHK_MOVIMIENTO_SIGNO;
 
 -- Nota: si se agrega un valor al enum TipoMovimiento, este CHECK debe
 -- actualizarse en la misma tarea (ver .agents/rules/20-java-spring.md).

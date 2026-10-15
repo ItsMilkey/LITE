@@ -57,7 +57,7 @@ public class DeudaController {
     @PostMapping("/{deudaId}/pagar")
     public ResponseEntity<?> registrarPago(@PathVariable Long deudaId, @Valid @RequestBody PagoDeudaDTO pagoDTO) {
         try {
-            DeudaResponseDTO deudaActualizada = deudaService.registrarPago(deudaId, pagoDTO);
+            DeudaResponseDTO deudaActualizada = deudaService.registrarPago(deudaId, pagoDTO).deuda();
             return ResponseEntity.ok(deudaActualizada);
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);

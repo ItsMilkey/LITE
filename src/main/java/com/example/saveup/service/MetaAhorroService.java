@@ -13,26 +13,32 @@ import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.movimiento.SignoMovimiento;
 import jakarta.persistence.EntityNotFoundException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class MetaAhorroService {
 
-    @Autowired
-    private MetaAhorroRepository metaAhorroRepository;
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-    @Autowired
-    private MovimientoRepository movimientoRepository;
-    @Autowired
-    private com.example.saveup.repository.CategoriaRepository categoriaRepository;
-    @Autowired
-    private SecurityUtils securityUtils;
+    private final MetaAhorroRepository metaAhorroRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final MovimientoRepository movimientoRepository;
+    private final com.example.saveup.repository.CategoriaRepository categoriaRepository;
+    private final SecurityUtils securityUtils;
+
+    public MetaAhorroService(MetaAhorroRepository metaAhorroRepository, UsuarioRepository usuarioRepository,
+                             MovimientoRepository movimientoRepository,
+                             com.example.saveup.repository.CategoriaRepository categoriaRepository,
+                             SecurityUtils securityUtils) {
+        this.metaAhorroRepository = metaAhorroRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.movimientoRepository = movimientoRepository;
+        this.categoriaRepository = categoriaRepository;
+        this.securityUtils = securityUtils;
+    }
 
     @Transactional
     public MetaAhorroResponseDTO crearMeta(MetaAhorroCreacionDTO dto) {
@@ -68,11 +74,15 @@ public class MetaAhorroService {
 
         securityUtils.validarPropietario(meta.getUsuario().getRut());
 
+        // El signo lo impone el tipo: el movimiento queda negativo y el saldo de la
+        // meta sube exactamente ese monto canónico (invariante T1d).
+        BigDecimal montoMovimiento = SignoMovimiento.aplicar(TipoMovimiento.ABONO_META, dto.getMonto());
+
         Movimiento abono = new Movimiento();
         abono.setUsuario(meta.getUsuario());
         abono.setMetaAhorro(meta);
         abono.setTipoMovimiento(TipoMovimiento.ABONO_META);
-        abono.setMonto(SignoMovimiento.aplicar(TipoMovimiento.ABONO_META, dto.getMonto())); // El dinero "sale" del saldo principal
+        abono.setMonto(montoMovimiento); // El dinero "sale" del saldo principal
         abono.setDescripcion(dto.getDescripcion());
 
         // ASIGNAR CATEGORÍA AHORRO
@@ -81,7 +91,7 @@ public class MetaAhorroService {
         movimientoRepository.save(abono);
 
         // Update Meta Amount
-        meta.setMontoActual(meta.getMontoActual().add(dto.getMonto()));
+        meta.setMontoActual(meta.getMontoActual().add(montoMovimiento.abs()));
         metaAhorroRepository.save(meta);
 
         return convertirADTO(meta);
@@ -94,9 +104,14 @@ public class MetaAhorroService {
 
         securityUtils.validarPropietario(meta.getUsuario().getRut());
 
+        // El signo lo impone el tipo. El control de "total ahorrado" se hace sobre el
+        // monto canónico en valor absoluto, no sobre lo que envió el cliente.
+        BigDecimal montoMovimiento = SignoMovimiento.aplicar(TipoMovimiento.RETIRO_META, dto.getMonto());
+        BigDecimal montoRetiro = montoMovimiento.abs();
+
         java.math.BigDecimal totalAhorradoRaw = metaAhorroRepository.findTotalAhorradoByMetaId(metaId);
         java.math.BigDecimal totalAhorrado = (totalAhorradoRaw != null ? totalAhorradoRaw : java.math.BigDecimal.ZERO).abs();
-        if (dto.getMonto().compareTo(totalAhorrado) > 0) {
+        if (montoRetiro.compareTo(totalAhorrado) > 0) {
             throw new IllegalStateException("El monto a retirar no puede ser mayor al total ahorrado.");
         }
 
@@ -104,7 +119,7 @@ public class MetaAhorroService {
         retiro.setUsuario(meta.getUsuario());
         retiro.setMetaAhorro(meta);
         retiro.setTipoMovimiento(TipoMovimiento.RETIRO_META);
-        retiro.setMonto(SignoMovimiento.aplicar(TipoMovimiento.RETIRO_META, dto.getMonto())); // El dinero "vuelve" al saldo principal
+        retiro.setMonto(montoMovimiento); // El dinero "vuelve" al saldo principal
         retiro.setDescripcion(dto.getDescripcion());
 
         // ASIGNAR CATEGORÍA AHORRO
@@ -113,7 +128,7 @@ public class MetaAhorroService {
         movimientoRepository.save(retiro);
 
         // Update Meta Amount
-        meta.setMontoActual(meta.getMontoActual().subtract(dto.getMonto()));
+        meta.setMontoActual(meta.getMontoActual().subtract(montoRetiro));
         metaAhorroRepository.save(meta);
 
         return convertirADTO(meta);

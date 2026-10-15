@@ -14,7 +14,6 @@ import com.example.saveup.repository.ConfiguracionPresupuestoRepository;
 import com.example.saveup.repository.MetaAhorroRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.service.movimiento.SignoMovimiento;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,20 +35,27 @@ import java.util.List;
 @Service
 public class SmartSplitProcessor {
 
-    @Autowired
-    private ConfiguracionPresupuestoRepository configuracionPresupuestoRepository;
+    private final ConfiguracionPresupuestoRepository configuracionPresupuestoRepository;
 
-    @Autowired
-    private AsignacionMetaPresupuestoRepository asignacionMetaPresupuestoRepository;
+    private final AsignacionMetaPresupuestoRepository asignacionMetaPresupuestoRepository;
 
-    @Autowired
-    private MetaAhorroRepository metaAhorroRepository;
+    private final MetaAhorroRepository metaAhorroRepository;
 
-    @Autowired
-    private MovimientoRepository movimientoRepository;
+    private final MovimientoRepository movimientoRepository;
 
-    @Autowired
-    private CategoriaRepository categoriaRepository;
+    private final CategoriaRepository categoriaRepository;
+
+    public SmartSplitProcessor(ConfiguracionPresupuestoRepository configuracionPresupuestoRepository,
+                               AsignacionMetaPresupuestoRepository asignacionMetaPresupuestoRepository,
+                               MetaAhorroRepository metaAhorroRepository,
+                               MovimientoRepository movimientoRepository,
+                               CategoriaRepository categoriaRepository) {
+        this.configuracionPresupuestoRepository = configuracionPresupuestoRepository;
+        this.asignacionMetaPresupuestoRepository = asignacionMetaPresupuestoRepository;
+        this.metaAhorroRepository = metaAhorroRepository;
+        this.movimientoRepository = movimientoRepository;
+        this.categoriaRepository = categoriaRepository;
+    }
 
     /**
      * Procesa la distribución de un ingreso general entre las metas activas del usuario,

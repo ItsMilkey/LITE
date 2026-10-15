@@ -3,8 +3,7 @@ package com.example.saveup.dto;
 import com.example.saveup.model.enums.EstadoDeuda;
 import com.example.saveup.model.enums.ModalidadCalculo;
 import com.example.saveup.model.enums.TipoDeuda;
-import com.example.saveup.service.finanzas.DeudaResponseMapper;
-import lombok.AllArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -13,10 +12,24 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Date;
 
+/**
+ * Datos de una deuda tal como se exponen en la API.
+ *
+ * <p>Es un DTO de datos: la matemática financiera (tasa anual efectiva, valor de
+ * cuota por defecto, fecha de la última cuota y los saldos) vive en
+ * {@link com.example.saveup.service.DeudaService}, que la calcula con
+ * {@link com.example.saveup.service.finanzas.MotorFinanciero},
+ * {@link com.example.saveup.service.finanzas.CalendarioCuotas} e
+ * {@link com.example.saveup.service.finanzas.ImputacionPagos}. Los campos
+ * derivados quedan en null si el servicio no pudo calcularlos.
+ */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class DeudaResponseDTO {
+
+    private static final int ESCALA_DINERO = 2;
+    private static final RoundingMode REDONDEO = RoundingMode.HALF_UP;
+    private static final BigDecimal CIEN = new BigDecimal("100");
 
     private Long id;
     private String nombre;
@@ -34,31 +47,37 @@ public class DeudaResponseDTO {
     private LocalDate fechaPrimeraCuota;
     private LocalDate fechaUltimaCuota;
     private int cuotasPagadasPrevias;
+    private BigDecimal montoPagadoPrevio;
     private BigDecimal montoTotal;
     private int cantidadCuotas;
     private EstadoDeuda estado;
     private Date fechaCreacion;
 
-    // Campos calculados
+    /** Tasa mensual como fracción (0.015 = 1,5 %): dato crudo del motor, no se expone. */
+    @JsonIgnore
+    private BigDecimal tasaMensualFraccion;
+
+    /** Suma de los pagos reales, sin las cuotas pagadas previas. */
+    private BigDecimal montoPagadoReal;
+
+    // ──────────────────────── Campos derivados (los calcula DeudaService) ────────────────────────
+
+    /** montoPagadoPrevio + montoPagadoReal. */
     private BigDecimal montoPagado;
     private BigDecimal montoRestante;
+    /** Lo que falta por pagar, intereses futuros incluidos. */
+    private BigDecimal totalPorPagar;
+    /**
+     * Capital que aún se debe: montoCapital − capital imputado. Aproxima lo que
+     * costaría liquidar hoy y NO incluye el interés devengado del mes en curso.
+     */
+    private BigDecimal saldoCapital;
+    /** Cuotas en estado PAGADA según la imputación (incluye las previas). */
     private int cuotasPagadas;
 
-    public DeudaResponseDTO(Long id, String nombre, String descripcion, BigDecimal montoTotal, int cantidadCuotas,
-                            EstadoDeuda estado, Date fechaCreacion, BigDecimal montoPagadoRaw, Long cuotasPagadas) {
-        this(id, nombre, descripcion, montoTotal, cantidadCuotas, estado, fechaCreacion, montoPagadoRaw, cuotasPagadas,
-             TipoDeuda.OTRO, ModalidadCalculo.SIN_INTERES, montoTotal, BigDecimal.ZERO, null, BigDecimal.ZERO, BigDecimal.ZERO, montoTotal, BigDecimal.ZERO, null, 0, BigDecimal.ZERO);
-    }
-    
-    public DeudaResponseDTO(Long id, String nombre, String descripcion, BigDecimal montoTotal, int cantidadCuotas,
-                            EstadoDeuda estado, Date fechaCreacion, BigDecimal montoPagadoRaw, Integer cuotasPagadas) {
-        this(id, nombre, descripcion, montoTotal, cantidadCuotas, estado, fechaCreacion, montoPagadoRaw, 
-             cuotasPagadas != null ? cuotasPagadas.longValue() : 0L);
-    }
-
     /**
-     * Constructor utilizado para proyecciones JPQL con agregaciones directas en BD (evita N+1 queries).
-     * Los cálculos financieros delegan en {@link DeudaResponseMapper}.
+     * Constructor de la proyección JPQL (ver {@code DeudaRepository}). Solo
+     * asigna datos: los campos derivados los completa el servicio.
      */
     public DeudaResponseDTO(Long id, String nombre, String descripcion, BigDecimal montoTotal, int cantidadCuotas,
                             EstadoDeuda estado, Date fechaCreacion, BigDecimal montoPagadoRaw, Long cuotasPagadas,
@@ -70,25 +89,30 @@ public class DeudaResponseDTO {
         this.id = id;
         this.nombre = nombre;
         this.descripcion = descripcion;
-        this.montoTotal = montoTotal != null ? montoTotal.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        this.montoTotal = montoTotal != null ? montoTotal.setScale(ESCALA_DINERO, REDONDEO) : BigDecimal.ZERO.setScale(ESCALA_DINERO, REDONDEO);
         this.cantidadCuotas = cantidadCuotas;
         this.estado = estado;
         this.fechaCreacion = fechaCreacion;
 
         this.tipoDeuda = tipoDeuda != null ? tipoDeuda : TipoDeuda.OTRO;
         this.modalidadCalculo = modalidadCalculo != null ? modalidadCalculo : ModalidadCalculo.SIN_INTERES;
-        this.montoCapital = montoCapital != null ? montoCapital.setScale(2, RoundingMode.HALF_UP) : this.montoTotal;
-        this.gastosIniciales = gastosIniciales != null ? gastosIniciales.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        this.costoAdicionalPorCuota = costoAdicionalPorCuota != null ? costoAdicionalPorCuota.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        this.costoTotalCredito = costoTotalCredito != null ? costoTotalCredito.setScale(2, RoundingMode.HALF_UP) : this.montoTotal;
-        this.cargaAnualEquivalente = cargaAnualEquivalente != null ? cargaAnualEquivalente.multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        this.montoCapital = montoCapital != null ? montoCapital.setScale(ESCALA_DINERO, REDONDEO) : this.montoTotal;
+        this.valorCuota = valorCuota != null ? valorCuota.setScale(ESCALA_DINERO, REDONDEO) : null;
+        this.gastosIniciales = gastosIniciales != null ? gastosIniciales.setScale(ESCALA_DINERO, REDONDEO) : BigDecimal.ZERO.setScale(ESCALA_DINERO, REDONDEO);
+        this.costoAdicionalPorCuota = costoAdicionalPorCuota != null ? costoAdicionalPorCuota.setScale(ESCALA_DINERO, REDONDEO) : BigDecimal.ZERO.setScale(ESCALA_DINERO, REDONDEO);
+        this.costoTotalCredito = costoTotalCredito != null ? costoTotalCredito.setScale(ESCALA_DINERO, REDONDEO) : this.montoTotal;
+        this.cargaAnualEquivalente = cargaAnualEquivalente != null
+                ? cargaAnualEquivalente.multiply(CIEN).setScale(ESCALA_DINERO, REDONDEO)
+                : BigDecimal.ZERO.setScale(ESCALA_DINERO, REDONDEO);
         this.fechaPrimeraCuota = fechaPrimeraCuota;
         this.cuotasPagadasPrevias = cuotasPagadasPrevias;
+        this.montoPagadoPrevio = montoPagadoPrevio != null ? montoPagadoPrevio.setScale(ESCALA_DINERO, REDONDEO) : BigDecimal.ZERO.setScale(ESCALA_DINERO, REDONDEO);
+        this.tasaMensualFraccion = tasaMensual;
 
-        // Cálculos financieros delegados al mapper (evita feature envy)
-        DeudaResponseMapper.populateCalculatedFields(this, tasaMensual, montoTotal, cantidadCuotas,
-                valorCuota, fechaPrimeraCuota, montoPagadoRaw, montoPagadoPrevio, cuotasPagadas, cuotasPagadasPrevias);
+        this.montoPagadoReal = montoPagadoRaw != null
+                ? montoPagadoRaw.abs().setScale(ESCALA_DINERO, REDONDEO)
+                : BigDecimal.ZERO.setScale(ESCALA_DINERO, REDONDEO);
+        // El conteo real de cuotas pagadas sale de la imputación (DeudaService).
+        this.cuotasPagadas = 0;
     }
-
-
 }
