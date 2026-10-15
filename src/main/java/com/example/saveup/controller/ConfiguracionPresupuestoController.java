@@ -1,200 +1,118 @@
 package com.example.saveup.controller;
 
-import com.example.saveup.dto.AsignacionPresupuestoDTO;
 import com.example.saveup.dto.ConfiguracionPresupuestoRequestDTO;
-import com.example.saveup.dto.EjecucionPresupuestoDTO;
-import com.example.saveup.model.AsignacionMetaPresupuesto;
-import com.example.saveup.model.ConfiguracionPresupuesto;
-import com.example.saveup.model.Movimiento;
-import com.example.saveup.model.Usuario;
-import com.example.saveup.model.enums.TipoMovimiento;
-import com.example.saveup.model.enums.TipoPresupuesto;
-import com.example.saveup.repository.AsignacionMetaPresupuestoRepository;
-import com.example.saveup.repository.ConfiguracionPresupuestoRepository;
-import com.example.saveup.repository.MetaAhorroRepository;
-import com.example.saveup.repository.MovimientoRepository;
-import com.example.saveup.repository.UsuarioRepository;
+import com.example.saveup.dto.ConfiguracionPresupuestoResponseDTO;
+import com.example.saveup.dto.PresupuestoCategoriaRequestDTO;
 import com.example.saveup.security.SecurityUtils;
+import com.example.saveup.service.PresupuestoService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
-import java.time.YearMonth;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
+/**
+ * Presupuesto del usuario (50/30/20, límites por categoría e historial). El
+ * controlador solo enruta y traduce excepciones de negocio a códigos HTTP: toda
+ * la lógica vive en {@link PresupuestoService}.
+ */
 @RestController
 @RequestMapping("/api/presupuestos")
+@RequiredArgsConstructor
 public class ConfiguracionPresupuestoController {
 
-    @Autowired
-    private ConfiguracionPresupuestoRepository repository;
+    private final PresupuestoService presupuestoService;
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-
-    @Autowired
-    private AsignacionMetaPresupuestoRepository asignacionRepository;
-
-    @Autowired
-    private MetaAhorroRepository metaRepository;
-
-    @Autowired
-    private MovimientoRepository movimientoRepository;
-
-    @Autowired
-    private SecurityUtils securityUtils;
+    private final SecurityUtils securityUtils;
 
     /**
      * Endpoint preferido (Implicit Context): Obtiene la configuración del usuario autenticado.
      */
     @GetMapping("/me")
-    public ResponseEntity<ConfiguracionPresupuesto> obtenerConfiguracionMe() {
+    public ResponseEntity<ConfiguracionPresupuestoResponseDTO> obtenerConfiguracionMe() {
         String rut = securityUtils.getAuthenticatedRut();
-        return repository.findByUsuarioRut(rut)
+        return presupuestoService.obtenerConfiguracion(rut)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     /**
      * Endpoint preferido (Implicit Context): Guarda o actualiza configuración del usuario autenticado.
+     * Los porcentajes deben sumar exactamente 100.00 y ninguno ser negativo; si no, 400.
      */
     @PostMapping("/me")
-    @Transactional
-    public ResponseEntity<ConfiguracionPresupuesto> guardarConfiguracionMe(
+    public ResponseEntity<?> guardarConfiguracionMe(
             @Valid @RequestBody ConfiguracionPresupuestoRequestDTO request) {
-        String rut = securityUtils.getAuthenticatedRut();
-        return guardarConfiguracionInterno(rut, request);
+        try {
+            String rut = securityUtils.getAuthenticatedRut();
+            return ResponseEntity.ok(presupuestoService.guardarConfiguracion(rut, request));
+        } catch (EntityNotFoundException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
+        }
     }
 
     /**
      * Endpoint preferido (Implicit Context): Ejecución presupuestaria del usuario autenticado.
      */
     @GetMapping("/ejecucion/me")
-    public ResponseEntity<EjecucionPresupuestoDTO> getEjecucionPresupuestoMe(
+    public ResponseEntity<?> getEjecucionPresupuestoMe(
             @RequestParam(required = false) Integer month,
             @RequestParam(required = false) Integer year) {
+        try {
+            String rut = securityUtils.getAuthenticatedRut();
+            return ResponseEntity.ok(presupuestoService.calcularEjecucionGeneral(rut, month, year));
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /** Límites mensuales por categoría del usuario autenticado. */
+    @GetMapping("/categorias/me")
+    public ResponseEntity<?> obtenerCategoriasMe() {
         String rut = securityUtils.getAuthenticatedRut();
-        return getEjecucionPresupuestoInterno(rut, month, year);
+        return ResponseEntity.ok(presupuestoService.obtenerCategorias(rut));
     }
 
-    private ResponseEntity<ConfiguracionPresupuesto> guardarConfiguracionInterno(
-            String rut,
-            ConfiguracionPresupuestoRequestDTO request) {
-        ConfiguracionPresupuesto config;
-        Optional<ConfiguracionPresupuesto> existing = repository.findByUsuarioRut(rut);
-
-        if (existing.isPresent()) {
-            config = existing.get();
-        } else {
-            Optional<Usuario> usuarioOpt = usuarioRepository.findById(rut);
-            if (usuarioOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-            config = new ConfiguracionPresupuesto();
-            config.setUsuario(usuarioOpt.get());
+    /** Reemplaza el conjunto completo de límites. Categoría inexistente o límite ≤ 0 → 400. */
+    @PutMapping("/categorias/me")
+    public ResponseEntity<?> reemplazarCategoriasMe(
+            @Valid @RequestBody PresupuestoCategoriaRequestDTO request) {
+        try {
+            String rut = securityUtils.getAuthenticatedRut();
+            return ResponseEntity.ok(presupuestoService.reemplazarCategorias(rut, request.getCategorias()));
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
         }
-
-        config.setPorcentajeNecesidades(request.getPorcentajeNecesidades());
-        config.setPorcentajeDeseos(request.getPorcentajeDeseos());
-        config.setPorcentajeAhorro(request.getPorcentajeAhorro());
-        config.setActivo(request.getActivo() != null ? request.getActivo() : true);
-        config.setAutomatizarAhorroEnMetas(request.getAutomatizarAhorroEnMetas() != null ? request.getAutomatizarAhorroEnMetas() : false);
-
-        ConfiguracionPresupuesto savedConfig = repository.save(config);
-
-        if (request.getAsignaciones() != null) {
-            List<AsignacionMetaPresupuesto> currentAsignaciones = asignacionRepository
-                    .findByConfiguracionId(savedConfig.getId());
-            asignacionRepository.deleteAll(currentAsignaciones);
-
-            for (AsignacionPresupuestoDTO asignacionDTO : request.getAsignaciones()) {
-                if (asignacionDTO.getMetaId() != null && asignacionDTO.getPorcentaje() != null && asignacionDTO.getPorcentaje().compareTo(java.math.BigDecimal.ZERO) > 0) {
-                    metaRepository.findById(asignacionDTO.getMetaId()).ifPresent(meta -> {
-                        // Asegurar que la meta pertenezca al usuario
-                        securityUtils.validarPropietario(meta.getUsuario().getRut());
-
-                        AsignacionMetaPresupuesto nuevaAsignacion = new AsignacionMetaPresupuesto();
-                        nuevaAsignacion.setConfiguracion(savedConfig);
-                        nuevaAsignacion.setMeta(meta);
-                        nuevaAsignacion.setPorcentajeAsignacion(asignacionDTO.getPorcentaje());
-                        asignacionRepository.save(nuevaAsignacion);
-                    });
-                }
-            }
-        }
-
-        return ResponseEntity.ok(savedConfig);
     }
 
-    private ResponseEntity<EjecucionPresupuestoDTO> getEjecucionPresupuestoInterno(
-            String rut,
-            Integer month,
-            Integer year) {
-        LocalDate now = LocalDate.now();
-        int m = month != null ? month : now.getMonthValue();
-        int y = year != null ? year : now.getYear();
-
-        YearMonth ym = YearMonth.of(y, m);
-        Date start = java.sql.Date.valueOf(ym.atDay(1));
-        Date end = java.sql.Date.valueOf(ym.atEndOfMonth());
-
-        ConfiguracionPresupuesto config = repository.findByUsuarioRut(rut)
-                .orElse(new ConfiguracionPresupuesto());
-
-        List<Movimiento> movs = movimientoRepository.findByUsuarioRutAndFechaBetween(rut, start, end);
-
-        java.math.BigDecimal totalIncome = movs.stream()
-                .filter(mv -> mv.getMonto().compareTo(java.math.BigDecimal.ZERO) > 0
-                        && mv.getTipoMovimiento() == TipoMovimiento.INGRESO_GENERAL)
-                .map(Movimiento::getMonto)
-                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
-
-        java.math.BigDecimal gastoNecesidad = java.math.BigDecimal.ZERO;
-        java.math.BigDecimal gastoDeseos = java.math.BigDecimal.ZERO;
-        java.math.BigDecimal ahorroRealizado = java.math.BigDecimal.ZERO;
-
-        for (Movimiento mv : movs) {
-            boolean isExpense = mv.getTipoMovimiento() == TipoMovimiento.GASTO_GENERAL
-                    || mv.getTipoMovimiento() == TipoMovimiento.PAGO_DEUDA;
-
-            if (isExpense && mv.getCategoria() != null) {
-                TipoPresupuesto tp = mv.getCategoria().getTipoPresupuesto();
-                if (tp == TipoPresupuesto.NECESIDAD) {
-                    gastoNecesidad = gastoNecesidad.add(mv.getMonto().abs());
-                } else if (tp == TipoPresupuesto.DESEO) {
-                    gastoDeseos = gastoDeseos.add(mv.getMonto().abs());
-                }
-            } else if (mv.getTipoMovimiento() == TipoMovimiento.ABONO_META) {
-                ahorroRealizado = ahorroRealizado.add(mv.getMonto().abs());
-            }
+    /** Ejecución (gastado vs. límite) por categoría en un mes. */
+    @GetMapping("/categorias/ejecucion/me")
+    public ResponseEntity<?> getEjecucionCategoriasMe(
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year) {
+        try {
+            String rut = securityUtils.getAuthenticatedRut();
+            return ResponseEntity.ok(presupuestoService.obtenerEjecucionCategorias(rut, month, year));
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
         }
+    }
 
-        EjecucionPresupuestoDTO dto = new EjecucionPresupuestoDTO();
-        dto.setTotalIngresos(totalIncome);
-
-        java.math.BigDecimal pNeed = config.getPorcentajeNecesidades() != null ? config.getPorcentajeNecesidades() : new java.math.BigDecimal("50.00");
-        java.math.BigDecimal pWant = config.getPorcentajeDeseos() != null ? config.getPorcentajeDeseos() : new java.math.BigDecimal("30.00");
-        java.math.BigDecimal pSave = config.getPorcentajeAhorro() != null ? config.getPorcentajeAhorro() : new java.math.BigDecimal("20.00");
-
-        dto.setPorcentajeNecesidadesConfigurado(pNeed);
-        dto.setPorcentajeDeseosConfigurado(pWant);
-        dto.setPorcentajeAhorroConfigurado(pSave);
-
-        java.math.BigDecimal cien = new java.math.BigDecimal("100");
-        dto.setPresupuestoNecesidades(totalIncome.multiply(pNeed).divide(cien, 2, java.math.RoundingMode.HALF_UP));
-        dto.setPresupuestoDeseos(totalIncome.multiply(pWant).divide(cien, 2, java.math.RoundingMode.HALF_UP));
-        dto.setPresupuestoAhorro(totalIncome.multiply(pSave).divide(cien, 2, java.math.RoundingMode.HALF_UP));
-
-        dto.setGastoNecesidades(gastoNecesidad);
-        dto.setGastoDeseos(gastoDeseos);
-        dto.setAhorroRealizado(ahorroRealizado);
-        dto.setAutomatizarAhorroEnMetas(Boolean.TRUE.equals(config.getAutomatizarAhorroEnMetas()));
-
-        return ResponseEntity.ok(dto);
+    /** Historial de la ejecución general, mes a mes. Rango máximo: 24 meses. */
+    @GetMapping("/historial/me")
+    public ResponseEntity<?> getHistorialMe(
+            @RequestParam String desde,
+            @RequestParam String hasta) {
+        try {
+            String rut = securityUtils.getAuthenticatedRut();
+            return ResponseEntity.ok(presupuestoService.obtenerHistorial(rut, desde, hasta));
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
+        }
     }
 }

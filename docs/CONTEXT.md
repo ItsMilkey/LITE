@@ -14,6 +14,7 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
   cuotasPagadasPrevias, montoPagadoPrevio, cargaAnualEquivalente, costoTotalCredito)
 - CONFIGURACION_PRESUPUESTO(id, usuario 1:1, %necesidades, %deseos, %ahorro, activo, automatizarAhorroEnMetas)
 - ASIGNACION_META_PRESUPUESTO(id, configuracion, meta, porcentajeAsignacion)
+- PRESUPUESTO_CATEGORIA(id, usuario, categoria, limiteMensual > 0; UNIQUE(usuario, categoria)) — límite mensual recurrente por categoría
 
 ## Endpoints (protegidos salvo register/login)
 - /api/usuarios: POST register · POST login · GET me
@@ -24,7 +25,7 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 - /api/categorias: GET
 - /api/metas: POST · GET me · POST {id}/abonar · POST {id}/retirar · PUT {id} · DELETE {id}
 - /api/deudas: POST · GET me · GET {id} · POST {id}/pagar · PUT {id} · PATCH {id}/cancelar · GET {id}/amortizacion · GET {id}/pagos (?page&size, fecha desc)
-- /api/presupuestos: GET me · POST me · GET ejecucion/me (?month&year)
+- /api/presupuestos: GET me (DTO) · POST me (DTO; porcentajes deben sumar 100.00 y ninguno ser negativo) · GET ejecucion/me (?month&year) · GET categorias/me · PUT categorias/me · GET categorias/ejecucion/me (?month&year) · GET historial/me (?desde&hasta=YYYY-MM)
 - /api/reportes/movimientos/exportar (?alcance&formato&mes&anio)
 - /api/simulaciones: POST credito (simulación sin persistencia, motor financiero + resumen educativo)
 
@@ -42,13 +43,14 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 - Detalle e historial (T3): GET /api/deudas/{id} devuelve la ficha enriquecida y valida propiedad (ajena → 403), igual que /amortizacion y el resto del módulo (SecurityUtils.validarPropietario, AccessDeniedException → 403; nunca SecurityException). GET /api/deudas/{id}/pagos es paginado (fecha desc) y devuelve {id, fecha, monto (positivo), capital, interes, costos, descripcion}; el desglose de cada pago se calcula en memoria como imputación acumulada tras ese pago − la del anterior (base = cuotas previas), no se persiste y usa una sola consulta de pagos. GET /api/deudas/{id}/amortizacion agrega por cuota estado (PAGADA|PARCIAL|PENDIENTE), montoPagado y previa vía ImputacionPagos. CuotaSimulacionDTO se arma con el mapper compartido `CuotaSimulacionDTO.from(tabla, fechas)`, usado por el simulador y el detalle de deuda.
 - PAGO_DEUDA puede crearse por /api/deudas/{id}/pagar y por POST /api/movimientos, pero ambas rutas terminan en DeudaService.registrarPago: mismo movimiento (negativo, por SignoMovimiento) y mismo estado de deuda.
 - Ejecución presupuestaria: presupuesto = ingresos del mes × %; gasto real = GASTO_GENERAL y PAGO_DEUDA clasificados por categoria.tipoPresupuesto; ahorroRealizado = SUM de ABONO_META del mes.
+- Presupuesto por categoría e historial (T5): PresupuestoService calcula el mes completo en la ventana semiabierta [inicioDeMes, inicioDeMesSiguiente) de FechasMovimiento. GET/PUT /categorias/me lee/reemplaza el conjunto de límites (PUT valida que cada categoría exista, que el límite sea > 0 y que no haya categorías repetidas; si no → 400) siempre por el RUT del token. GET /categorias/ejecucion/me devuelve por categoría {categoria, limite, gastado, porcentajeUsado, estado}: gastado = suma en abs de GASTO_GENERAL y PAGO_DEUDA de esa categoría en el mes; estado = EstadoEjecucion.desdePorcentaje (constantes UMBRAL_ALERTA=80 y UMBRAL_EXCEDIDO=100) → OK (<80), ALERTA (≥80) o EXCEDIDO (≥100). GET /historial/me?desde&hasta (YYYY-MM, inclusivos) reutiliza calcularEjecucionGeneral mes a mes (no duplica el cálculo); máximo 24 meses, rango invertido o formato inválido → 400. Un mes sin ingresos devuelve ceros (sin dividir por 0). POST /me exige necesidades + deseos + ahorro = 100.00 con compareTo y ningún porcentaje negativo; PresupuestoService concentra el guardado y responde ConfiguracionPresupuestoResponseDTO (no la entidad).
 - La categoría 'Deudas' (NECESIDAD) se asigna automáticamente a los pagos de deuda.
 - Seguridad: JWT HMAC-SHA256 stateless; SecurityUtils.validarPropietario(rut).
-- Esquema: 7 tablas; V1 (DDL), V2 (seed de 10 categorías), V3 (deuda con condiciones de crédito), V4 (CHECK de signo de MOVIMIENTO) y V5 (movimiento_origen_id: FK_MOVIMIENTO_ORIGEN + IDX_MOVIMIENTO_ORIGEN_ID, vínculo de Smart-Split) en db/migration/postgresql.
+- Esquema: 8 tablas; V1 (DDL), V2 (seed de 10 categorías), V3 (deuda con condiciones de crédito), V4 (CHECK de signo de MOVIMIENTO), V5 (movimiento_origen_id: FK_MOVIMIENTO_ORIGEN + IDX_MOVIMIENTO_ORIGEN_ID, vínculo de Smart-Split) y V6 (presupuesto_categoria: límite mensual por categoría, CHK limite > 0, UNIQUE(usuario, categoria), RLS) en db/migration/postgresql.
 
 ## Visión del módulo de deudas
 Dos usos con un mismo motor de cálculo: (1) simular un endeudamiento antes de contraerlo (cuánto cuesta, por cuánto tiempo, efecto de tasa y plazo, con fines de decisión y educación financiera) y (2) llevar la deuda real al detalle (cuánto falta, historial de pagos). Una deuda guardada = condiciones de una simulación + pagos.
 
 ## Tareas pendientes (docs/tareas/)
-[x] T0 BigDecimal · [x] T1a motor financiero y calendario · [x] T1b simulador (sin persistir) · [x] T1c deuda con condiciones, fechas y cuotas previas · [x] T2 pagos, imputación y saldos · [x] T3 detalle de deuda (ficha, cronograma, historial) · [x] T4 filtros y edición de movimientos · T5 presupuesto por categoría e historial · BACKLOG.md (diferido)
+[x] T0 BigDecimal · [x] T1a motor financiero y calendario · [x] T1b simulador (sin persistir) · [x] T1c deuda con condiciones, fechas y cuotas previas · [x] T2 pagos, imputación y saldos · [x] T3 detalle de deuda (ficha, cronograma, historial) · [x] T4 filtros y edición de movimientos · [x] T5 presupuesto por categoría e historial · BACKLOG.md (diferido)
 Orden: [x] T0 → [x] T1a → [x] T1b (el frontend ya puede consumirlo) → [x] T1c → [x] T2 → [x] T3. T4 y T5 solo dependen de T0.

@@ -1,0 +1,36 @@
+package com.example.saveup.model;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+
+/**
+ * Límite de gasto mensual recurrente de un usuario sobre una categoría (T5).
+ * El monto se reutiliza mes a mes: no está atado a un período concreto, sino a
+ * la categoría. {@code limiteMensual} es siempre mayor a 0 (también en la BD).
+ */
+@Entity
+@Table(name = "PRESUPUESTO_CATEGORIA")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class PresupuestoCategoria {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "ID_PRESUPUESTO_CATEGORIA")
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "USUARIO_ID", nullable = false)
+    private Usuario usuario;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "CATEGORIA_ID", nullable = false)
+    private Categoria categoria;
+
+    @Column(name = "LIMITE_MENSUAL", nullable = false, precision = 19, scale = 2)
+    private BigDecimal limiteMensual;
+}

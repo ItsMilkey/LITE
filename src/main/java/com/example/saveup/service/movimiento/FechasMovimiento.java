@@ -1,6 +1,7 @@
 package com.example.saveup.service.movimiento;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.Date;
 
@@ -37,6 +38,20 @@ public final class FechasMovimiento {
      */
     public static Date inicioDelDiaSiguiente(LocalDate fecha) {
         return inicioDelDia(fecha.plusDays(1));
+    }
+
+    /** Instante de inicio (00:00:00.000) del primer día del mes. */
+    public static Date inicioDeMes(YearMonth mes) {
+        return inicioDelDia(mes.atDay(1));
+    }
+
+    /**
+     * Instante de inicio del primer día del mes siguiente. Se usa como límite
+     * superior EXCLUSIVO de un mes completo (incluye el último día a cualquier
+     * hora, sin depender de la hora ni de los milisegundos).
+     */
+    public static Date inicioDeMesSiguiente(YearMonth mes) {
+        return inicioDelDia(mes.plusMonths(1).atDay(1));
     }
 
     /** Zona fijada (expuesta para tests y diagnóstico). */

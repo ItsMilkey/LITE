@@ -39,6 +39,14 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long>,
     List<Movimiento> findByUsuarioRutAndFechaBetween(String rut, java.util.Date start, java.util.Date end);
 
     /**
+     * Movimientos del usuario en una ventana semiabierta [desde, hastaExclusivo).
+     * Se usa para un mes completo: el límite superior es el inicio del mes
+     * siguiente, así se incluye el último día a cualquier hora (T5).
+     */
+    List<Movimiento> findByUsuarioRutAndFechaGreaterThanEqualAndFechaLessThan(
+            String rut, java.util.Date desde, java.util.Date hastaExclusivo);
+
+    /**
      * ¿Este movimiento es el origen de abonos automáticos de Smart-Split? (T4).
      * Si devuelve true, el ingreso tiene movimientos derivados y no se puede
      * editar ni borrar.
