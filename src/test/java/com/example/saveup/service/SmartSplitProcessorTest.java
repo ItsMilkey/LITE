@@ -72,6 +72,14 @@ class SmartSplitProcessorTest {
         catAhorro = new Categoria(1L, "Ahorro", "ic_savings", "#3F51B5", TipoPresupuesto.AHORRO);
     }
 
+    private Movimiento ingresoDe(Usuario usuario) {
+        Movimiento m = new Movimiento();
+        m.setId(1L);
+        m.setUsuario(usuario);
+        m.setTipoMovimiento(TipoMovimiento.INGRESO_GENERAL);
+        return m;
+    }
+
     @Test
     @DisplayName("Debe distribuir el porcentaje de ahorro entre las metas cuando automatizarAhorroEnMetas es true")
     void procesarDistribucion_conAutomatizacionActiva_distribuyeCorrectamente() {
@@ -89,7 +97,7 @@ class SmartSplitProcessorTest {
         when(asignacionMetaPresupuestoRepository.findByConfiguracionId(1L)).thenReturn(List.of(asig1, asig2));
         when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.of(catAhorro));
 
-        smartSplitProcessor.procesarDistribucion(usuario, montoIngreso);
+        smartSplitProcessor.procesarDistribucion(ingresoDe(usuario), montoIngreso);
 
         // Verificamos actualización de saldos en metas
         assertEquals(0, new java.math.BigDecimal("170000.00").compareTo(meta1.getMontoActual())); // 50.000 + 120.000
@@ -123,7 +131,7 @@ class SmartSplitProcessorTest {
         config.setAutomatizarAhorroEnMetas(false);
         when(configuracionPresupuestoRepository.findByUsuarioRut("12345678-9")).thenReturn(Optional.of(config));
 
-        smartSplitProcessor.procesarDistribucion(usuario, new java.math.BigDecimal("1000000.00"));
+        smartSplitProcessor.procesarDistribucion(ingresoDe(usuario), new java.math.BigDecimal("1000000.00"));
 
         // No se debe consultar asignaciones, ni modificar metas ni guardar movimientos
         verifyNoInteractions(asignacionMetaPresupuestoRepository);
@@ -162,7 +170,7 @@ class SmartSplitProcessorTest {
         when(asignacionMetaPresupuestoRepository.findByConfiguracionId(1L)).thenReturn(List.of(asig1, asig2, asig3));
         when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.of(catAhorro));
 
-        smartSplitProcessor.procesarDistribucion(usuario, montoIngreso);
+        smartSplitProcessor.procesarDistribucion(ingresoDe(usuario), montoIngreso);
 
         // Verificamos que los movimientos suman exactamente 100.00
         ArgumentCaptor<Movimiento> captor = ArgumentCaptor.forClass(Movimiento.class);
@@ -202,7 +210,7 @@ class SmartSplitProcessorTest {
         when(asignacionMetaPresupuestoRepository.findByConfiguracionId(1L)).thenReturn(List.of(asig1, asig2));
         when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.of(catAhorro));
 
-        smartSplitProcessor.procesarDistribucion(usuario, montoIngreso);
+        smartSplitProcessor.procesarDistribucion(ingresoDe(usuario), montoIngreso);
 
         // Verificamos que los movimientos suman exactamente 50.00 (el 50% de 100)
         ArgumentCaptor<Movimiento> captor = ArgumentCaptor.forClass(Movimiento.class);
@@ -244,7 +252,7 @@ class SmartSplitProcessorTest {
                 .thenReturn(List.of(asig1, asig2, asig3));
         when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.of(catAhorro));
 
-        smartSplitProcessor.procesarDistribucion(usuario, montoIngreso);
+        smartSplitProcessor.procesarDistribucion(ingresoDe(usuario), montoIngreso);
 
         ArgumentCaptor<Movimiento> captor = ArgumentCaptor.forClass(Movimiento.class);
         verify(movimientoRepository, times(3)).save(captor.capture());
@@ -261,12 +269,36 @@ class SmartSplitProcessorTest {
     }
 
     @Test
+    @DisplayName("T4: cada abono automático queda vinculado al ingreso que lo originó (movimientoOrigen)")
+    void procesarDistribucion_dejaVinculoConElIngreso() {
+        java.math.BigDecimal montoIngreso = new java.math.BigDecimal("100000.00");
+
+        AsignacionMetaPresupuesto asig1 = new AsignacionMetaPresupuesto();
+        asig1.setMeta(meta1);
+        asig1.setPorcentajeAsignacion(new java.math.BigDecimal("100.00"));
+
+        when(configuracionPresupuestoRepository.findByUsuarioRut("12345678-9")).thenReturn(Optional.of(config));
+        when(asignacionMetaPresupuestoRepository.findByConfiguracionId(1L)).thenReturn(List.of(asig1));
+        when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.of(catAhorro));
+
+        Movimiento ingreso = ingresoDe(usuario);
+        ingreso.setId(77L);
+
+        smartSplitProcessor.procesarDistribucion(ingreso, montoIngreso);
+
+        ArgumentCaptor<Movimiento> captor = ArgumentCaptor.forClass(Movimiento.class);
+        verify(movimientoRepository, times(1)).save(captor.capture());
+        assertSame(ingreso, captor.getValue().getMovimientoOrigen(),
+                "El ABONO_META debe apuntar al ingreso que lo generó (columna movimiento_origen_id)");
+    }
+
+    @Test
     @DisplayName("No debe hacer nada si la configuración presupuestaria está inactiva")
     void procesarDistribucion_conConfiguracionInactiva_noRealizaAccion() {
         config.setActivo(false);
         when(configuracionPresupuestoRepository.findByUsuarioRut("12345678-9")).thenReturn(Optional.of(config));
 
-        smartSplitProcessor.procesarDistribucion(usuario, new java.math.BigDecimal("500000.00"));
+        smartSplitProcessor.procesarDistribucion(ingresoDe(usuario), new java.math.BigDecimal("500000.00"));
 
         verifyNoInteractions(asignacionMetaPresupuestoRepository);
         verifyNoInteractions(metaAhorroRepository);
@@ -276,8 +308,8 @@ class SmartSplitProcessorTest {
     @Test
     @DisplayName("No debe hacer nada si el monto del ingreso es menor o igual a cero")
     void procesarDistribucion_conMontoInvalido_noRealizaAccion() {
-        smartSplitProcessor.procesarDistribucion(usuario, java.math.BigDecimal.ZERO);
-        smartSplitProcessor.procesarDistribucion(usuario, new java.math.BigDecimal("-100.00"));
+        smartSplitProcessor.procesarDistribucion(ingresoDe(usuario), java.math.BigDecimal.ZERO);
+        smartSplitProcessor.procesarDistribucion(ingresoDe(usuario), new java.math.BigDecimal("-100.00"));
 
         verifyNoInteractions(configuracionPresupuestoRepository);
     }

@@ -89,8 +89,12 @@ class MovimientoServiceTest {
         assertEquals(0, new java.math.BigDecimal("500000.00").compareTo(response.getMonto()));
         assertEquals("Sueldo mensual", response.getDescripcion());
 
-        // Verificamos que se delegó la distribución al procesador de dominio
-        verify(smartSplitProcessor, times(1)).procesarDistribucion(usuario, new java.math.BigDecimal("500000.00"));
+        // Verificamos que se delegó la distribución al procesador de dominio, con
+        // el ingreso ya persistido (T4: así el abono queda vinculado al origen).
+        ArgumentCaptor<Movimiento> origenCaptor = ArgumentCaptor.forClass(Movimiento.class);
+        verify(smartSplitProcessor, times(1)).procesarDistribucion(
+                origenCaptor.capture(), eq(new java.math.BigDecimal("500000.00")));
+        assertEquals(usuario, origenCaptor.getValue().getUsuario());
         verify(securityUtils).getAuthenticatedRut();
     }
 

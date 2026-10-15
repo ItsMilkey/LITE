@@ -61,14 +61,21 @@ public class SmartSplitProcessor {
      * Procesa la distribución de un ingreso general entre las metas activas del usuario,
      * respetando la bandera de automatización opcional de metas.
      *
-     * @param usuario Usuario titular del ingreso.
+     * <p>Recibe el ingreso ya persistido para dejar el vínculo
+     * {@code movimientoOrigen} en cada abono automático (T4): así el ingreso que
+     * tiene movimientos derivados queda protegido ante edición/borrado.
+     *
+     * @param movimientoIngreso INGRESO_GENERAL ya guardado (tiene id y usuario).
      * @param montoIngreso Monto total del ingreso percibido.
      */
     @Transactional
-    public void procesarDistribucion(Usuario usuario, BigDecimal montoIngreso) {
-        if (usuario == null || montoIngreso == null || montoIngreso.compareTo(BigDecimal.ZERO) <= 0) {
+    public void procesarDistribucion(Movimiento movimientoIngreso, BigDecimal montoIngreso) {
+        if (movimientoIngreso == null || movimientoIngreso.getUsuario() == null
+                || montoIngreso == null || montoIngreso.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
+
+        Usuario usuario = movimientoIngreso.getUsuario();
 
         configuracionPresupuestoRepository.findByUsuarioRut(usuario.getRut()).ifPresent(config -> {
             // El motor evalúa conjuntamente:
@@ -143,6 +150,8 @@ public class SmartSplitProcessor {
                         abonoMovimiento.setDescripcion("Abono Auto: " + meta.getNombre());
                         abonoMovimiento.setTipoMovimiento(TipoMovimiento.ABONO_META);
                         abonoMovimiento.setMetaAhorro(meta);
+                        // T4: deja el rastro del ingreso que originó el abono.
+                        abonoMovimiento.setMovimientoOrigen(movimientoIngreso);
                         if (catAhorro != null) {
                             abonoMovimiento.setCategoria(catAhorro);
                         }

@@ -6,6 +6,7 @@ import com.example.saveup.model.enums.TipoMovimiento;
 import org.springframework.data.domain.Page; // <-- ¡CAMBIO!
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -13,7 +14,8 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
+public interface MovimientoRepository extends JpaRepository<Movimiento, Long>,
+        JpaSpecificationExecutor<Movimiento> {
 
     List<Movimiento> findByUsuarioRutOrderByFechaDesc(String rut);
 
@@ -35,4 +37,11 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
     List<Movimiento> findByMetaAhorroId(Long metaId);
 
     List<Movimiento> findByUsuarioRutAndFechaBetween(String rut, java.util.Date start, java.util.Date end);
+
+    /**
+     * ¿Este movimiento es el origen de abonos automáticos de Smart-Split? (T4).
+     * Si devuelve true, el ingreso tiene movimientos derivados y no se puede
+     * editar ni borrar.
+     */
+    boolean existsByMovimientoOrigenId(Long movimientoOrigenId);
 }

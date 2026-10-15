@@ -55,6 +55,16 @@ public class Movimiento {
     @JoinColumn(name = "META_ID")
     private MetaAhorro metaAhorro;
 
+    /**
+     * Movimiento que originó a este (T4). Smart-Split deja aquí el
+     * INGRESO_GENERAL cuyos abonos automáticos son este movimiento. Es null en
+     * todo movimiento que no provenga de Smart-Split, incluido el histórico.
+     * Inmutable tras la inserción: el vínculo no se reasigna.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "MOVIMIENTO_ORIGEN_ID", updatable = false)
+    private Movimiento movimientoOrigen;
+
     @PrePersist
     protected void onCreate() {
         if (this.fecha == null) {

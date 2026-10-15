@@ -1,6 +1,8 @@
 package com.example.saveup.service;
 
 import com.example.saveup.dto.CategoriaDTO;
+import com.example.saveup.dto.MovimientoEdicionDTO;
+import com.example.saveup.dto.MovimientoFiltroDTO;
 import com.example.saveup.dto.MovimientoRegistroDTO;
 import com.example.saveup.dto.MovimientoResponseDTO;
 import com.example.saveup.dto.PageResponseDTO;
@@ -12,6 +14,7 @@ import com.example.saveup.model.enums.ModoPago;
 import com.example.saveup.model.enums.TipoMovimiento;
 import com.example.saveup.repository.CategoriaRepository;
 import com.example.saveup.repository.MovimientoRepository;
+import com.example.saveup.repository.MovimientoSpecifications;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.movimiento.SignoMovimiento;
@@ -19,6 +22,7 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +45,14 @@ public class MovimientoService {
             TipoMovimiento.INGRESO_GENERAL,
             TipoMovimiento.GASTO_GENERAL,
             TipoMovimiento.PAGO_DEUDA);
+
+    /**
+     * Tipos editables/borrables desde este endpoint (T4). El resto se modifican
+     * desde su módulo (deudas, metas): intentarlo responde 409.
+     */
+    private static final Set<TipoMovimiento> TIPOS_EDITABLES = Set.of(
+            TipoMovimiento.INGRESO_GENERAL,
+            TipoMovimiento.GASTO_GENERAL);
 
     private final MovimientoRepository movimientoRepository;
 
@@ -100,14 +112,15 @@ public class MovimientoService {
             movimiento.setCategoria(categoria);
         }
 
-        // LÓGICA SMART-SPLIT: Delegada a un servicio de dominio especializado
+        // 5. Guardar el ingreso PRIMERO: así Smart-Split puede dejar en cada abono
+        //    automático el vínculo movimientoOrigen (T4).
+        Movimiento movimientoGuardado = movimientoRepository.save(movimiento);
+
+        // LÓGICA SMART-SPLIT: Delegada a un servicio de dominio especializado.
         if (Boolean.TRUE.equals(dto.getAplicarPresupuesto())
                 && dto.getTipoMovimiento() == TipoMovimiento.INGRESO_GENERAL) {
-            smartSplitProcessor.procesarDistribucion(usuario, montoCanonico);
+            smartSplitProcessor.procesarDistribucion(movimientoGuardado, montoCanonico);
         }
-
-        // 5. Guardar la entidad en la base de datos.
-        Movimiento movimientoGuardado = movimientoRepository.save(movimiento);
 
         // 6. Convertir la entidad guardada a un DTO de respuesta y devolverla.
         return convertirAEntidadResponseDTO(movimientoGuardado);
@@ -170,16 +183,24 @@ public class MovimientoService {
     }
 
     /**
-     * Obtiene el historial de movimientos de forma paginada.
+     * Obtiene el historial de movimientos de forma paginada, filtrando siempre
+     * por el RUT del usuario autenticado. Los filtros son opcionales (T4).
+     *
+     * @throws IllegalArgumentException si {@code desde > hasta} o
+     *                                  {@code montoMin > montoMax} (400)
      */
     @Transactional(readOnly = true)
-    public PageResponseDTO<MovimientoResponseDTO> obtenerMovimientosPaginados(String rut, Pageable pageable) {
+    public PageResponseDTO<MovimientoResponseDTO> obtenerMovimientosPaginados(String rut, Pageable pageable,
+                                                                              MovimientoFiltroDTO filtro) {
         if (!usuarioRepository.existsById(rut)) {
             throw new EntityNotFoundException("Usuario no encontrado con RUT: " + rut);
         }
 
-        // 1. Obtenemos la página de entidades desde el repositorio
-        Page<Movimiento> paginaMovimientos = movimientoRepository.findByUsuarioRutOrderByFechaDesc(rut, pageable);
+        validarRango(filtro);
+
+        // 1. Obtenemos la página de entidades desde el repositorio aplicando filtros.
+        Specification<Movimiento> especificacion = MovimientoSpecifications.conFiltros(rut, filtro);
+        Page<Movimiento> paginaMovimientos = movimientoRepository.findAll(especificacion, pageable);
 
         // 2. Convertimos el contenido de la página de entidades a una lista de DTO
         List<MovimientoResponseDTO> contenidoDTO = paginaMovimientos.getContent().stream()
@@ -194,6 +215,91 @@ public class MovimientoService {
         respuesta.setTotalPages(paginaMovimientos.getTotalPages());
 
         return respuesta;
+    }
+
+    /**
+     * Edita un movimiento editable (T4): solo descripción, monto y categoría. La
+     * fecha no se toca y el signo lo impone el tipo (SignoMovimiento).
+     *
+     * @throws jakarta.persistence.EntityNotFoundException si el movimiento no existe (404)
+     * @throws org.springframework.security.access.AccessDeniedException si es de otro usuario (403)
+     * @throws IllegalStateException si el tipo no es editable o el ingreso tiene Smart-Split (409)
+     */
+    @Transactional
+    public MovimientoResponseDTO editarMovimiento(Long id, MovimientoEdicionDTO dto) {
+        Movimiento movimiento = buscarPropioOAccesoDenegado(id);
+        validarEditable(movimiento);
+
+        movimiento.setDescripcion(dto.getDescripcion());
+        movimiento.setMonto(SignoMovimiento.aplicar(movimiento.getTipoMovimiento(), dto.getMonto()));
+        if (dto.getCategoriaId() != null) {
+            movimiento.setCategoria(resolverCategoria(dto.getCategoriaId()));
+        }
+
+        return convertirAEntidadResponseDTO(movimientoRepository.save(movimiento));
+    }
+
+    /**
+     * Elimina un movimiento editable (T4) con las mismas validaciones que la edición.
+     *
+     * @throws jakarta.persistence.EntityNotFoundException si el movimiento no existe (404)
+     * @throws org.springframework.security.access.AccessDeniedException si es de otro usuario (403)
+     * @throws IllegalStateException si el tipo no es editable o el ingreso tiene Smart-Split (409)
+     */
+    @Transactional
+    public void eliminarMovimiento(Long id) {
+        Movimiento movimiento = buscarPropioOAccesoDenegado(id);
+        validarEditable(movimiento);
+        movimientoRepository.delete(movimiento);
+    }
+
+    private Movimiento buscarPropioOAccesoDenegado(Long id) {
+        Movimiento movimiento = movimientoRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Movimiento no encontrado con ID: " + id));
+        securityUtils.validarPropietario(movimiento.getUsuario().getRut());
+        return movimiento;
+    }
+
+    /**
+     * Solo se editan/borran INGRESO_GENERAL y GASTO_GENERAL sin deuda ni meta, y
+     * sin abonos automáticos derivados (Smart-Split). Cualquier otro caso es 409.
+     */
+    private void validarEditable(Movimiento movimiento) {
+        if (!TIPOS_EDITABLES.contains(movimiento.getTipoMovimiento())
+                || movimiento.getDeuda() != null
+                || movimiento.getMetaAhorro() != null) {
+            throw new IllegalStateException(
+                    "Este movimiento solo se modifica desde su módulo (deudas o metas); "
+                            + "por este endpoint solo se editan o eliminan INGRESO_GENERAL y GASTO_GENERAL.");
+        }
+        if (movimientoRepository.existsByMovimientoOrigenId(movimiento.getId())) {
+            throw new IllegalStateException(
+                    "Este ingreso tiene abonos automáticos de Smart-Split vinculados y no se puede editar ni eliminar.");
+        }
+    }
+
+    private void validarRango(MovimientoFiltroDTO filtro) {
+        if (filtro == null) {
+            return;
+        }
+        if (filtro.getDesde() != null && filtro.getHasta() != null && filtro.getDesde().isAfter(filtro.getHasta())) {
+            throw new IllegalArgumentException("La fecha 'desde' no puede ser posterior a 'hasta'.");
+        }
+        if (filtro.getMontoMin() != null && filtro.getMontoMin().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("El monto mínimo no puede ser negativo.");
+        }
+        if (filtro.getMontoMax() != null && filtro.getMontoMax().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("El monto máximo no puede ser negativo.");
+        }
+        if (filtro.getMontoMin() != null && filtro.getMontoMax() != null
+                && filtro.getMontoMin().compareTo(filtro.getMontoMax()) > 0) {
+            throw new IllegalArgumentException("El monto mínimo no puede ser mayor que el monto máximo.");
+        }
+    }
+
+    private Categoria resolverCategoria(Long categoriaId) {
+        return categoriaRepository.findById(categoriaId)
+                .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada con ID: " + categoriaId));
     }
 
     /**

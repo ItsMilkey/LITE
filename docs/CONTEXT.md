@@ -4,7 +4,7 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 ## Entidades
 - USUARIO(rut PK, nombre, apellido, email, contrasena, fechaRegistro)
 - CATEGORIA(id, nombre, iconId, colorHex, tipoPresupuesto: NECESIDAD|DESEO|AHORRO|OTROS)
-- MOVIMIENTO(id, monto, descripcion, fecha [updatable=false], tipoMovimiento, usuario, categoria?, deuda?, metaAhorro?)
+- MOVIMIENTO(id, monto, descripcion, fecha [updatable=false], tipoMovimiento, usuario, categoria?, deuda?, metaAhorro?, movimientoOrigen?)
   Signo: + INGRESO_GENERAL y RETIRO_META; − GASTO_GENERAL, PAGO_DEUDA y ABONO_META. Saldo = SUM(monto).
   El signo NO lo decide el cliente: lo impone el tipo vía SignoMovimiento (ver reglas vigentes).
 - META_AHORRO(id, nombre, montoObjetivo?, montoActual, fechaLimite?, usuario). Meta 'Ahorros' por defecto, protegida.
@@ -18,7 +18,7 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 ## Endpoints (protegidos salvo register/login)
 - /api/usuarios: POST register · POST login · GET me
 - /api/saldos/me
-- /api/movimientos: POST · GET me (?limit) · GET paginados/me (?page&size)
+- /api/movimientos: POST · GET me (?limit) · GET paginados/me (?page&size&desde&hasta&tipoMovimiento&categoriaId&montoMin&montoMax&q) · PUT {id} · DELETE {id}
   POST solo acepta INGRESO_GENERAL, GASTO_GENERAL y PAGO_DEUDA. ABONO_META y RETIRO_META se rechazan con 400:
   se registran únicamente desde /api/metas/{id}/abonar y /api/metas/{id}/retirar, donde existe la meta que los respalda.
 - /api/categorias: GET
@@ -34,7 +34,8 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 - Invariante de metas: tras abonar, retirar, Smart-Split y eliminar, montoActual de la meta = −(suma de movimientos ABONO_META vinculados a esa meta). Al eliminar una meta con ahorro se crea un RETIRO_META (positivo) por el total ahorrado, sin vincular a la meta.
 - CHECK CHK_MOVIMIENTO_SIGNO (V4) sobre MOVIMIENTO: (tipo IN ('INGRESO_GENERAL','RETIRO_META') AND monto > 0) OR (tipo IN ('GASTO_GENERAL','PAGO_DEUDA','ABONO_META') AND monto < 0). Creado NOT VALID: el histórico puede violarlo y el arranque no falla, pero desde ya rechaza INSERT/UPDATE inválidos. El script trae la consulta de diagnóstico agrupada por tipo y el VALIDATE CONSTRAINT comentados.
 - Si se agrega un valor a TipoMovimiento hay que actualizar SignoMovimiento y el CHECK en la misma tarea.
-- Smart-Split: INGRESO_GENERAL con aplicarPresupuesto=true, config.activo, automatizarAhorroEnMetas y %ahorro>0 → un ABONO_META (negativo) por asignación. No guarda vínculo con el ingreso que lo originó.
+- Smart-Split: INGRESO_GENERAL con aplicarPresupuesto=true, config.activo, automatizarAhorroEnMetas y %ahorro>0 → un ABONO_META (negativo) por asignación. Desde T4 deja el vínculo movimiento_origen_id hacia el ingreso que lo originó; el ingreso se guarda antes de repartir para conocer su id.
+- Historial filtrado y edición (T4): GET /api/movimientos/paginados/me acepta filtros opcionales (desde/hasta ISO inclusivos, tipoMovimiento, categoriaId, montoMin/montoMax contra la magnitud (valor absoluto) del monto, q case-insensitive en descripcion con comodines % y _ escapados) vía JPA Specifications, siempre filtrando por el RUT del token; 400 si desde>hasta, montoMin/montoMax negativos o montoMin>montoMax. PUT/DELETE /api/movimientos/{id} solo aplican a INGRESO_GENERAL y GASTO_GENERAL sin deuda ni meta (el resto → 409 "se modifica desde su módulo"), exigen propiedad (ajeno → 403) y rechazan con 409 un ingreso que tenga movimientos derivados (movimiento_origen_id). La fecha no se edita y el monto se reescribe con SignoMovimiento. Los movimientos históricos sin vínculo no tienen esa restricción. La conversión LocalDate→java.util.Date del rango y la zona (systemDefault, fijada una sola vez) viven en FechasMovimiento (service.movimiento): ninguna otra clase mezcla java.time con java.util.Date.
 - Deuda hoy (V3): montoPagado = Σ pagos PAGO_DEUDA + montoPagadoPrevio; cuotasPagadas = cuotas PAGADA de la imputación (incluye previas); PAGADA cuando pagado ≥ montoTotal; editar solo con 0 pagos (cuotasPagadasPrevias sí se puede cambiar); cuotasPagadasPrevias < cantidadCuotas; crear/editar ejecuta el motor (MotorFinanciero) y persiste las condiciones; amortización reconstruye la tabla sin persistirla.
 - Pagos e imputación (T2): DeudaService.registrarPago es el ÚNICO productor de PAGO_DEUDA (POST /api/movimientos con ese tipo delega en él). ImputacionPagos (clase pura, service.finanzas) reparte los pagos reales cuota por cuota y, dentro de cada cuota, interés → costo adicional → capital; las cuotasPagadasPrevias cuentan como completas ya pagadas y los pagos reales empiezan en la siguiente. Nada de la imputación se persiste. modoPago: CUOTA_CALCULADA cobra lo que falta de la próxima cuota impaga (cuota + costo adicional); MONTO_PERSONALIZADO (por defecto) exige monto > 0. Sobrepago o deuda no PENDIENTE → 409; deuda ajena → 403.
 - DeudaResponseDTO es solo datos: las tasas, el valor de cuota, la fecha de la última cuota y los saldos los calcula DeudaService en memoria tras la proyección JPQL (motor + calendario + ImputacionPagos, sin consultas extra). También calcula la próxima cuota impaga (proximaCuotaNumero, proximaCuotaMontoPendiente y proximaFechaVencimiento si hay fechaPrimeraCuota) e interesesPagados (incluye las cuotas previas). totalPorPagar = montoTotal − (previas + pagos reales); saldoCapital = montoCapital − capital imputado (aproxima liquidar hoy; NO incluye el interés devengado del mes en curso). Si una deuda no se puede recalcular, sus campos derivados quedan en null y el listado sigue.
@@ -43,11 +44,11 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 - Ejecución presupuestaria: presupuesto = ingresos del mes × %; gasto real = GASTO_GENERAL y PAGO_DEUDA clasificados por categoria.tipoPresupuesto; ahorroRealizado = SUM de ABONO_META del mes.
 - La categoría 'Deudas' (NECESIDAD) se asigna automáticamente a los pagos de deuda.
 - Seguridad: JWT HMAC-SHA256 stateless; SecurityUtils.validarPropietario(rut).
-- Esquema: 7 tablas; V1 (DDL), V2 (seed de 10 categorías), V3 (deuda con condiciones de crédito) y V4 (CHECK de signo de MOVIMIENTO) en db/migration/postgresql.
+- Esquema: 7 tablas; V1 (DDL), V2 (seed de 10 categorías), V3 (deuda con condiciones de crédito), V4 (CHECK de signo de MOVIMIENTO) y V5 (movimiento_origen_id: FK_MOVIMIENTO_ORIGEN + IDX_MOVIMIENTO_ORIGEN_ID, vínculo de Smart-Split) en db/migration/postgresql.
 
 ## Visión del módulo de deudas
 Dos usos con un mismo motor de cálculo: (1) simular un endeudamiento antes de contraerlo (cuánto cuesta, por cuánto tiempo, efecto de tasa y plazo, con fines de decisión y educación financiera) y (2) llevar la deuda real al detalle (cuánto falta, historial de pagos). Una deuda guardada = condiciones de una simulación + pagos.
 
 ## Tareas pendientes (docs/tareas/)
-[x] T0 BigDecimal · [x] T1a motor financiero y calendario · [x] T1b simulador (sin persistir) · [x] T1c deuda con condiciones, fechas y cuotas previas · [x] T2 pagos, imputación y saldos · [x] T3 detalle de deuda (ficha, cronograma, historial) · T4 filtros y edición de movimientos · T5 presupuesto por categoría e historial · BACKLOG.md (diferido)
+[x] T0 BigDecimal · [x] T1a motor financiero y calendario · [x] T1b simulador (sin persistir) · [x] T1c deuda con condiciones, fechas y cuotas previas · [x] T2 pagos, imputación y saldos · [x] T3 detalle de deuda (ficha, cronograma, historial) · [x] T4 filtros y edición de movimientos · T5 presupuesto por categoría e historial · BACKLOG.md (diferido)
 Orden: [x] T0 → [x] T1a → [x] T1b (el frontend ya puede consumirlo) → [x] T1c → [x] T2 → [x] T3. T4 y T5 solo dependen de T0.
