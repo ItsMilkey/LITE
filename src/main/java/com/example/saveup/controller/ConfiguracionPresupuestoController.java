@@ -7,7 +7,6 @@ import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.PresupuestoService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,12 +20,17 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/presupuestos")
-@RequiredArgsConstructor
 public class ConfiguracionPresupuestoController {
 
     private final PresupuestoService presupuestoService;
 
     private final SecurityUtils securityUtils;
+
+    public ConfiguracionPresupuestoController(PresupuestoService presupuestoService,
+                                              SecurityUtils securityUtils) {
+        this.presupuestoService = presupuestoService;
+        this.securityUtils = securityUtils;
+    }
 
     /**
      * Endpoint preferido (Implicit Context): Obtiene la configuración del usuario autenticado.

@@ -3,14 +3,12 @@ package com.example.saveup.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "CONFIGURACION_PRESUPUESTO")
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class ConfiguracionPresupuesto {
 
     @Id

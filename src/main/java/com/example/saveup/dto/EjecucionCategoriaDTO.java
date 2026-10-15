@@ -1,7 +1,6 @@
 package com.example.saveup.dto;
 
 import com.example.saveup.model.enums.EstadoEjecucion;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -14,7 +13,6 @@ import java.math.BigDecimal;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class EjecucionCategoriaDTO {
     private Long categoriaId;
     private String categoria;
@@ -22,4 +20,14 @@ public class EjecucionCategoriaDTO {
     private BigDecimal gastado;
     private BigDecimal porcentajeUsado;
     private EstadoEjecucion estado;
+
+    public EjecucionCategoriaDTO(Long categoriaId, String categoria, BigDecimal limite, BigDecimal gastado,
+                                 BigDecimal porcentajeUsado, EstadoEjecucion estado) {
+        this.categoriaId = categoriaId;
+        this.categoria = categoria;
+        this.limite = limite;
+        this.gastado = gastado;
+        this.porcentajeUsado = porcentajeUsado;
+        this.estado = estado;
+    }
 }

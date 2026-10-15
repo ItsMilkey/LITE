@@ -3,7 +3,6 @@ package com.example.saveup.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import java.math.BigDecimal;
 import java.util.Date;
 
@@ -11,7 +10,6 @@ import java.util.Date;
 @Table(name = "META_AHORRO")
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class MetaAhorro {
 
     @Id

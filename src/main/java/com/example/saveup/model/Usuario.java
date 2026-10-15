@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import lombok.ToString;
 import java.util.Date;
 
@@ -12,7 +11,6 @@ import java.util.Date;
 @Table(name = "USUARIO")
 @Data // Genera getters, setters, toString, etc.
 @NoArgsConstructor
-@AllArgsConstructor
 public class Usuario {
 
     @Id

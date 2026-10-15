@@ -2,7 +2,6 @@ package com.example.saveup.dto;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -15,7 +14,6 @@ import java.math.BigDecimal;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class PresupuestoCategoriaItemDTO {
 
     @NotNull(message = "La categoría es obligatoria")
@@ -24,4 +22,9 @@ public class PresupuestoCategoriaItemDTO {
     @NotNull(message = "El límite mensual es obligatorio")
     @Positive(message = "El límite mensual debe ser mayor a 0")
     private BigDecimal limiteMensual;
+
+    public PresupuestoCategoriaItemDTO(Long categoriaId, BigDecimal limiteMensual) {
+        this.categoriaId = categoriaId;
+        this.limiteMensual = limiteMensual;
+    }
 }

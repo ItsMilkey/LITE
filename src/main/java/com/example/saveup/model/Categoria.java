@@ -1,7 +1,6 @@
 package com.example.saveup.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -9,7 +8,6 @@ import lombok.NoArgsConstructor;
 @Table(name = "CATEGORIA")
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class Categoria {
 
     @Id
@@ -29,4 +27,13 @@ public class Categoria {
     @Enumerated(EnumType.STRING)
     @Column(name = "TIPO_PRESUPUESTO")
     private com.example.saveup.model.enums.TipoPresupuesto tipoPresupuesto;
+
+    public Categoria(Long id, String nombre, String iconId, String colorHex,
+                     com.example.saveup.model.enums.TipoPresupuesto tipoPresupuesto) {
+        this.id = id;
+        this.nombre = nombre;
+        this.iconId = iconId;
+        this.colorHex = colorHex;
+        this.tipoPresupuesto = tipoPresupuesto;
+    }
 }

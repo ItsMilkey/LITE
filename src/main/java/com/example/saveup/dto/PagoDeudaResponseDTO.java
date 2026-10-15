@@ -1,6 +1,5 @@
 package com.example.saveup.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -17,7 +16,6 @@ import java.util.Date;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class PagoDeudaResponseDTO {
     private Long id;
     private Date fecha;
@@ -26,4 +24,15 @@ public class PagoDeudaResponseDTO {
     private BigDecimal interes;
     private BigDecimal costos;
     private String descripcion;
+
+    public PagoDeudaResponseDTO(Long id, Date fecha, BigDecimal monto, BigDecimal capital, BigDecimal interes,
+                                BigDecimal costos, String descripcion) {
+        this.id = id;
+        this.fecha = fecha;
+        this.monto = monto;
+        this.capital = capital;
+        this.interes = interes;
+        this.costos = costos;
+        this.descripcion = descripcion;
+    }
 }

@@ -3,10 +3,8 @@ package com.example.saveup.dto;
 import com.example.saveup.model.enums.ModalidadCalculo;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -14,8 +12,6 @@ import java.util.List;
 
 @Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class SimulacionCreditoRequestDTO {
 
     @NotNull(message = "La modalidad es obligatoria")
@@ -48,4 +44,27 @@ public class SimulacionCreditoRequestDTO {
 
     @Builder.Default
     private Boolean incluirTabla = true;
+
+    public SimulacionCreditoRequestDTO() {
+    }
+
+    public SimulacionCreditoRequestDTO(ModalidadCalculo modalidad, BigDecimal montoCapital, Integer cantidadCuotas,
+                                       LocalDate fechaPrimeraCuota, LocalDate fechaUltimaCuota, BigDecimal tasaMensual,
+                                       BigDecimal tasaAnualEfectiva, BigDecimal valorCuota, BigDecimal gastosIniciales,
+                                       BigDecimal costoAdicionalPorCuota, BigDecimal ingresoMensual,
+                                       List<Integer> cantidadCuotasAlternativas, Boolean incluirTabla) {
+        this.modalidad = modalidad;
+        this.montoCapital = montoCapital;
+        this.cantidadCuotas = cantidadCuotas;
+        this.fechaPrimeraCuota = fechaPrimeraCuota;
+        this.fechaUltimaCuota = fechaUltimaCuota;
+        this.tasaMensual = tasaMensual;
+        this.tasaAnualEfectiva = tasaAnualEfectiva;
+        this.valorCuota = valorCuota;
+        this.gastosIniciales = gastosIniciales;
+        this.costoAdicionalPorCuota = costoAdicionalPorCuota;
+        this.ingresoMensual = ingresoMensual;
+        this.cantidadCuotasAlternativas = cantidadCuotasAlternativas;
+        this.incluirTabla = incluirTabla;
+    }
 }

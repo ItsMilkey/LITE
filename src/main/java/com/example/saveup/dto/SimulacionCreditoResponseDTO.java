@@ -4,7 +4,6 @@ import com.example.saveup.model.enums.ModalidadCalculo;
 import com.example.saveup.service.finanzas.CuotaAmortizacion;
 import com.example.saveup.service.finanzas.ImputacionPagos;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,7 +16,6 @@ import java.util.List;
 @Data
 @Builder
 @NoArgsConstructor
-@AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class SimulacionCreditoResponseDTO {
 
@@ -33,10 +31,28 @@ public class SimulacionCreditoResponseDTO {
     private List<ComparacionPlazoDTO> comparacionPlazos;
     private List<String> advertencias;
 
+    public SimulacionCreditoResponseDTO(CondicionesSimulacionDTO condiciones, BigDecimal valorCuota, BigDecimal montoTotal,
+                                        BigDecimal gastosIniciales, BigDecimal costoTotalCredito,
+                                        BigDecimal interesesYCostos, BigDecimal cargaAnualEquivalente,
+                                        ResumenEducativoDTO resumenEducativo,
+                                        List<CuotaSimulacionDTO> tablaAmortizacion,
+                                        List<ComparacionPlazoDTO> comparacionPlazos, List<String> advertencias) {
+        this.condiciones = condiciones;
+        this.valorCuota = valorCuota;
+        this.montoTotal = montoTotal;
+        this.gastosIniciales = gastosIniciales;
+        this.costoTotalCredito = costoTotalCredito;
+        this.interesesYCostos = interesesYCostos;
+        this.cargaAnualEquivalente = cargaAnualEquivalente;
+        this.resumenEducativo = resumenEducativo;
+        this.tablaAmortizacion = tablaAmortizacion;
+        this.comparacionPlazos = comparacionPlazos;
+        this.advertencias = advertencias;
+    }
+
     @Data
     @Builder
     @NoArgsConstructor
-    @AllArgsConstructor
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class CondicionesSimulacionDTO {
         private ModalidadCalculo modalidad;
@@ -46,24 +62,42 @@ public class SimulacionCreditoResponseDTO {
         private LocalDate fechaUltimaCuota;
         private BigDecimal tasaMensual;
         private BigDecimal tasaAnualEfectiva;
+
+        public CondicionesSimulacionDTO(ModalidadCalculo modalidad, BigDecimal montoCapital, Integer cantidadCuotas,
+                                        LocalDate fechaPrimeraCuota, LocalDate fechaUltimaCuota, BigDecimal tasaMensual,
+                                        BigDecimal tasaAnualEfectiva) {
+            this.modalidad = modalidad;
+            this.montoCapital = montoCapital;
+            this.cantidadCuotas = cantidadCuotas;
+            this.fechaPrimeraCuota = fechaPrimeraCuota;
+            this.fechaUltimaCuota = fechaUltimaCuota;
+            this.tasaMensual = tasaMensual;
+            this.tasaAnualEfectiva = tasaAnualEfectiva;
+        }
     }
 
     @Data
     @Builder
     @NoArgsConstructor
-    @AllArgsConstructor
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class ResumenEducativoDTO {
         private BigDecimal costoPorCada100;
         private BigDecimal porcentajeSobreCapital;
         private BigDecimal porcentajeInteresesYCostos;
         private BigDecimal porcentajeIngresoComprometido;
+
+        public ResumenEducativoDTO(BigDecimal costoPorCada100, BigDecimal porcentajeSobreCapital,
+                                   BigDecimal porcentajeInteresesYCostos, BigDecimal porcentajeIngresoComprometido) {
+            this.costoPorCada100 = costoPorCada100;
+            this.porcentajeSobreCapital = porcentajeSobreCapital;
+            this.porcentajeInteresesYCostos = porcentajeInteresesYCostos;
+            this.porcentajeIngresoComprometido = porcentajeIngresoComprometido;
+        }
     }
 
     @Data
     @Builder
     @NoArgsConstructor
-    @AllArgsConstructor
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class CuotaSimulacionDTO {
         private Integer numero;
@@ -78,6 +112,21 @@ public class SimulacionCreditoResponseDTO {
         private ImputacionPagos.EstadoCuota estado;
         private BigDecimal montoPagado;
         private Boolean previa;
+
+        public CuotaSimulacionDTO(Integer numero, LocalDate fechaVencimiento, BigDecimal cuota, BigDecimal capital,
+                                  BigDecimal interes, BigDecimal costoAdicional, BigDecimal saldo,
+                                  ImputacionPagos.EstadoCuota estado, BigDecimal montoPagado, Boolean previa) {
+            this.numero = numero;
+            this.fechaVencimiento = fechaVencimiento;
+            this.cuota = cuota;
+            this.capital = capital;
+            this.interes = interes;
+            this.costoAdicional = costoAdicional;
+            this.saldo = saldo;
+            this.estado = estado;
+            this.montoPagado = montoPagado;
+            this.previa = previa;
+        }
 
         /**
          * Construye un CuotaSimulacionDTO a partir de una fila de amortización
@@ -115,12 +164,20 @@ public class SimulacionCreditoResponseDTO {
     @Data
     @Builder
     @NoArgsConstructor
-    @AllArgsConstructor
     public static class ComparacionPlazoDTO {
         private Integer cantidadCuotas;
         private BigDecimal valorCuota;
         private BigDecimal costoTotalCredito;
         private BigDecimal interesesYCostos;
         private BigDecimal cargaAnualEquivalente;
+
+        public ComparacionPlazoDTO(Integer cantidadCuotas, BigDecimal valorCuota, BigDecimal costoTotalCredito,
+                                   BigDecimal interesesYCostos, BigDecimal cargaAnualEquivalente) {
+            this.cantidadCuotas = cantidadCuotas;
+            this.valorCuota = valorCuota;
+            this.costoTotalCredito = costoTotalCredito;
+            this.interesesYCostos = interesesYCostos;
+            this.cargaAnualEquivalente = cargaAnualEquivalente;
+        }
     }
 }

@@ -1,7 +1,6 @@
 package com.example.saveup.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
@@ -15,7 +14,6 @@ import java.math.BigDecimal;
 @Table(name = "PRESUPUESTO_CATEGORIA")
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class PresupuestoCategoria {
 
     @Id
@@ -33,4 +31,11 @@ public class PresupuestoCategoria {
 
     @Column(name = "LIMITE_MENSUAL", nullable = false, precision = 19, scale = 2)
     private BigDecimal limiteMensual;
+
+    public PresupuestoCategoria(Long id, Usuario usuario, Categoria categoria, BigDecimal limiteMensual) {
+        this.id = id;
+        this.usuario = usuario;
+        this.categoria = categoria;
+        this.limiteMensual = limiteMensual;
+    }
 }

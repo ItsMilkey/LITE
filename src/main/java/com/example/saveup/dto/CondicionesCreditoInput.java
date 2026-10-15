@@ -3,7 +3,6 @@ package com.example.saveup.dto;
 import com.example.saveup.model.enums.ModalidadCalculo;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,7 +19,6 @@ import java.time.LocalDate;
 @Data
 @Builder
 @NoArgsConstructor
-@AllArgsConstructor
 public class CondicionesCreditoInput {
 
     @NotNull(message = "La modalidad es obligatoria")
@@ -38,4 +36,20 @@ public class CondicionesCreditoInput {
     private BigDecimal valorCuota;
     private BigDecimal gastosIniciales;
     private BigDecimal costoAdicionalPorCuota;
+
+    public CondicionesCreditoInput(ModalidadCalculo modalidad, BigDecimal montoCapital, Integer cantidadCuotas,
+                                   LocalDate fechaPrimeraCuota, LocalDate fechaUltimaCuota, BigDecimal tasaMensual,
+                                   BigDecimal tasaAnualEfectiva, BigDecimal valorCuota, BigDecimal gastosIniciales,
+                                   BigDecimal costoAdicionalPorCuota) {
+        this.modalidad = modalidad;
+        this.montoCapital = montoCapital;
+        this.cantidadCuotas = cantidadCuotas;
+        this.fechaPrimeraCuota = fechaPrimeraCuota;
+        this.fechaUltimaCuota = fechaUltimaCuota;
+        this.tasaMensual = tasaMensual;
+        this.tasaAnualEfectiva = tasaAnualEfectiva;
+        this.valorCuota = valorCuota;
+        this.gastosIniciales = gastosIniciales;
+        this.costoAdicionalPorCuota = costoAdicionalPorCuota;
+    }
 }
