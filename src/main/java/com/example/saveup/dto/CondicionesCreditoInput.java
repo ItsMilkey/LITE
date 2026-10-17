@@ -52,4 +52,18 @@ public class CondicionesCreditoInput {
         this.gastosIniciales = gastosIniciales;
         this.costoAdicionalPorCuota = costoAdicionalPorCuota;
     }
+
+    /**
+     * Tasa mensual como fracción (0.015 = 1,5 %): lo que consume el motor. La
+     * conversión porcentaje → fracción vive en el DTO (regla 40), no en
+     * {@link com.example.saveup.service.finanzas.ResolutorCondiciones}.
+     */
+    public BigDecimal tasaMensualFraccion() {
+        return PorcentajeTasa.aFraccion(tasaMensual);
+    }
+
+    /** Tasa anual efectiva como fracción (0.1956 = 19,56 %). */
+    public BigDecimal tasaAnualEfectivaFraccion() {
+        return PorcentajeTasa.aFraccion(tasaAnualEfectiva);
+    }
 }

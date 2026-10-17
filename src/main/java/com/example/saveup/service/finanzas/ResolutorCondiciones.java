@@ -4,12 +4,10 @@ import com.example.saveup.dto.CondicionesCreditoInput;
 import com.example.saveup.model.enums.ModalidadCalculo;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
 import java.time.LocalDate;
 
 public class ResolutorCondiciones {
 
-    private static final MathContext MC = MathContext.DECIMAL128;
     private static final BigDecimal CIEN = new BigDecimal("100");
 
     private final CalculoFinancieroService calculoService;
@@ -118,15 +116,18 @@ public class ResolutorCondiciones {
                     if (dto.getTasaMensual().compareTo(BigDecimal.ZERO) < 0 || dto.getTasaMensual().compareTo(CIEN) > 0) {
                         throw new CalculoFinancieroException("La tasa mensual debe estar entre 0 y 100%");
                     }
-                    tasaMensualFraccion = dto.getTasaMensual().divide(CIEN, MC);
+                    tasaMensualFraccion = dto.tasaMensualFraccion();
                 } else {
                     if (dto.getTasaAnualEfectiva().compareTo(BigDecimal.ZERO) < 0) {
                         throw new CalculoFinancieroException("La tasa anual efectiva debe ser mayor o igual a 0");
                     }
-                    tasaMensualFraccion = calculoService.tasaAnualAMensual(dto.getTasaAnualEfectiva().divide(CIEN, MC));
+                    tasaMensualFraccion = calculoService.tasaAnualAMensual(dto.tasaAnualEfectivaFraccion());
                 }
             }
             case CUOTA_CONOCIDA -> {
+                if (dto.getTasaMensual() != null || dto.getTasaAnualEfectiva() != null) {
+                    throw new CalculoFinancieroException("CUOTA_CONOCIDA no admite tasas de interés");
+                }
                 if (dto.getValorCuota() == null || dto.getValorCuota().compareTo(BigDecimal.ZERO) <= 0) {
                     throw new CalculoFinancieroException("CUOTA_CONOCIDA requiere valorCuota mayor a 0");
                 }

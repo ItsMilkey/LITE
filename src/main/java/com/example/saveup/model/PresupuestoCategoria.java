@@ -2,7 +2,6 @@ package com.example.saveup.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 
 /**
@@ -13,7 +12,6 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "PRESUPUESTO_CATEGORIA")
 @Data
-@NoArgsConstructor
 public class PresupuestoCategoria {
 
     @Id
@@ -31,6 +29,10 @@ public class PresupuestoCategoria {
 
     @Column(name = "LIMITE_MENSUAL", nullable = false, precision = 19, scale = 2)
     private BigDecimal limiteMensual;
+
+    /** Constructor sin argumentos requerido por JPA/Hibernate (explícito, sin Lombok). */
+    public PresupuestoCategoria() {
+    }
 
     public PresupuestoCategoria(Long id, Usuario usuario, Categoria categoria, BigDecimal limiteMensual) {
         this.id = id;

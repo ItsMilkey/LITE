@@ -9,7 +9,6 @@ import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.MovimientoService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -24,11 +23,14 @@ import java.util.Map;
 @RequestMapping("/api/movimientos")
 public class MovimientoController {
 
-    @Autowired
-    private MovimientoService movimientoService;
+    private final MovimientoService movimientoService;
 
-    @Autowired
-    private SecurityUtils securityUtils;
+    private final SecurityUtils securityUtils;
+
+    public MovimientoController(MovimientoService movimientoService, SecurityUtils securityUtils) {
+        this.movimientoService = movimientoService;
+        this.securityUtils = securityUtils;
+    }
 
     @PostMapping
     public ResponseEntity<?> registrarMovimiento(@Valid @RequestBody MovimientoRegistroDTO dto) {

@@ -4,6 +4,7 @@ import com.example.saveup.dto.SimulacionCreditoRequestDTO;
 import com.example.saveup.dto.SimulacionCreditoResponseDTO;
 import com.example.saveup.model.enums.ModalidadCalculo;
 import com.example.saveup.service.finanzas.CalculoFinancieroException;
+import com.example.saveup.service.finanzas.MotorFinanciero;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,7 @@ class SimulacionServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new SimulacionService();
+        service = new SimulacionService(new MotorFinanciero());
     }
 
     // ──────────────────────── 1. Modalidades de T1a ────────────────────────
@@ -285,6 +286,28 @@ class SimulacionServiceTest {
                 .cantidadCuotasAlternativas(List.of(6, 24))
                 .build();
         assertThrows(CalculoFinancieroException.class, () -> service.simularCredito(reqConAlt));
+    }
+
+    @Test
+    @DisplayName("Error 400 si CUOTA_CONOCIDA envía tasaMensual o tasaAnualEfectiva (T1b: ninguna en las demás modalidades)")
+    void error_cuotaConocidaConTasa() {
+        SimulacionCreditoRequestDTO conTasaMensual = SimulacionCreditoRequestDTO.builder()
+                .modalidad(ModalidadCalculo.CUOTA_CONOCIDA)
+                .montoCapital(new BigDecimal("100000"))
+                .cantidadCuotas(12)
+                .valorCuota(new BigDecimal("10000"))
+                .tasaMensual(new BigDecimal("1.5"))
+                .build();
+        assertThrows(CalculoFinancieroException.class, () -> service.simularCredito(conTasaMensual));
+
+        SimulacionCreditoRequestDTO conTasaAnual = SimulacionCreditoRequestDTO.builder()
+                .modalidad(ModalidadCalculo.CUOTA_CONOCIDA)
+                .montoCapital(new BigDecimal("100000"))
+                .cantidadCuotas(12)
+                .valorCuota(new BigDecimal("10000"))
+                .tasaAnualEfectiva(new BigDecimal("19.56"))
+                .build();
+        assertThrows(CalculoFinancieroException.class, () -> service.simularCredito(conTasaAnual));
     }
 
     @Test

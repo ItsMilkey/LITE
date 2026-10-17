@@ -1,14 +1,13 @@
 package com.example.saveup.controller;
-import com.example.saveup.service.finanzas.CalculoFinancieroException;
 
 import com.example.saveup.dto.DeudaCreacionDTO;
 import com.example.saveup.dto.DeudaResponseDTO;
 import com.example.saveup.dto.PagoDeudaDTO;
 import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.DeudaService;
+import com.example.saveup.service.finanzas.CalculoFinancieroException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,11 +19,14 @@ import java.util.Map;
 @RequestMapping("/api/deudas")
 public class DeudaController {
 
-    @Autowired
-    private DeudaService deudaService;
+    private final DeudaService deudaService;
 
-    @Autowired
-    private SecurityUtils securityUtils;
+    private final SecurityUtils securityUtils;
+
+    public DeudaController(DeudaService deudaService, SecurityUtils securityUtils) {
+        this.deudaService = deudaService;
+        this.securityUtils = securityUtils;
+    }
 
     // Endpoint para crear una nueva deuda
     @PostMapping

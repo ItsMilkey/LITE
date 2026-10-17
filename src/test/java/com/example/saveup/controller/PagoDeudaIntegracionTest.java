@@ -424,7 +424,7 @@ class PagoDeudaIntegracionTest {
                 .andExpect(jsonPath("$[0].valorCuota").value(10000.00))
                 .andExpect(jsonPath("$[0].cuotasPagadas").value(0))
                 .andExpect(jsonPath("$[0].tasaMensualFraccion").doesNotExist())
-                .andExpect(jsonPath("$[0].tasaMensualPorcentaje").exists());
+                .andExpect(jsonPath("$[0].tasaMensual").exists());
 
         assertNotNull(deudaDe(deuda));
     }

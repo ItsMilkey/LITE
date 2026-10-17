@@ -2,12 +2,10 @@ package com.example.saveup.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "CATEGORIA")
 @Data
-@NoArgsConstructor
 public class Categoria {
 
     @Id
@@ -27,6 +25,10 @@ public class Categoria {
     @Enumerated(EnumType.STRING)
     @Column(name = "TIPO_PRESUPUESTO")
     private com.example.saveup.model.enums.TipoPresupuesto tipoPresupuesto;
+
+    /** Constructor sin argumentos requerido por JPA/Hibernate (explícito, sin Lombok). */
+    public Categoria() {
+    }
 
     public Categoria(Long id, String nombre, String iconId, String colorHex,
                      com.example.saveup.model.enums.TipoPresupuesto tipoPresupuesto) {

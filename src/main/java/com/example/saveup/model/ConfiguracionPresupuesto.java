@@ -2,13 +2,11 @@ package com.example.saveup.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "CONFIGURACION_PRESUPUESTO")
 @Data
-@NoArgsConstructor
 public class ConfiguracionPresupuesto {
 
     @Id
@@ -40,6 +38,10 @@ public class ConfiguracionPresupuesto {
      */
     @Column(name = "AUTOMATIZAR_AHORRO_EN_METAS", nullable = false)
     private Boolean automatizarAhorroEnMetas = false;
+
+    /** Constructor sin argumentos requerido por JPA/Hibernate (explícito, sin Lombok). */
+    public ConfiguracionPresupuesto() {
+    }
 
     @PrePersist
     @PreUpdate

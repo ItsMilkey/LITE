@@ -1,5 +1,6 @@
 package com.example.saveup.service;
 
+import com.example.saveup.dto.CondicionesCreditoInput;
 import com.example.saveup.dto.DeudaCreacionDTO;
 import com.example.saveup.dto.DeudaResponseDTO;
 import com.example.saveup.dto.PageResponseDTO;
@@ -248,7 +249,7 @@ class DeudaServiceTest {
         List<DeudaResponseDTO> result = deudaService.obtenerDeudasPorUsuario(RUT);
 
         // porcentaje de la tasa mensual (fracción → porcentaje, regla 40)
-        assertEquals(0, new BigDecimal("1.5000").compareTo(result.get(0).getTasaMensualPorcentaje()));
+        assertEquals(0, new BigDecimal("1.5000").compareTo(result.get(0).getTasaMensual()));
         // tasa anual efectiva = (1 + 0.015)^12 − 1 = 19.56 %
         assertEquals(0, new BigDecimal("19.56").compareTo(result.get(0).getTasaAnualEfectiva()));
         // el valor de cuota persistido se respeta
@@ -265,7 +266,7 @@ class DeudaServiceTest {
     @Test
     @DisplayName("La tasa mensual se expone como porcentaje; la fracción cruda no sale en el JSON")
     void deudaResponseDTO_exponeTasaComoPorcentaje() throws NoSuchFieldException {
-        assertNotNull(DeudaResponseDTO.class.getDeclaredField("tasaMensualPorcentaje"));
+        assertNotNull(DeudaResponseDTO.class.getDeclaredField("tasaMensual"));
         // El dato crudo existe en el DTO para que el servicio recalcule, pero no se expone
         assertNotNull(DeudaResponseDTO.class.getDeclaredField("tasaMensualFraccion"));
 
@@ -279,7 +280,7 @@ class DeudaServiceTest {
         List<DeudaResponseDTO> result = deudaService.obtenerDeudasPorUsuario(RUT);
 
         // 0.015 de fracción se muestra como 1.5 % de porcentaje
-        assertEquals(0, new BigDecimal("1.5000").compareTo(result.get(0).getTasaMensualPorcentaje()));
+        assertEquals(0, new BigDecimal("1.5000").compareTo(result.get(0).getTasaMensual()));
     }
 
     @Test
@@ -297,7 +298,7 @@ class DeudaServiceTest {
         List<DeudaResponseDTO> result = deudaService.obtenerDeudasPorUsuario(RUT);
 
         assertEquals(1, result.size());
-        assertEquals(0, new BigDecimal("3.0000").compareTo(cuotaConocida.getTasaMensualPorcentaje()));
+        assertEquals(0, new BigDecimal("3.0000").compareTo(cuotaConocida.getTasaMensual()));
         assertEquals(0, new BigDecimal("10000.00").compareTo(cuotaConocida.getValorCuota()));
         assertEquals(LocalDate.of(2027, 7, 7), cuotaConocida.getFechaUltimaCuota());
         assertEquals(0, cuotaConocida.getCuotasPagadas());
@@ -324,6 +325,58 @@ class DeudaServiceTest {
         assertNull(invalida.getSaldoCapital());
         assertNull(invalida.getMontoPagado());
         assertEquals(0, invalida.getCuotasPagadas());
+    }
+
+    // ──────────────────────── editar ────────────────────────
+
+    @Test
+    @DisplayName("Editar con pagos: cuotasPagadasPrevias y etiqueta sí se aplican, sin tocar las condiciones financieras")
+    void editarDeuda_conPagos_aplicaPreviasYEtiqueta() {
+        stubBuscarDeuda();
+        when(deudaRepository.countPagosPorDeuda(1L)).thenReturn(2);
+        when(deudaRepository.save(any(Deuda.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(
+                proyeccion(1L, "Deuda renombrada", new BigDecimal("100000.00"), 10, new BigDecimal("-20000.00"))));
+
+        DeudaCreacionDTO dto = new DeudaCreacionDTO();
+        dto.setNombre("Deuda renombrada");
+        dto.setDescripcion("Corregida");
+        dto.setTipoDeuda(TipoDeuda.PERSONAL);
+        dto.setCuotasPagadasPrevias(2);
+
+        DeudaResponseDTO result = deudaService.editarDeuda(1L, dto);
+
+        assertNotNull(result);
+        assertEquals("Deuda renombrada", deuda.getNombre());
+        assertEquals("Corregida", deuda.getDescripcion());
+        assertEquals(TipoDeuda.PERSONAL, deuda.getTipoDeuda());
+        assertEquals(2, deuda.getCuotasPagadasPrevias());
+        // montoPagadoPrevio se recalcula desde el cronograma persistido: 2 × 10.000
+        assertEquals(0, new BigDecimal("20000.00").compareTo(deuda.getMontoPagadoPrevio()));
+        // Las condiciones financieras persistidas quedan intactas
+        assertEquals(10, deuda.getCantidadCuotas());
+        assertEquals(0, new BigDecimal("100000.00").compareTo(deuda.getMontoCapital()));
+        assertEquals(0, new BigDecimal("10000.00").compareTo(deuda.getValorCuota()));
+        verify(securityUtils).validarPropietario(RUT);
+    }
+
+    @Test
+    @DisplayName("Editar con pagos: cambiar las condiciones financieras → IllegalStateException (409)")
+    void editarDeuda_conPagos_condicionesBloqueadas() {
+        stubBuscarDeuda();
+        when(deudaRepository.countPagosPorDeuda(1L)).thenReturn(1);
+
+        CondicionesCreditoInput condiciones = new CondicionesCreditoInput();
+        condiciones.setModalidad(ModalidadCalculo.SIN_INTERES);
+        condiciones.setMontoCapital(new BigDecimal("50000"));
+        condiciones.setCantidadCuotas(5);
+
+        DeudaCreacionDTO dto = new DeudaCreacionDTO();
+        dto.setNombre("Deuda");
+        dto.setCondiciones(condiciones);
+
+        assertThrows(IllegalStateException.class, () -> deudaService.editarDeuda(1L, dto));
+        verify(deudaRepository, never()).save(any(Deuda.class));
     }
 
     // ──────────────────────── registrarPago ────────────────────────

@@ -308,6 +308,22 @@ class MovimientoFiltrosEdicionTest {
     }
 
     @Test
+    @DisplayName("Editar solo la descripción (PUT parcial) → 200 y conserva monto y categoría")
+    void editarSoloDescripcion_200() throws Exception {
+        Movimiento gasto = movimiento(usuario, fecha(2026, 8, 1), TipoMovimiento.GASTO_GENERAL,
+                "-1000.00", "Vieja", categoria, null);
+
+        mockMvc.perform(put("/api/movimientos/" + gasto.getId())
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"descripcion\":\"Solo texto\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.descripcion").value("Solo texto"))
+                .andExpect(jsonPath("$.monto").value(-1000.00))
+                .andExpect(jsonPath("$.categoria.id").value(categoria.getId()));
+    }
+
+    @Test
     @DisplayName("Editar un movimiento ajeno → 403 Forbidden (anti-IDOR)")
     void editarAjeno_403() throws Exception {
         Movimiento deOtro = movimiento(ajeno, fecha(2026, 8, 2), TipoMovimiento.GASTO_GENERAL,

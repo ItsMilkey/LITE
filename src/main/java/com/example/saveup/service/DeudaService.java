@@ -56,10 +56,7 @@ public class DeudaService {
     private static final Logger LOG = LoggerFactory.getLogger(DeudaService.class);
 
     private static final int ESCALA_DINERO = 2;
-    private static final int ESCALA_PORCENTAJE_TASA = 4;
-    private static final int ESCALA_TASA_ANUAL = 2;
     private static final RoundingMode REDONDEO = RoundingMode.HALF_UP;
-    private static final BigDecimal CIEN = new BigDecimal("100");
 
     private final DeudaRepository deudaRepository;
     private final UsuarioRepository usuarioRepository;
@@ -173,15 +170,46 @@ public class DeudaService {
 
         securityUtils.validarPropietario(deuda.getUsuario().getRut());
 
-        Integer cuotasPagadas = deudaRepository.countPagosPorDeuda(deudaId);
-        if (cuotasPagadas != null && cuotasPagadas > 0) {
-            throw new IllegalStateException("No se puede editar una deuda que ya tiene pagos registrados.");
+        Integer pagos = deudaRepository.countPagosPorDeuda(deudaId);
+        if (pagos != null && pagos > 0) {
+            // Con pagos registrados las condiciones financieras quedan congeladas:
+            // cambiarlas invalidaría los pagos ya imputados. Sí se pueden corregir
+            // la etiqueta y cuotasPagadasPrevias (T1c).
+            if (dto.getCondiciones() != null || dto.getMontoTotal() != null || dto.getCantidadCuotas() != null) {
+                throw new IllegalStateException(
+                        "No se pueden editar las condiciones de una deuda que ya tiene pagos registrados.");
+            }
+            aplicarEtiquetaYPrevias(deuda, dto);
+        } else {
+            aplicarCalculoGuardar(deuda, dto);
         }
 
-        aplicarCalculoGuardar(deuda, dto);
         Deuda deudaActualizada = deudaRepository.save(deuda);
 
         return convertirADeudaResponseDTO(deudaActualizada);
+    }
+
+    /**
+     * Edición parcial permitida cuando la deuda ya tiene pagos: solo la etiqueta
+     * (nombre, descripción, tipo) y {@code cuotasPagadasPrevias}. Recalcula
+     * {@code montoPagadoPrevio} desde el cronograma persistido sin tocar las
+     * condiciones financieras, que quedan congeladas para no invalidar los pagos
+     * ya imputados (T1c).
+     */
+    private void aplicarEtiquetaYPrevias(Deuda deuda, DeudaCreacionDTO dto) {
+        deuda.setNombre(dto.getNombre());
+        deuda.setDescripcion(dto.getDescripcion());
+        deuda.setTipoDeuda(dto.getTipoDeuda() != null ? dto.getTipoDeuda() : TipoDeuda.OTRO);
+
+        if (dto.getCuotasPagadasPrevias() != null && dto.getCuotasPagadasPrevias() >= 0) {
+            deuda.setCuotasPagadasPrevias(dto.getCuotasPagadasPrevias());
+        }
+        if (deuda.getCuotasPagadasPrevias() >= deuda.getCantidadCuotas()) {
+            throw new IllegalArgumentException("cuotasPagadasPrevias (" + deuda.getCuotasPagadasPrevias()
+                    + ") no puede ser mayor o igual a cantidadCuotas (" + deuda.getCantidadCuotas() + ")");
+        }
+        deuda.setMontoPagadoPrevio(
+                sumarCuotasPagadasPrevias(deuda.getCuotasPagadasPrevias(), tablaAmortizacion(deuda)));
     }
 
     @Transactional
@@ -402,12 +430,18 @@ public class DeudaService {
         deuda.setCostoTotalCredito(resultado.costoTotalCredito());
         deuda.setCargaAnualEquivalente(resultado.cargaAnualEquivalente());
 
-        BigDecimal montoPagadoPrevio = BigDecimal.ZERO;
-        for (int i = 0; i < deuda.getCuotasPagadasPrevias(); i++) {
-            CuotaAmortizacion c = resultado.tabla().get(i);
-            montoPagadoPrevio = montoPagadoPrevio.add(c.cuota()).add(c.costoAdicional());
+        deuda.setMontoPagadoPrevio(
+                sumarCuotasPagadasPrevias(deuda.getCuotasPagadasPrevias(), resultado.tabla()));
+    }
+
+    /** Suma de (cuota + costo adicional) de las primeras {@code cuotasPagadasPrevias} cuotas. */
+    private BigDecimal sumarCuotasPagadasPrevias(int cuotasPagadasPrevias, List<CuotaAmortizacion> tabla) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (int i = 0; i < cuotasPagadasPrevias; i++) {
+            CuotaAmortizacion c = tabla.get(i);
+            total = total.add(c.cuota()).add(c.costoAdicional());
         }
-        deuda.setMontoPagadoPrevio(montoPagadoPrevio);
+        return total;
     }
 
     // ──────────────────────── Pagos: monto y saldos ────────────────────────
@@ -488,14 +522,10 @@ public class DeudaService {
     /** Tasa mensual en porcentaje y tasa anual efectiva = (1+m)^12 − 1, en porcentaje. */
     private void aplicarDerivadosTasa(DeudaResponseDTO dto) {
         BigDecimal fraccion = dto.getTasaMensualFraccion();
-        dto.setTasaMensualPorcentaje(fraccion != null
-                ? fraccion.multiply(CIEN).setScale(ESCALA_PORCENTAJE_TASA, REDONDEO)
-                : BigDecimal.ZERO.setScale(ESCALA_PORCENTAJE_TASA, REDONDEO));
-
-        dto.setTasaAnualEfectiva(fraccion != null && fraccion.compareTo(BigDecimal.ZERO) > 0
-                ? motorFinanciero.calculoService().tasaMensualAAnual(fraccion)
-                        .multiply(CIEN).setScale(ESCALA_TASA_ANUAL, REDONDEO)
-                : BigDecimal.ZERO.setScale(ESCALA_TASA_ANUAL, REDONDEO));
+        // La conversión fracción → porcentaje vive en el DTO (regla 40).
+        dto.setTasaMensualDesdeFraccion(fraccion);
+        dto.setTasaAnualEfectivaDesdeFraccion(
+                fraccion != null ? motorFinanciero.calculoService().tasaMensualAAnual(fraccion) : null);
     }
 
     /** Valor de cuota persistido (o montoTotal/cantidadCuotas) y fecha de la última cuota. */

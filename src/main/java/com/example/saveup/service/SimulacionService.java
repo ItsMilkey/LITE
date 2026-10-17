@@ -1,6 +1,7 @@
 package com.example.saveup.service;
 
 import com.example.saveup.dto.CondicionesCreditoInput;
+import com.example.saveup.dto.PorcentajeTasa;
 import com.example.saveup.dto.SimulacionCreditoRequestDTO;
 import com.example.saveup.dto.SimulacionCreditoResponseDTO;
 import com.example.saveup.dto.SimulacionCreditoResponseDTO.*;
@@ -28,14 +29,12 @@ public class SimulacionService {
     private static final RoundingMode REDONDEO = RoundingMode.HALF_UP;
     private static final BigDecimal CIEN = new BigDecimal("100");
     private static final BigDecimal UMBRAL_INGRESO_COMPROMETIDO = new BigDecimal("30");
+    private static final int MAX_CUOTAS_ALTERNATIVAS = 5;
+    private static final int MAX_CUOTAS = 360;
     private static final String ADVERTENCIA_CAE = "El CAE mostrado es referencial; el oficial lo informa la institución financiera.";
     private static final String ADVERTENCIA_SOBRE_ENDEUDAMIENTO = "La cuota mensual compromete más del 30% de tus ingresos declarados (se recomienda un máximo de 30%).";
 
     private final MotorFinanciero motorFinanciero;
-
-    public SimulacionService() {
-        this.motorFinanciero = new MotorFinanciero();
-    }
 
     public SimulacionService(MotorFinanciero motorFinanciero) {
         this.motorFinanciero = motorFinanciero;
@@ -76,8 +75,8 @@ public class SimulacionService {
                 .cantidadCuotas(cantidadCuotas)
                 .fechaPrimeraCuota(request.getFechaPrimeraCuota())
                 .fechaUltimaCuota(fechaUltimaCuotaNormalizada)
-                .tasaMensual(toPorcentajeTasa(resultado.tasaMensual()))
-                .tasaAnualEfectiva(toPorcentaje(resultado.tasaAnualEfectiva()))
+                .tasaMensual(PorcentajeTasa.aPorcentaje(resultado.tasaMensual(), ESCALA_TASA))
+                .tasaAnualEfectiva(PorcentajeTasa.aPorcentaje(resultado.tasaAnualEfectiva(), ESCALA_DINERO))
                 .build();
 
         // 7. Construir resumen educativo
@@ -140,7 +139,7 @@ public class SimulacionService {
                         .valorCuota(altRes.valorCuota())
                         .costoTotalCredito(altRes.costoTotalCredito())
                         .interesesYCostos(altRes.interesesYCostos())
-                        .cargaAnualEquivalente(toPorcentaje(altRes.cargaAnualEquivalente()))
+                        .cargaAnualEquivalente(PorcentajeTasa.aPorcentaje(altRes.cargaAnualEquivalente(), ESCALA_DINERO))
                         .build());
             }
         }
@@ -159,7 +158,7 @@ public class SimulacionService {
                 .gastosIniciales(resultadoResolucion.gastosIniciales().setScale(ESCALA_DINERO, REDONDEO))
                 .costoTotalCredito(resultado.costoTotalCredito())
                 .interesesYCostos(resultado.interesesYCostos())
-                .cargaAnualEquivalente(toPorcentaje(resultado.cargaAnualEquivalente()))
+                .cargaAnualEquivalente(PorcentajeTasa.aPorcentaje(resultado.cargaAnualEquivalente(), ESCALA_DINERO))
                 .resumenEducativo(resumenEducativo)
                 .tablaAmortizacion(tablaAmortizacion)
                 .comparacionPlazos(comparacionPlazos)
@@ -196,28 +195,14 @@ public class SimulacionService {
             if (request.getModalidad() == ModalidadCalculo.CUOTA_CONOCIDA) {
                 throw new CalculoFinancieroException("CUOTA_CONOCIDA no admite cuotas alternativas");
             }
-            if (request.getCantidadCuotasAlternativas().size() > 5) {
-                throw new CalculoFinancieroException("Máximo 5 plazos alternativos permitidos");
+            if (request.getCantidadCuotasAlternativas().size() > MAX_CUOTAS_ALTERNATIVAS) {
+                throw new CalculoFinancieroException("Máximo " + MAX_CUOTAS_ALTERNATIVAS + " plazos alternativos permitidos");
             }
             for (Integer cuotas : request.getCantidadCuotasAlternativas()) {
-                if (cuotas == null || cuotas < 1 || cuotas > 360) {
-                    throw new CalculoFinancieroException("Las cuotas alternativas deben estar entre 1 y 360");
+                if (cuotas == null || cuotas < 1 || cuotas > MAX_CUOTAS) {
+                    throw new CalculoFinancieroException("Las cuotas alternativas deben estar entre 1 y " + MAX_CUOTAS);
                 }
             }
         }
-    }
-
-    private BigDecimal toPorcentaje(BigDecimal fraccion) {
-        if (fraccion == null) {
-            return null;
-        }
-        return fraccion.multiply(CIEN).setScale(ESCALA_DINERO, REDONDEO);
-    }
-
-    private BigDecimal toPorcentajeTasa(BigDecimal fraccion) {
-        if (fraccion == null) {
-            return null;
-        }
-        return fraccion.multiply(CIEN).setScale(ESCALA_TASA, REDONDEO);
     }
 }

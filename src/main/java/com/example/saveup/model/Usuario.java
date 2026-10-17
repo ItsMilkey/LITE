@@ -3,14 +3,12 @@ package com.example.saveup.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.ToString;
 import java.util.Date;
 
 @Entity
 @Table(name = "USUARIO")
 @Data // Genera getters, setters, toString, etc.
-@NoArgsConstructor
 public class Usuario {
 
     @Id
@@ -34,6 +32,10 @@ public class Usuario {
     @Column(name = "FECHA_REGISTRO", nullable = false, updatable = false)
     @Temporal(TemporalType.TIMESTAMP)
     private Date fechaRegistro;
+
+    /** Constructor sin argumentos requerido por JPA/Hibernate (explícito, sin Lombok). */
+    public Usuario() {
+    }
 
     @PrePersist
     protected void onCreate() {

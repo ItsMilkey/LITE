@@ -3,14 +3,12 @@ package com.example.saveup.model;
 import com.example.saveup.model.enums.TipoMovimiento;
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.util.Date;
 
 @Entity
 @Table(name = "MOVIMIENTO")
 @Data
-@NoArgsConstructor
 public class Movimiento {
 
     @Id
@@ -62,6 +60,10 @@ public class Movimiento {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "MOVIMIENTO_ORIGEN_ID", updatable = false)
     private Movimiento movimientoOrigen;
+
+    /** Constructor sin argumentos requerido por JPA/Hibernate (explícito, sin Lombok). */
+    public Movimiento() {
+    }
 
     @PrePersist
     protected void onCreate() {

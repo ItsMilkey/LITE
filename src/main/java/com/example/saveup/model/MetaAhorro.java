@@ -2,14 +2,12 @@ package com.example.saveup.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.util.Date;
 
 @Entity
 @Table(name = "META_AHORRO")
 @Data
-@NoArgsConstructor
 public class MetaAhorro {
 
     @Id
@@ -36,6 +34,10 @@ public class MetaAhorro {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "USUARIO_ID", nullable = false)
     private Usuario usuario;
+
+    /** Constructor sin argumentos requerido por JPA/Hibernate (explícito, sin Lombok). */
+    public MetaAhorro() {
+    }
 
     public BigDecimal getMontoActual() {
         return montoActual != null ? montoActual : BigDecimal.ZERO;

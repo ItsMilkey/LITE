@@ -230,8 +230,13 @@ public class MovimientoService {
         Movimiento movimiento = buscarPropioOAccesoDenegado(id);
         validarEditable(movimiento);
 
-        movimiento.setDescripcion(dto.getDescripcion());
-        movimiento.setMonto(SignoMovimiento.aplicar(movimiento.getTipoMovimiento(), dto.getMonto()));
+        // Edición parcial (T4): solo se tocan los campos que el cliente envía.
+        if (dto.getDescripcion() != null) {
+            movimiento.setDescripcion(dto.getDescripcion());
+        }
+        if (dto.getMonto() != null) {
+            movimiento.setMonto(SignoMovimiento.aplicar(movimiento.getTipoMovimiento(), dto.getMonto()));
+        }
         if (dto.getCategoriaId() != null) {
             movimiento.setCategoria(resolverCategoria(dto.getCategoriaId()));
         }
