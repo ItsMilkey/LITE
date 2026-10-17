@@ -68,12 +68,12 @@ A continuación se detalla el mapa de archivos donde este problema se manifiesta
 | Archivo | Líneas | Anotaciones | Estado actual |
 |---|---|---|---|
 | [AsignacionMetaPresupuesto.java](file:///c:/Users/hanom/Downloads/LITE/src/main/java/com/example/saveup/model/AsignacionMetaPresupuesto.java#L32-L41) | 32-41 | Reemplazado por constructores explícitos | **Resuelto** |
-| [Usuario.java](file:///c:/Users/hanom/Downloads/LITE/src/main/java/com/example/saveup/model/Usuario.java#L14-L15) | 14-15 | `@NoArgsConstructor`, `@AllArgsConstructor` | Pendiente |
-| [Movimiento.java](file:///c:/Users/hanom/Downloads/LITE/src/main/java/com/example/saveup/model/Movimiento.java#L14-L15) | 14-15 | `@NoArgsConstructor`, `@AllArgsConstructor` | Pendiente |
-| [MetaAhorro.java](file:///c:/Users/hanom/Downloads/LITE/src/main/java/com/example/saveup/model/MetaAhorro.java#L13-L14) | 13-14 | `@NoArgsConstructor`, `@AllArgsConstructor` | Pendiente |
-| [Categoria.java](file:///c:/Users/hanom/Downloads/LITE/src/main/java/com/example/saveup/model/Categoria.java#L11-L12) | 11-12 | `@NoArgsConstructor`, `@AllArgsConstructor` | Pendiente |
-| [ConfiguracionPresupuesto.java](file:///c:/Users/hanom/Downloads/LITE/src/main/java/com/example/saveup/model/ConfiguracionPresupuesto.java#L12-L13) | 12-13 | `@NoArgsConstructor`, `@AllArgsConstructor` | Pendiente |
-| [PresupuestoCategoria.java](file:///c:/Users/hanom/Downloads/LITE/src/main/java/com/example/saveup/model/PresupuestoCategoria.java#L17-L18) | 17-18 | `@NoArgsConstructor`, `@AllArgsConstructor` | Pendiente |
+| [Usuario.java](file:///c:/Users/hanom/Downloads/LITE/src/main/java/com/example/saveup/model/Usuario.java#L14-L15) | 14-15 | `@NoArgsConstructor`, `@AllArgsConstructor` | Resuelto |
+| [Movimiento.java](file:///c:/Users/hanom/Downloads/LITE/src/main/java/com/example/saveup/model/Movimiento.java#L14-L15) | 14-15 | `@NoArgsConstructor`, `@AllArgsConstructor` | Resuelto |
+| [MetaAhorro.java](file:///c:/Users/hanom/Downloads/LITE/src/main/java/com/example/saveup/model/MetaAhorro.java#L13-L14) | 13-14 | `@NoArgsConstructor`, `@AllArgsConstructor` | Resuelto |
+| [Categoria.java](file:///c:/Users/hanom/Downloads/LITE/src/main/java/com/example/saveup/model/Categoria.java#L11-L12) | 11-12 | `@NoArgsConstructor`, `@AllArgsConstructor` | Resuelto |
+| [ConfiguracionPresupuesto.java](file:///c:/Users/hanom/Downloads/LITE/src/main/java/com/example/saveup/model/ConfiguracionPresupuesto.java#L12-L13) | 12-13 | `@NoArgsConstructor`, `@AllArgsConstructor` | Resuelto |
+| [PresupuestoCategoria.java](file:///c:/Users/hanom/Downloads/LITE/src/main/java/com/example/saveup/model/PresupuestoCategoria.java#L17-L18) | 17-18 | `@NoArgsConstructor`, `@AllArgsConstructor` | Resuelto |
 
 ### 3.3. DTOs de Entrada / Salida (`@AllArgsConstructor` / `@NoArgsConstructor`)
 - [SimulacionCreditoRequestDTO.java](file:///c:/Users/hanom/Downloads/LITE/src/main/java/com/example/saveup/dto/SimulacionCreditoRequestDTO.java#L17-L18)
