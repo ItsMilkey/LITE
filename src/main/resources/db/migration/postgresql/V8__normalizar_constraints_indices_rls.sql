@@ -2,7 +2,7 @@
 -- 1) Revierte V7: nombres de constraint en minúscula (PostgreSQL pliega los identificadores sin comillas).
 -- 2) Valida el CHECK de signo de MOVIMIENTO (la tabla estaba vacía al revisar; si hubiera filas inválidas, esta sentencia falla y lo hace visible).
 -- 3) Índices en las columnas de filtro y claves foráneas más usadas (PostgreSQL no indexa las FK automáticamente).
--- 4) RLS en todas las tablas del esquema public (Supabase las expone por API). El backend conecta con el rol postgres, que lo ignora.
+-- 4) RLS en las 8 tablas de dominio del esquema public (Supabase las expone por API). El backend conecta con el rol postgres, que lo ignora. flyway_schema_history NO se toca: Flyway la mantiene bloqueada durante la migración (su RLS se activa a mano, fuera de Flyway).
 
 -- 1) Nombres en minúscula
 ALTER TABLE deuda RENAME CONSTRAINT "CHK_CUOTAS_PAGADAS_PREVIAS" TO chk_cuotas_pagadas_previas;
@@ -36,4 +36,3 @@ ALTER TABLE movimiento ENABLE ROW LEVEL SECURITY;
 ALTER TABLE configuracion_presupuesto ENABLE ROW LEVEL SECURITY;
 ALTER TABLE asignacion_meta_presupuesto ENABLE ROW LEVEL SECURITY;
 ALTER TABLE presupuesto_categoria ENABLE ROW LEVEL SECURITY;
-ALTER TABLE flyway_schema_history ENABLE ROW LEVEL SECURITY;
