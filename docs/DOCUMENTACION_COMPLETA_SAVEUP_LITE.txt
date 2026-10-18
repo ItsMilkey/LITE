@@ -3,12 +3,12 @@
             DOCUMENTACION TECNICA COMPLETA Y DETALLADA DEL PROYECTO
 ================================================================================
 Fecha de Generacion: 2026-09-29
-Ultima Actualizacion: 2026-10-12
+Ultima Actualizacion: 2026-10-18
 Version: 0.0.1-SNAPSHOT
 Framework Base: Spring Boot 3.3.0
 Lenguaje: Java 21 LTS
 Base de Datos: Supabase PostgreSQL (session pooler, SSL) en dev y prod
-Migracion de Esquema: Flyway 10.x (gestionado por BOM Spring Boot 3.3)
+Migracion de Esquema: Flyway 10.20.0 (propiedad flyway.version en el pom.xml)
 Repositorio: https://github.com/ItsMilkey/LITE
 Servicio en Produccion: https://lite-backend-1wn9.onrender.com/
 ================================================================================
@@ -22,12 +22,15 @@ TABLA DE CONTENIDOS:
 6. MAPA COMPLETO DE ENDPOINTS REST
 7. CATALOGO DE CLASES, SERVICIOS, REPOSITORIOS Y METODOS
 8. REGLAS DE NEGOCIO Y FLUJOS DE TRABAJO (MAPAS CONCEPTUALES EN TEXTO)
+   - Reglas transversales (signo canonico, metas, imputacion de pagos, filtros y
+     edicion de movimientos, presupuesto por categoria)
    - Flujo 1: Registro y Autenticacion
    - Flujo 2: Registro de Movimientos y Algoritmo Smart-Split
    - Flujo 3: Ciclo de Vida y Amortizacion de Deudas
    - Flujo 4: Metas de Ahorro y Eliminacion Segura con Reembolso
    - Flujo 5: Ejecucion Presupuestaria (Regla 50/30/20)
    - Flujo 6: Generacion y Exportacion de Reportes (Strategy: PDF / CSV)
+   - Flujo 7: Presupuesto por Categoria e Historial
 9. CONFIGURACIONES, SEGURIDAD, DESPLIEGUE Y DEVOPS
 10. MIGRACION DE ESQUEMA Y DATOS CON FLYWAY (NUEVO)
 
@@ -44,9 +47,20 @@ exportables estructurados en PDF y CSV.
 
 Aspectos destacados:
 - Modelo financiero integral: ingresos, gastos, deudas, metas y presupuestos 
-  conectados sin fisuras de integridad.
+  conectados sin fisuras de integridad. El signo de cada movimiento lo impone su
+  tipo (regla canonica) y el saldo es la suma directa de MOVIMIENTO.monto.
+- Motor financiero propio (paquete service/finanzas): cuotas francesas, tabla de
+  amortizacion, CAE y conversion de tasas, ademas de una imputacion de pagos pura
+  (interes -> costo adicional -> capital) que no se persiste.
+- Simulador de credito sin persistencia (POST /api/simulaciones/credito): cuota,
+  costos, CAE, resumen educativo, tabla de amortizacion y comparacion de plazos.
+- Deudas con condiciones de credito (modalidades SIN_INTERES, TASA_CONOCIDA y
+  CUOTA_CONOCIDA), ficha enriquecida, cronograma con estado por cuota e historial
+  de pagos con su desglose.
 - Smart-Split: asignacion automatizada de porcentajes de ahorro a metas al 
-  percibir ingresos generales.
+  percibir ingresos generales, con vinculo trazable al ingreso de origen.
+- Presupuesto 50/30/20 mas limites por categoria con medicion de ejecucion
+  (OK / ALERTA / EXCEDIDO) e historial mensual.
 - Calculos en tiempo real: saldos de cuenta, montos acumulados por meta, montos 
   pagados y restantes en deudas, y porcentaje de ejecucion presupuestaria.
 - Alta compatibilidad de exportacion: PDFs con estilos corporativos listos para 
@@ -98,21 +112,35 @@ src/main/java/com/example/saveup/
 │   ├── MovimientoController.java
 │   ├── ReporteController.java
 │   ├── SaldoController.java
+│   ├── SimulacionController.java
 │   └── UsuarioController.java
 ├── dto/
 │   ├── AbonoRetiroDTO.java
 │   ├── AsignacionPresupuestoDTO.java
 │   ├── CategoriaDTO.java
+│   ├── CondicionesCreditoInput.java
 │   ├── ConfiguracionPresupuestoRequestDTO.java
+│   ├── ConfiguracionPresupuestoResponseDTO.java
 │   ├── DeudaCreacionDTO.java
 │   ├── DeudaResponseDTO.java
+│   ├── EjecucionCategoriaDTO.java
 │   ├── EjecucionPresupuestoDTO.java
+│   ├── HistorialPresupuestoDTO.java
 │   ├── MetaAhorroCreacionDTO.java
 │   ├── MetaAhorroResponseDTO.java
+│   ├── MovimientoEdicionDTO.java
+│   ├── MovimientoFiltroDTO.java
 │   ├── MovimientoRegistroDTO.java
 │   ├── MovimientoResponseDTO.java
 │   ├── PageResponseDTO.java
 │   ├── PagoDeudaDTO.java
+│   ├── PagoDeudaResponseDTO.java
+│   ├── PorcentajeTasa.java
+│   ├── PresupuestoCategoriaDTO.java
+│   ├── PresupuestoCategoriaItemDTO.java
+│   ├── PresupuestoCategoriaRequestDTO.java
+│   ├── SimulacionCreditoRequestDTO.java
+│   ├── SimulacionCreditoResponseDTO.java
 │   ├── UsuarioLoginDTO.java
 │   └── UsuarioRegistroDTO.java
 ├── model/
@@ -122,9 +150,14 @@ src/main/java/com/example/saveup/
 │   ├── Deuda.java
 │   ├── MetaAhorro.java
 │   ├── Movimiento.java
+│   ├── PresupuestoCategoria.java
 │   ├── Usuario.java
 │   └── enums/
 │       ├── EstadoDeuda.java
+│       ├── EstadoEjecucion.java
+│       ├── ModalidadCalculo.java
+│       ├── ModoPago.java
+│       ├── TipoDeuda.java
 │       ├── TipoMovimiento.java
 │       └── TipoPresupuesto.java
 ├── repository/
@@ -134,13 +167,31 @@ src/main/java/com/example/saveup/
 │   ├── DeudaRepository.java
 │   ├── MetaAhorroRepository.java
 │   ├── MovimientoRepository.java
+│   ├── MovimientoSpecifications.java    (Specifications de filtros T4)
+│   ├── PresupuestoCategoriaRepository.java
 │   └── UsuarioRepository.java
 └── service/
     ├── CategoriaService.java
     ├── DeudaService.java
     ├── MetaAhorroService.java
     ├── MovimientoService.java
+    ├── PresupuestoService.java
+    ├── SimulacionService.java
+    ├── SmartSplitProcessor.java         (Algoritmo Smart-Split)
     ├── UsuarioService.java
+    ├── finanzas/
+    │   ├── CalculoFinancieroException.java
+    │   ├── CalculoFinancieroService.java  (Motor puro: cuotas, tabla, CAE, tasas)
+    │   ├── CalendarioCuotas.java          (Fechas de vencimiento mensuales)
+    │   ├── CondicionesCredito.java        (Record de entrada al motor)
+    │   ├── CuotaAmortizacion.java         (Fila de la tabla)
+    │   ├── ImputacionPagos.java           (Reparto de pagos, clase pura)
+    │   ├── MotorFinanciero.java           (Fachada de los 3 componentes)
+    │   ├── ResolutorCondiciones.java      (Valida/normaliza el DTO de condiciones)
+    │   └── ResultadoCalculo.java          (Record de salida del motor)
+    ├── movimiento/
+    │   ├── FechasMovimiento.java          (Frontera java.time <-> java.util.Date)
+    │   └── SignoMovimiento.java           (Regla canonica de signo)
     └── report/
         ├── CsvReporteGenerator.java
         ├── PdfReporteGenerator.java
@@ -153,9 +204,14 @@ src/main/resources/
 ├── application-prod.properties          (Supabase PostgreSQL + Flyway + vars Render)
 └── db/migration/                        (Scripts versionados de Flyway)
     └── postgresql/                      (Motor unico: PostgreSQL / Supabase, dev y prod)
-        ├── V1__init_schema.sql          (DDL completo: 7 tablas con constraints)
-        ├── V2__seed_categories.sql      (10 categorias via ON CONFLICT DO NOTHING)
-        └── V3__deuda_condiciones_credito.sql (Deuda con condiciones de credito)
+        ├── V1__init_schema.sql              (DDL completo: 7 tablas con constraints)
+        ├── V2__seed_categories.sql          (10 categorias via ON CONFLICT DO NOTHING)
+        ├── V3__deuda_condiciones_credito.sql (DEUDA + condiciones de credito)
+        ├── V4__movimiento_check_signo.sql   (CHECK CHK_MOVIMIENTO_SIGNO, NOT VALID)
+        ├── V5__movimiento_origen_id.sql     (movimiento_origen_id + FK + indice)
+        ├── V6__presupuesto_categoria.sql    (tabla PRESUPUESTO_CATEGORIA + RLS)
+        ├── V7__rename_constraints.sql       (renombra constraints de V3-V6)
+        └── V8__normalizar_constraints_indices_rls.sql (minusculas, valida CHECK, indices, RLS)
 
 ================================================================================
 3. MODELO DE DATOS Y ESQUEMA DE ENTIDADES (JPA / HIBERNATE)
@@ -199,8 +255,17 @@ Campos:
 - categoria (ManyToOne, Eager, Nullable): Categoria asignada.
 - deuda (ManyToOne, Lazy, Nullable): Deuda vinculada si el tipo es PAGO_DEUDA.
 - metaAhorro (ManyToOne, Lazy, Nullable): Meta vinculada si es abono/retiro.
+- movimientoOrigen (ManyToOne, Lazy, Nullable, updatable=false): Movimiento que
+  origino a este. Smart-Split deja aqui el INGRESO_GENERAL cuyos abonos
+  automaticos son este movimiento (T4). Es null en todo movimiento que no
+  provenga de Smart-Split, incluido el historico. Inmutable tras la insercion.
+Invariante de signo (T1d):
+- El signo NO lo decide el cliente ni el productor: lo impone el tipo mediante
+  SignoMovimiento. El saldo del usuario es SUM(MOVIMIENTO.monto).
 Ciclo de vida:
 - @PrePersist onCreate(): Si fecha es nula, inicializa con new Date().
+Nota de tipo: monto es BigDecimal (precision 19, escala 2, redondeo HALF_EVEN);
+se elimino el uso de Double en los DTOs de movimiento.
 
 3.4. ENTIDAD META_AHORRO (Tabla: META_AHORRO)
 --------------------------------------------------------------------------------
@@ -218,18 +283,44 @@ Metodo auxiliar:
 
 3.5. ENTIDAD DEUDA (Tabla: DEUDA)
 --------------------------------------------------------------------------------
-Compromiso financiero o pasivo adquirido por el usuario.
+Compromiso financiero o pasivo adquirido por el usuario. Desde V3 (T1c) guarda
+las condiciones del credito, ademas de las etiquetas y las cuotas ya pagadas.
 Campos:
 - id (Long, PK, Auto-incremental IDENTITY): Identificador de la deuda.
 - nombre (String, NOT NULL, length=100): Titulo (ej. "Credito de Consumo").
 - descripcion (String, length=255, Nullable): Informacion adicional.
-- montoTotal (BigDecimal, NOT NULL): Monto global comprometido a pagar.
-- cantidadCuotas (int, NOT NULL): Total de cuotas pactadas.
+- montoTotal (BigDecimal, NOT NULL): Monto global a pagar (capital + intereses y
+  costos); lo calcula el motor financiero, no lo envia el cliente.
+- cantidadCuotas (int, NOT NULL): Total de cuotas pactadas (1-360).
 - estado (Enum EstadoDeuda, NOT NULL): PENDIENTE, PAGADA o CANCELADA.
+- tipoDeuda (Enum TipoDeuda, NOT NULL, default OTRO): PERSONAL, TIENDA,
+  CREDITO_CONSUMO, EDUCACION u OTRO.
+- modalidadCalculo (Enum ModalidadCalculo, NOT NULL, default SIN_INTERES):
+  SIN_INTERES, TASA_CONOCIDA o CUOTA_CONOCIDA.
+- montoCapital (BigDecimal, NOT NULL): Capital sobre el que se calcula.
+- gastosIniciales (BigDecimal, NOT NULL, default 0): Gastos cobrados al desembolso.
+- costoAdicionalPorCuota (BigDecimal, NOT NULL, default 0): Costo fijo por cuota.
+- tasaMensual (BigDecimal, NOT NULL, precision 12 escala 8, default 0): Tasa
+  mensual como FRACCION (0.015 = 1,5 %). La capa DTO la expone en porcentaje; el
+  motor trabaja con la fraccion.
+- valorCuota (BigDecimal, NOT NULL): Cuota calculada o publicada.
+- fechaPrimeraCuota (LocalDate, Nullable): Ancla del calendario de vencimientos.
+- cuotasPagadasPrevias (int, NOT NULL, default 0): Cuotas ya pagadas antes de
+  usar la app (se cuentan como completas en la imputacion).
+- montoPagadoPrevio (BigDecimal, NOT NULL, default 0): Suma (cuota + costo
+  adicional) de esas cuotas previas.
+- cargaAnualEquivalente (BigDecimal, NOT NULL, precision 10 escala 4, default 0):
+  CAE referencial como fraccion.
+- costoTotalCredito (BigDecimal, NOT NULL): montoTotal + gastosIniciales.
 - fechaCreacion (Date, NOT NULL, updatable=false): Fecha de ingreso de la deuda.
 - usuario (ManyToOne, NOT NULL, Lazy): Usuario deudor.
 Ciclo de vida:
 - @PrePersist onCreate(): Establece fecha actual y estado PENDIENTE por defecto.
+Notas:
+- El cliente ya no envia montoTotal ni cantidadCuotas cuando usa el bloque
+  "condiciones" (condiciones de credito); el motor los deriva.
+- Las tasas se guardan como fraccion; la conversion porcentaje <-> fraccion vive
+  en dto/PorcentajeTasa (regla 40).
 
 3.6. ENTIDAD CONFIGURACION_PRESUPUESTO (Tabla: CONFIGURACION_PRESUPUESTO)
 --------------------------------------------------------------------------------
@@ -260,6 +351,22 @@ Campos:
 - configuracion (ManyToOne, NOT NULL, Lazy): Configuracion a la que pertenece.
 - meta (ManyToOne, NOT NULL, Eager): Meta de ahorro beneficiaria.
 - porcentajeAsignacion (BigDecimal, NOT NULL): Fraccion del ahorro total (ej. 60.00%).
+
+3.8. ENTIDAD PRESUPUESTO_CATEGORIA (Tabla: PRESUPUESTO_CATEGORIA) [NUEVA - V6/T5]
+--------------------------------------------------------------------------------
+Limite de gasto MENSUAL y recurrente de un usuario sobre una categoria. El monto
+se reutiliza mes a mes (no esta atado a un periodo concreto) y permite medir la
+ejecucion real (gastado vs. limite). Complementa al reparto 50/30/20 por tipo.
+Campos:
+- id (Long, PK, Auto-incremental IDENTITY): Identificador del limite.
+- usuario (ManyToOne, NOT NULL, Lazy): Propietario del limite.
+- categoria (ManyToOne, NOT NULL, Eager): Categoria acotada.
+- limiteMensual (BigDecimal, NOT NULL, precision 19 escala 2): Tope mensual;
+  siempre mayor a 0 (tambien por CHECK en la BD).
+Restricciones:
+- UNIQUE(usuario, categoria): un solo limite por usuario y categoria.
+- CHECK chk_presup_cat_limite: limite_mensual > 0.
+- RLS habilitado (V6 y V8).
 
 ================================================================================
 4. CATALOGO COMPLETO DE ENUMS
@@ -297,6 +404,41 @@ Valores:
 - OTROS     : Entradas u otros conceptos que no clasifican como gasto 
               presupuestario estandar.
 
+4.4. Enum: TipoDeuda  [NUEVO - V3]
+------------------------
+Ubicacion: com.example.saveup.model.enums.TipoDeuda
+Valores:
+- PERSONAL, TIENDA, CREDITO_CONSUMO, EDUCACION, OTRO.
+- Etiqueta de la deuda; no altera el calculo. Un valor nulo se normaliza a OTRO.
+
+4.5. Enum: ModalidadCalculo  [NUEVO - T1a/T1c]
+------------------------
+Ubicacion: com.example.saveup.model.enums.ModalidadCalculo
+Valores:
+- SIN_INTERES    : No admite tasas ni valor de cuota; cuota = capital / n.
+- TASA_CONOCIDA  : Exige exactamente una de tasaMensual o tasaAnualEfectiva.
+- CUOTA_CONOCIDA : Exige valorCuota > 0 y NO admite ninguna tasa.
+
+4.6. Enum: ModoPago  [NUEVO - T2]
+------------------------
+Ubicacion: com.example.saveup.model.enums.ModoPago
+Valores:
+- CUOTA_CALCULADA    : El monto enviado se ignora; se cobra lo que falta de la
+                       proxima cuota impaga (cuota + costo adicional).
+- MONTO_PERSONALIZADO: Se cobra el monto enviado (obligatorio y > 0). Es el
+                       valor por defecto para no romper clientes existentes.
+No se persiste: solo decide con que monto se registra el movimiento PAGO_DEUDA.
+
+4.7. Enum: EstadoEjecucion  [NUEVO - T5]
+------------------------
+Ubicacion: com.example.saveup.model.enums.EstadoEjecucion
+Valores (derivados del porcentaje usado):
+- OK       : porcentaje < 80 (UMBRAL_ALERTA).
+- ALERTA   : porcentaje >= 80 y < 100.
+- EXCEDIDO : porcentaje >= 100 (UMBRAL_EXCEDIDO).
+Metodo auxiliar: desdePorcentaje(BigDecimal) compara con compareTo (80 y 80.00
+son iguales); un porcentaje nulo se trata como OK (sin gasto).
+
 ================================================================================
 5. CATALOGO EXHAUSTIVO DE DTOs (DATA TRANSFER OBJECTS)
 ================================================================================
@@ -321,24 +463,28 @@ Valores:
 5.3. MovimientoRegistroDTO
 - Proposito: Entrada para asentar una nueva transaccion financiera.
 - Campos:
-  * monto (Double): @NotNull
+  * monto (BigDecimal): @NotNull, @Digits(integer=17, fraction=2).
   * descripcion (String): @NotBlank
-  * tipoMovimiento (TipoMovimiento): @NotNull
+  * tipoMovimiento (TipoMovimiento): @NotNull. POST solo acepta INGRESO_GENERAL,
+    GASTO_GENERAL y PAGO_DEUDA (ABONO_META y RETIRO_META se rechazan con 400).
   * deudaId (Long, opcional): Requerido exclusivamente si es PAGO_DEUDA.
   * metaId (Long, opcional): Meta vinculada para abonos o retiros.
   * categoriaId (Long, opcional): Categoria asignada al movimiento.
   * aplicarPresupuesto (Boolean, default false): Activa el Smart-Split.
   (Nota: usuarioRut fue removido; la identidad se extrae estrictamente del token JWT).
+  (Nota: el monto viaja en positivo; el signo lo impone SignoMovimiento segun el tipo).
 
 5.4. MovimientoResponseDTO
 - Proposito: Datos de salida al consultar un movimiento o confirmar su creacion.
 - Campos:
   * id (Long)
-  * monto (double)
+  * monto (BigDecimal): valor canonico (negativo para gastos, pagos y abonos).
   * descripcion (String)
   * fecha (Date)
   * tipoMovimiento (TipoMovimiento)
   * categoria (CategoriaDTO)
+- Metodo estatico from(Movimiento): mapper compartido por todos los productores de
+  movimientos (MovimientoService, DeudaService, MetaAhorroService, SmartSplit).
 
 5.5. CategoriaDTO
 - Proposito: Transporte liviano de informacion de categorias con metadatos de UI.
@@ -353,7 +499,7 @@ Valores:
 - Proposito: Creacion o edicion de una meta de ahorro.
 - Campos:
   * nombre (String): @NotBlank
-  * montoObjetivo (Double): @Positive (opcional)
+  * montoObjetivo (BigDecimal): @Positive (opcional), @Digits(17,2)
   * fechaLimite (Date): @Future (opcional)
   (Nota: usuarioRut fue removido; la identidad se extrae del contexto de seguridad).
 
@@ -362,14 +508,14 @@ Valores:
 - Campos:
   * id (Long)
   * nombre (String)
-  * montoObjetivo (Double)
+  * montoObjetivo (BigDecimal, Nullable)
   * fechaLimite (Date)
-  * montoActual (double)
+  * montoActual (BigDecimal): saldo acumulado persistido y calculado en el servicio.
 
 5.8. AbonoRetiroDTO
 - Proposito: Ejecucion de inyeccion o extraccion voluntaria de dinero en una meta.
 - Campos:
-  * monto (Double): @NotNull, @Positive
+  * monto (BigDecimal): @NotNull, @Positive, @Digits(17,2)
   * descripcion (String): @NotBlank
 
 5.9. DeudaCreacionDTO
@@ -377,37 +523,64 @@ Valores:
 - Campos:
   * nombre (String): @NotBlank
   * descripcion (String, opcional)
-  * montoTotal (Double): @NotNull, @Positive
-  * cantidadCuotas (Integer): @NotNull, @Positive
+  * tipoDeuda (TipoDeuda, opcional; nulo -> OTRO)
+  * cuotasPagadasPrevias (Integer, default 0): @Min(0)
+  * condiciones (CondicionesCreditoInput, @Valid, opcional): bloque de condiciones
+    de credito (modalidad, montoCapital, tasas/cuota, fechas, costos).
+  * montoTotal (BigDecimal, opcional): @Positive, @Digits(17,2). Compatibilidad.
+  * cantidadCuotas (Integer, opcional): @Positive.
+  - Si viene "condiciones", el motor deriva montoTotal/cuotas/tasas.
+  - Sin "condiciones", se exige montoTotal y cantidadCuotas (modalidad SIN_INTERES).
   (Nota: usuarioRut fue removido; la identidad se extrae del contexto de seguridad).
 
 5.10. DeudaResponseDTO
-- Proposito: Respuesta detallada con calculos en tiempo real mediante proyeccion JPQL optimizada (sin N+1).
+- Proposito: Respuesta detallada de una deuda. Es un DTO de datos: los campos
+  derivados los calcula DeudaService en memoria tras la proyeccion JPQL
+  (motor financiero + calendario + imputacion), sin consultas extra por deuda.
 - Campos:
-  * id (Long)
-  * nombre (String)
-  * descripcion (String)
-  * montoTotal (double)
-  * cantidadCuotas (int)
-  * estado (EstadoDeuda)
-  * fechaCreacion (Date)
-  * montoPagado (double, calculado via agregacion directa JPQL)
-  * montoRestante (double, calculado: montoTotal - montoPagado)
-  * cuotasPagadas (int, calculado: COUNT(m) de movimientos PAGO_DEUDA en JPQL)
+  * id, nombre, descripcion
+  * tipoDeuda (TipoDeuda), modalidadCalculo (ModalidadCalculo)
+  * montoCapital (BigDecimal)
+  * tasaMensual (BigDecimal): tasa mensual EN PORCENTAJE. Se renombro desde
+    "tasaMensualPorcentaje" (ver nota de compatibilidad abajo).
+  * tasaAnualEfectiva (BigDecimal): en porcentaje, calculada como (1+m)^12 - 1.
+  * tasaMensualFraccion (BigDecimal): fraccion cruda del motor; oculta con
+    @JsonIgnore.
+  * valorCuota, gastosIniciales, costoAdicionalPorCuota, costoTotalCredito,
+    cargaAnualEquivalente (porcentaje)
+  * fechaPrimeraCuota, fechaUltimaCuota, cuotasPagadasPrevias, montoPagadoPrevio
+  * montoTotal (BigDecimal), cantidadCuotas (int), estado (EstadoDeuda),
+    fechaCreacion (Date)
+  * montoPagadoReal (BigDecimal): solo los pagos reales, sin las cuotas previas.
+  * montoPagado (BigDecimal): montoPagadoPrevio + montoPagadoReal.
+  * montoRestante / totalPorPagar (BigDecimal): montoTotal - montoPagado.
+  * saldoCapital (BigDecimal): montoCapital - capital imputado (aproxima lo que
+    costaria liquidar hoy; NO incluye el interes devengado del mes en curso).
+  * cuotasPagadas (int): cuotas PAGADA segun la imputacion (incluye las previas).
+  * proximaCuotaNumero (Integer), proximaCuotaMontoPendiente (BigDecimal),
+    proximaFechaVencimiento (LocalDate); null si no queda cuota o no hay calendario.
+  * interesesPagados (BigDecimal): interes imputado a pagos y cuotas previas.
+- Los campos derivados quedan en null si una deuda no se puede recalcular; el
+  listado sigue funcionando.
+- Compatibilidad: el JSON expone "tasaMensual" en lugar del antiguo
+  "tasaMensualPorcentaje". Cualquier cliente que lea la clave vieja debe cambiar.
 
 5.11. PagoDeudaDTO
 - Proposito: Registro de abono o pago a una cuota de una deuda activa.
 - Campos:
-  * monto (Double): @NotNull, @Positive
+  * monto (BigDecimal, opcional): @Digits(17,2). Obligatorio solo en
+    MONTO_PERSONALIZADO; en CUOTA_CALCULADA se ignora.
   * descripcion (String): @NotBlank
+  * modoPago (ModoPago, default MONTO_PERSONALIZADO): CUOTA_CALCULADA o
+    MONTO_PERSONALIZADO.
 
 5.12. ConfiguracionPresupuestoRequestDTO
 - Proposito: Establecer o modificar los parametros del presupuesto 50/30/20 y la
   opcion de automatizacion de abonos a metas.
 - Campos y Validaciones:
-  * porcentajeNecesidades (Double): @NotNull, @DecimalMin("0.0"), @DecimalMax("100.0")
-  * porcentajeDeseos (Double): @NotNull, @DecimalMin("0.0"), @DecimalMax("100.0")
-  * porcentajeAhorro (Double): @NotNull, @DecimalMin("0.0"), @DecimalMax("100.0")
+  * porcentajeNecesidades (BigDecimal): @NotNull, @DecimalMin("0.0"), @DecimalMax("100.0")
+  * porcentajeDeseos (BigDecimal): @NotNull, @DecimalMin("0.0"), @DecimalMax("100.0")
+  * porcentajeAhorro (BigDecimal): @NotNull, @DecimalMin("0.0"), @DecimalMax("100.0")
   * activo (Boolean): Opcional, default true.
   * automatizarAhorroEnMetas (Boolean): Opcional, default false.
     - false: El presupuesto funciona como guia visual; ningun ABONO_META se genera.
@@ -421,24 +594,24 @@ Valores:
 - Proposito: Declarar que fraccion del ahorro se destinara a una meta concreta.
 - Campos y Validaciones:
   * metaId (Long): @NotNull. ID de la meta de ahorro beneficiaria.
-  * porcentaje (Double): @NotNull, @DecimalMin("0.0"), @DecimalMax("100.0").
+  * porcentaje (BigDecimal): @NotNull, @DecimalMin("0.0"), @DecimalMax("100.0").
     Fraccion del monto total de ahorro a derivar (ej. 60.0 -> 60% del ahorro va a esa meta).
 
 5.14. EjecucionPresupuestoDTO
 - Proposito: Comparativa mensual de presupuesto proyectado vs ejecucion real,
   incluyendo metricas de ahorro y el estado de automatizacion configurado.
 - Campos:
-  * presupuestoNecesidades (Double)     : (Total Ingresos * % Necesidades)
-  * gastoNecesidades (Double)           : Suma real de gastos clasificados como NECESIDAD
-  * presupuestoDeseos (Double)          : (Total Ingresos * % Deseos)
-  * gastoDeseos (Double)                : Suma real de gastos clasificados como DESEO
-  * presupuestoAhorro (Double)          : (Total Ingresos * % Ahorro) — monto objetivo
-  * ahorroRealizado (Double)            : Suma de egresos ABONO_META del mes (ahorro fisico
+  * presupuestoNecesidades (BigDecimal)  : (Total Ingresos * % Necesidades)
+  * gastoNecesidades (BigDecimal)       : Suma real de gastos clasificados como NECESIDAD
+  * presupuestoDeseos (BigDecimal)      : (Total Ingresos * % Deseos)
+  * gastoDeseos (BigDecimal)            : Suma real de gastos clasificados como DESEO
+  * presupuestoAhorro (BigDecimal)      : (Total Ingresos * % Ahorro) — monto objetivo
+  * ahorroRealizado (BigDecimal)        : Suma de egresos ABONO_META del mes (ahorro fisico
                                           efectivamente movido a metas via Smart-Split o manual)
-  * totalIngresos (Double)              : Total acumulado de INGRESO_GENERAL del mes
-  * porcentajeNecesidadesConfigurado (Double): % configurado para Necesidades
-  * porcentajeDeseosConfigurado (Double)     : % configurado para Deseos
-  * porcentajeAhorroConfigurado (Double)     : % configurado para Ahorro
+  * totalIngresos (BigDecimal)          : Total acumulado de INGRESO_GENERAL del mes
+  * porcentajeNecesidadesConfigurado (BigDecimal): % configurado para Necesidades
+  * porcentajeDeseosConfigurado (BigDecimal)     : % configurado para Deseos
+  * porcentajeAhorroConfigurado (BigDecimal)     : % configurado para Ahorro
   * automatizarAhorroEnMetas (Boolean)       : Refleja si la automatizacion fisica
                                                de abonos a metas esta habilitada.
 
@@ -449,6 +622,115 @@ Valores:
   * currentPage (int)
   * totalItems (long)
   * totalPages (int)
+
+5.16. CondicionesCreditoInput  [NUEVO - T1c]
+- Proposito: Entrada de condiciones de credito desde la API. Las tasas vienen en
+  PORCENTAJE (0-100) y los campos son opcionales; ResolutorCondiciones valida y
+  normaliza.
+- Campos:
+  * modalidad (ModalidadCalculo): @NotNull
+  * montoCapital (BigDecimal): @NotNull, @DecimalMin("0.01")
+  * cantidadCuotas (Integer), fechaPrimeraCuota / fechaUltimaCuota (LocalDate)
+  * tasaMensual (BigDecimal): porcentaje
+  * tasaAnualEfectiva (BigDecimal): porcentaje
+  * valorCuota (BigDecimal), gastosIniciales (BigDecimal),
+    costoAdicionalPorCuota (BigDecimal)
+- Metodos tasaMensualFraccion() / tasaAnualEfectivaFraccion(): delegan en
+  dto/PorcentajeTasa. La conversion porcentaje -> fraccion vive en el DTO, nunca
+  en el motor (regla 40).
+
+5.17. SimulacionCreditoRequestDTO  [NUEVO - T1b]
+- Proposito: Peticion del simulador de credito (sin persistencia).
+- Campos:
+  * modalidad (ModalidadCalculo): @NotNull
+  * montoCapital (BigDecimal): @NotNull, @DecimalMin("0.01")
+  * cantidadCuotas (Integer), fechaPrimeraCuota / fechaUltimaCuota (LocalDate)
+  * tasaMensual (BigDecimal): porcentaje (0-100)
+  * tasaAnualEfectiva (BigDecimal): porcentaje
+  * valorCuota (BigDecimal), gastosIniciales (BigDecimal),
+    costoAdicionalPorCuota (BigDecimal)
+  * ingresoMensual (BigDecimal, opcional): base del resumen educativo
+  * cantidadCuotasAlternativas (List<Integer>, opcional): hasta 5 plazos
+  * incluirTabla (Boolean, default true): si false omite la tabla de amortizacion
+
+5.18. SimulacionCreditoResponseDTO  [NUEVO - T1b]
+- Proposito: Resultado del simulador: cuota, costos, CAE, resumen educativo,
+  tabla y comparacion de plazos. @JsonInclude(NON_NULL).
+- Campos:
+  * condiciones (CondicionesSimulacionDTO): modalidad, montoCapital,
+    cantidadCuotas, fechas y tasas normalizadas (en porcentaje)
+  * valorCuota, montoTotal, gastosIniciales, costoTotalCredito,
+    interesesYCostos, cargaAnualEquivalente (porcentaje)
+  * resumenEducativo (ResumenEducativoDTO): costoPorCada100,
+    porcentajeSobreCapital, porcentajeInteresesYCostos,
+    porcentajeIngresoComprometido (null si no se envio ingresoMensual)
+  * tablaAmortizacion (List<CuotaSimulacionDTO>)
+  * comparacionPlazos (List<ComparacionPlazoDTO>)
+  * advertencias (List<String>): aviso CAE referencial y, si la cuota compromete
+    mas del 30% del ingreso, aviso de sobreendeudamiento
+- Sub-DTO CuotaSimulacionDTO: numero, fechaVencimiento, cuota, capital, interes,
+  costoAdicional, saldo y (solo para deudas reales) estado, montoPagado, previa.
+  El mapper compartido from(tabla, fechas) lo usan el simulador y el detalle de
+  deuda.
+
+5.19. PagoDeudaResponseDTO  [NUEVO - T3]
+- Proposito: Un pago real de una deuda con su desglose. El desglose NO se
+  persiste: DeudaService lo recalcula con ImputacionPagos como la imputacion
+  acumulada tras ese pago menos la del anterior.
+- Campos: id (Long), fecha (Date), monto (BigDecimal, positivo), capital,
+  interes, costos, descripcion (String).
+
+5.20. MovimientoFiltroDTO  [NUEVO - T4]
+- Proposito: Filtros opcionales de GET /api/movimientos/paginados/me.
+- Campos (todos opcionales):
+  * desde / hasta (LocalDate, ISO inclusivos; no puede haber desde > hasta)
+  * tipoMovimiento (TipoMovimiento)
+  * categoriaId (Long)
+  * montoMin / montoMax (BigDecimal): comparan contra la magnitud (valor
+    absoluto) del monto; no pueden ser negativos ni montoMin > montoMax
+  * q (String): busqueda case-insensitive en descripcion
+
+5.21. MovimientoEdicionDTO  [NUEVO - T4]
+- Proposito: Edicion parcial de un movimiento (PUT /api/movimientos/{id}). La
+  fecha NO es editable; el tipo tampoco se cambia aqui. Se aplican solo los
+  campos no nulos.
+- Campos: monto (BigDecimal, @Digits(17,2)), descripcion (String, @Size(max=100)),
+  categoriaId (Long).
+
+5.22. ConfiguracionPresupuestoResponseDTO  [NUEVO - T5]
+- Proposito: Configuracion 50/30/20 expuesta por la API. Sustituye a la entidad
+  JPA en la respuesta para no filtrar el modelo de persistencia.
+- Campos: id (Long), usuarioRut (String), porcentajeNecesidades, porcentajeDeseos,
+  porcentajeAhorro (BigDecimal), activo (Boolean), automatizarAhorroEnMetas
+  (Boolean).
+
+5.23. PresupuestoCategoriaRequestDTO / PresupuestoCategoriaItemDTO  [NUEVO - T5]
+- Proposito: Cuerpo e items del PUT /api/presupuestos/categorias/me (reemplaza el
+  conjunto completo de limites). Se envuelve la lista en un DTO para que @Valid
+  valide cada item.
+- PresupuestoCategoriaItemDTO: categoriaId (Long, @NotNull), limiteMensual
+  (BigDecimal, @NotNull, @Positive).
+
+5.24. PresupuestoCategoriaDTO  [NUEVO - T5]
+- Proposito: Item de respuesta con los limites del usuario.
+- Campos: categoriaId (Long), categoria (String), limiteMensual (BigDecimal).
+
+5.25. EjecucionCategoriaDTO  [NUEVO - T5]
+- Proposito: Ejecucion (gastado vs. limite) de una categoria en un mes.
+- Campos: categoriaId (Long), categoria (String), limite (BigDecimal), gastado
+  (BigDecimal, suma en valor absoluto de GASTO_GENERAL y PAGO_DEUDA del mes),
+  porcentajeUsado (BigDecimal), estado (EstadoEjecucion).
+
+5.26. HistorialPresupuestoDTO  [NUEVO - T5]
+- Proposito: Ejecucion general 50/30/20 de un mes dentro del historial.
+- Campos: anio (Integer), mes (Integer), ejecucion (EjecucionPresupuestoDTO).
+
+5.27. PorcentajeTasa  [NUEVO - T0/regla 40]
+- Proposito: Conversion entre la fraccion del motor (0.015 = 1,5 %) y el
+  porcentaje de los DTO (1.5). Centraliza la aritmetica *100 / 100 para que no se
+  repita por el codigo. Clase utilitaria final sin instancias.
+- Metodos: aPorcentaje(fraccion, escala) y aFraccion(porcentaje); devuelven null
+  si la entrada es null.
 
 ================================================================================
 6. MAPA COMPLETO DE ENDPOINTS REST
@@ -491,27 +773,55 @@ MODULO: SALDOS (/api/saldos)
 --------------------------------------------------------------------------------
 MODULO: MOVIMIENTOS (/api/movimientos)
 --------------------------------------------------------------------------------
-6. POST /api/movimientos (PROTEGIDO)
+5. POST /api/movimientos (PROTEGIDO)
    - Descripcion: Registra un movimiento. usuarioRut es opcional (se infiere del token).
-     Soporta Smart-Split automático si es INGRESO_GENERAL y aplicarPresupuesto=true.
+     Acepta solo INGRESO_GENERAL, GASTO_GENERAL y PAGO_DEUDA; ABONO_META y
+     RETIRO_META se rechazan con 400 (se crean desde /api/metas). El signo lo
+     impone el tipo (SignoMovimiento). Soporta Smart-Split automático si es
+     INGRESO_GENERAL y aplicarPresupuesto=true.
    - Body: MovimientoRegistroDTO (JSON)
    - Respuestas:
      * 201 Created: MovimientoResponseDTO
+     * 400 Bad Request: tipo no registrable o monto nulo/cero
+     * 409 Conflict: sobrepago o deuda no PENDIENTE (pagos delegados a DeudaService)
 
-7. GET /api/movimientos/me (PROTEGIDO - Implicit Context)
+6. GET /api/movimientos/me (PROTEGIDO - Implicit Context)
    - Descripcion: Obtiene movimientos del usuario autenticado. Permite ?limit=N.
    - Respuestas:
      * 200 OK: List<MovimientoResponseDTO>
 
-8. GET /api/movimientos/paginados/me (PROTEGIDO - Implicit Context)
-   - Descripcion: Historial paginado del usuario autenticado (?page=0&size=50).
+7. GET /api/movimientos/paginados/me (PROTEGIDO - Implicit Context)
+   - Descripcion: Historial paginado del usuario autenticado. Filtros opcionales
+     (T4): ?page=0&size=50&desde&hasta&tipoMovimiento&categoriaId&montoMin&montoMax&q.
+     desde/hasta son ISO inclusivos; montoMin/montoMax comparan contra el valor
+     absoluto; q busca en descripcion (case-insensitive). Siempre filtra por el
+     RUT del token.
    - Respuestas:
      * 200 OK: PageResponseDTO<MovimientoResponseDTO>
+     * 400 Bad Request: desde>hasta, montos negativos o montoMin>montoMax
+
+8. PUT /api/movimientos/{id} (PROTEGIDO - Edicion T4)
+   - Descripcion: Edicion parcial (descripcion, monto y/o categoriaId; la fecha y
+     el tipo no cambian). El monto se reescribe con SignoMovimiento. Solo aplica a
+     INGRESO_GENERAL y GASTO_GENERAL sin deuda ni meta; el resto se modifica desde
+     su modulo (409). Un ingreso con abonos de Smart-Split vinculados no se edita (409).
+   - Body: MovimientoEdicionDTO (JSON)
+   - Respuestas:
+     * 200 OK: MovimientoResponseDTO
+     * 403 Forbidden: movimiento de otro usuario
+     * 404 / 409 segun corresponda
+
+9. DELETE /api/movimientos/{id} (PROTEGIDO - T4)
+    - Descripcion: Elimina un movimiento propio con las mismas reglas que la
+      edicion (tipos permitidos y sin movimientos derivados).
+    - Respuestas:
+      * 204 No Content
+      * 403 / 404 / 409 segun corresponda
 
 --------------------------------------------------------------------------------
 MODULO: CATEGORIAS (/api/categorias)
 --------------------------------------------------------------------------------
-11. GET /api/categorias (PROTEGIDO)
+10. GET /api/categorias (PROTEGIDO)
     - Descripcion: Obtiene el catálogo de categorías con colores, iconos y tipo.
     - Respuestas:
       * 200 OK: List<CategoriaDTO>
@@ -519,51 +829,126 @@ MODULO: CATEGORIAS (/api/categorias)
 --------------------------------------------------------------------------------
 MODULO: METAS DE AHORRO (/api/metas)
 --------------------------------------------------------------------------------
-12. POST /api/metas (PROTEGIDO)
+11. POST /api/metas (PROTEGIDO)
     - Descripcion: Crea una meta para el usuario autenticado (usuarioRut opcional).
     - Body: MetaAhorroCreacionDTO (JSON)
     - Respuestas:
       * 201 Created: MetaAhorroResponseDTO
 
-10. GET /api/metas/me (PROTEGIDO - Implicit Context)
+12. GET /api/metas/me (PROTEGIDO - Implicit Context)
     - Descripcion: Lista las metas del usuario autenticado.
     - Respuestas:
       * 200 OK: List<MetaAhorroResponseDTO>
 
-11. POST /api/metas/{metaId}/abonar (PROTEGIDO - Valida propiedad de la meta)
-12. POST /api/metas/{metaId}/retirar (PROTEGIDO - Valida propiedad de la meta)
-13. PUT /api/metas/{metaId} (PROTEGIDO - Valida propiedad de la meta)
-14. DELETE /api/metas/{metaId} (PROTEGIDO - Valida propiedad, reembolso a saldo)
+13. POST /api/metas/{metaId}/abonar (PROTEGIDO - Valida propiedad de la meta)
+14. POST /api/metas/{metaId}/retirar (PROTEGIDO - Valida propiedad de la meta)
+15. PUT /api/metas/{metaId} (PROTEGIDO - Valida propiedad de la meta)
+16. DELETE /api/metas/{metaId} (PROTEGIDO - Valida propiedad, reembolso a saldo)
 
 --------------------------------------------------------------------------------
 MODULO: DEUDAS (/api/deudas)
 --------------------------------------------------------------------------------
-15. POST /api/deudas (PROTEGIDO)
+17. POST /api/deudas (PROTEGIDO)
     - Descripcion: Registra deuda para el usuario autenticado (identidad obtenida del token).
+      Acepta el bloque "condiciones" (motor financiero) o, por compatibilidad,
+      montoTotal + cantidadCuotas.
     - Body: DeudaCreacionDTO (JSON)
     - Respuestas:
       * 201 Created: DeudaResponseDTO
+      * 400 Bad Request: condiciones invalidas (CalculoFinancieroException)
 
-16. GET /api/deudas/me (PROTEGIDO - Implicit Context)
+18. GET /api/deudas/me (PROTEGIDO - Implicit Context)
     - Descripcion: Lista deudas con cálculo en tiempo real optimizado mediante proyección JPQL (evita N+1).
     - Respuestas:
       * 200 OK: List<DeudaResponseDTO>
 
-17. POST /api/deudas/{deudaId}/pagar (PROTEGIDO - Valida propiedad de la deuda)
-18. PUT /api/deudas/{deudaId} (PROTEGIDO - Valida propiedad de la deuda)
-19. PATCH /api/deudas/{deudaId}/cancelar (PROTEGIDO - Valida propiedad)
+19. GET /api/deudas/{deudaId} (PROTEGIDO - T3)
+    - Descripcion: Devuelve la ficha enriquecida de una deuda. Valida propiedad
+      (ajena -> 403).
+    - Respuestas: 200 OK: DeudaResponseDTO; 404 / 403
+
+20. GET /api/deudas/{deudaId}/amortizacion (PROTEGIDO - T3)
+    - Descripcion: Cronograma reconstruido sin persistir. Cada cuota lleva estado
+      (PAGADA | PARCIAL | PENDIENTE), montoPagado y previa segun la imputacion.
+    - Respuestas: 200 OK: List<CuotaSimulacionDTO>
+
+21. GET /api/deudas/{deudaId}/pagos (PROTEGIDO - T3)
+    - Descripcion: Historial de pagos reales, paginado (?page&size) y en orden
+      fecha desc, con desglose capital/interes/costos calculado en memoria.
+    - Respuestas:
+      * 200 OK: PageResponseDTO<PagoDeudaResponseDTO>
+      * 400 Bad Request: page < 0 o size < 1
+
+22. POST /api/deudas/{deudaId}/pagar (PROTEGIDO - Valida propiedad de la deuda)
+    - Descripcion: Unico productor de PAGO_DEUDA. modoPago CUOTA_CALCULADA cobra lo
+      que falta de la proxima cuota impaga; MONTO_PERSONALIZADO exige monto > 0.
+      Sobrepago o deuda no PENDIENTE -> 409.
+    - Body: PagoDeudaDTO
+    - Respuestas: 200 OK: DeudaResponseDTO; 409 / 400 / 403
+
+23. PUT /api/deudas/{deudaId} (PROTEGIDO - Valida propiedad de la deuda)
+    - Descripcion: Sin pagos recalcula todas las condiciones; con pagos solo permite
+      nombre, descripcion, tipoDeuda y cuotasPagadasPrevias (enviar condiciones,
+      montoTotal o cantidadCuotas -> 409).
+    - Respuestas: 200 OK; 409 / 400
+
+24. PATCH /api/deudas/{deudaId}/cancelar (PROTEGIDO - Valida propiedad)
+    - Descripcion: Pasa estado a CANCELADA (soft delete); no se cancela una PAGADA.
+    - Respuestas: 200 OK; 409
 
 --------------------------------------------------------------------------------
 MODULO: PRESUPUESTOS (/api/presupuestos)
 --------------------------------------------------------------------------------
-20. GET /api/presupuestos/me (PROTEGIDO - Implicit Context)
-21. POST /api/presupuestos/me (PROTEGIDO - Implicit Context)
-22. GET /api/presupuestos/ejecucion/me (PROTEGIDO - Implicit Context)
+25. GET /api/presupuestos/me (PROTEGIDO - Implicit Context)
+    - Descripcion: Configuracion 50/30/20 del usuario. Responde 404 si no existe.
+    - Respuestas: 200 OK: ConfiguracionPresupuestoResponseDTO
+
+26. POST /api/presupuestos/me (PROTEGIDO - Implicit Context)
+    - Descripcion: Guarda/actualiza la configuracion. Los porcentajes deben sumar
+      exactamente 100.00 y ninguno ser negativo; si no -> 400.
+    - Body: ConfiguracionPresupuestoRequestDTO
+    - Respuestas: 200 OK: ConfiguracionPresupuestoResponseDTO; 400
+
+27. GET /api/presupuestos/ejecucion/me (PROTEGIDO - Implicit Context)
+    - Descripcion: Ejecucion general del mes (?month&year; por defecto el actual).
+    - Respuestas: 200 OK: EjecucionPresupuestoDTO; 400 (mes fuera de 1-12)
+
+28. GET /api/presupuestos/categorias/me (PROTEGIDO - T5)
+    - Descripcion: Limites mensuales por categoria del usuario.
+    - Respuestas: 200 OK: List<PresupuestoCategoriaDTO>
+
+29. PUT /api/presupuestos/categorias/me (PROTEGIDO - T5)
+    - Descripcion: Reemplaza el conjunto completo de limites. Valida categoria
+      existente, limite > 0 y sin categorias repetidas; si no -> 400.
+    - Body: PresupuestoCategoriaRequestDTO
+    - Respuestas: 200 OK: List<PresupuestoCategoriaDTO>; 400
+
+30. GET /api/presupuestos/categorias/ejecucion/me (PROTEGIDO - T5)
+    - Descripcion: Gastado vs. limite por categoria en un mes (?month&year). El
+      estado se deriva del porcentaje usado (OK / ALERTA / EXCEDIDO).
+    - Respuestas: 200 OK: List<EjecucionCategoriaDTO>; 400
+
+31. GET /api/presupuestos/historial/me (PROTEGIDO - T5)
+    - Descripcion: Historial de la ejecucion general mes a mes (?desde&hasta en
+      formato YYYY-MM, inclusivos). Maximo 24 meses.
+    - Respuestas: 200 OK: List<HistorialPresupuestoDTO>; 400 (formato, rango
+      invertido o mas de 24 meses)
+
+--------------------------------------------------------------------------------
+MODULO: SIMULACIONES (/api/simulaciones)  [NUEVO - T1b]
+--------------------------------------------------------------------------------
+32. POST /api/simulaciones/credito (PROTEGIDO)
+    - Descripcion: Simulador de credito sin persistencia. Resuelve condiciones,
+      calcula cuota, costos, CAE, resumen educativo, tabla y comparacion de plazos.
+    - Body: SimulacionCreditoRequestDTO
+    - Respuestas:
+      * 200 OK: SimulacionCreditoResponseDTO
+      * 400 Bad Request: condiciones invalidas (CalculoFinancieroException)
 
 --------------------------------------------------------------------------------
 MODULO: REPORTES (/api/reportes)
 --------------------------------------------------------------------------------
-23. GET /api/reportes/movimientos/exportar (PROTEGIDO - Implicit Context)
+33. GET /api/reportes/movimientos/exportar (PROTEGIDO - Implicit Context)
     - Descripcion: Descarga PDF o CSV del usuario autenticado en sesión.
     - Parametros Query:
       * alcance (String, "COMPLETO" o "MENSUAL", default "COMPLETO")
@@ -589,24 +974,35 @@ MODULO: REPORTES (/api/reportes)
     arroja BadCredentialsException ante fallos.
 
 * MovimientoService
-  - registrarMovimiento(MovimientoRegistroDTO): Valida usuario desde SecurityContext, asocia categorias 
-    y deudas, y delega la distribucion automatica Smart-Split a SmartSplitProcessor.
-  - obtenerMovimientosPorUsuario(String rut, Integer limit): Consulta movimientos 
+  - registrarMovimiento(MovimientoRegistroDTO): Toma la identidad del token,
+    valida que el tipo sea registrable (INGRESO_GENERAL, GASTO_GENERAL,
+    PAGO_DEUDA), aplica SignoMovimiento y guarda. Para PAGO_DEUDA delega en
+    DeudaService.registrarPago. Si es INGRESO_GENERAL con aplicarPresupuesto=true,
+    guarda el ingreso PRIMERO y luego invoca Smart-Split (asi conoce su id).
+  - obtenerMovimientosPorUsuario(String rut, Integer limit): Consulta movimientos
     ordenados con soporte de limite.
   - obtenerSaldoActual(String rut): Ejecuta la agregacion de saldo neto.
-  - obtenerMovimientosPaginados(String rut, Pageable): Retorna envoltorio 
-    PageResponseDTO con contenido y metadatos.
+  - obtenerMovimientosPaginados(String rut, Pageable, MovimientoFiltroDTO): arma
+    una Specification (MovimientoSpecifications.conFiltros) con el RUT obligatorio
+    y los filtros opcionales; valida rango (400).
+  - editarMovimiento(Long id, MovimientoEdicionDTO): edicion parcial propia; solo
+    INGRESO_GENERAL/GASTO_GENERAL sin deuda ni meta y sin abonos derivados (409);
+    reescribe el monto con SignoMovimiento.
+  - eliminarMovimiento(Long id): mismas validaciones que la edicion y borra.
 
 * SmartSplitProcessor (com.example.saveup.service.SmartSplitProcessor)
-  - procesarDistribucion(Usuario usuario, double montoIngreso): Servicio de dominio
-    especializado que desacopla la logica del algoritmo Smart-Split de MovimientoService.
+  - procesarDistribucion(Movimiento movimientoIngreso, BigDecimal montoIngreso):
+    Servicio de dominio especializado que desacopla el algoritmo Smart-Split de
+    MovimientoService. Recibe el ingreso ya persistido (con id y usuario).
     Implementa el modelo de automatizacion opcional de metas:
     * Condicion de ejecucion (triple AND): config.activo == true
       AND config.automatizarAhorroEnMetas == true
       AND config.porcentajeAhorro > 0.
     * Si la condicion se cumple: Calcula montoAhorro = ingreso * (%ahorro / 100),
       itera sobre asignaciones de metas, genera un Movimiento ABONO_META por cada
-      meta (monto negativo, categoria 'Ahorro'), y actualiza meta.montoActual.
+      meta (monto negativo via SignoMovimiento, categoria 'Ahorro'), le deja el
+      vinculo movimientoOrigen = ingreso (T4) y actualiza meta.montoActual. El
+      residuo de redondeo se asigna a la ultima asignacion.
     * Si la condicion NO se cumple (automatizarAhorroEnMetas=false o config inactiva):
       No se genera ningun sub-movimiento ni debito adicional. El 100% del ingreso
       permanece liquido en el saldo principal del usuario. El presupuesto actua
@@ -615,26 +1011,77 @@ MODULO: REPORTES (/api/reportes)
 * MetaAhorroService
   - crearMeta(MetaAhorroCreacionDTO): Inicializa una meta de ahorro.
   - obtenerMetasPorUsuario(String rut): Lista de metas con saldos.
-  - realizarAbono(Long metaId, AbonoRetiroDTO): Descuenta saldo general y 
-    abona a meta con categoria "Ahorro".
-  - realizarRetiro(Long metaId, AbonoRetiroDTO): Valida fondos suficientes, 
-    descuenta de la meta y reintegra al saldo principal.
-  - eliminarMeta(Long metaId): Protege la meta por defecto, transfiere fondos 
-    al saldo principal si habia ahorro acumulado, desvincula historicos y borra.
-  - editarMeta(Long metaId, MetaAhorroCreacionDTO): Modifica propiedades 
+  - realizarAbono(Long metaId, AbonoRetiroDTO): Valida propiedad, aplica
+    SignoMovimiento (ABONO_META negativo), abona a la meta con categoria "Ahorro".
+  - realizarRetiro(Long metaId, AbonoRetiroDTO): Valida fondos suficientes,
+    aplica SignoMovimiento (RETIRO_META positivo) y reintegra al saldo principal.
+  - eliminarMeta(Long metaId): Protege la meta por defecto, devuelve los fondos
+    con un RETIRO_META sin vincular (SignoMovimiento), desvincula historicos y borra.
+  - editarMeta(Long metaId, MetaAhorroCreacionDTO): Modifica propiedades
     respetando las restricciones de la meta por defecto.
 
-* DeudaService
-  - crearDeuda(DeudaCreacionDTO): Registra deuda pendiente.
-  - obtenerDeudasPorUsuario(String rut): Lista deudas con campos calculados.
-  - registrarPago(Long deudaId, PagoDeudaDTO): Crea movimiento PAGO_DEUDA, 
-    asocia categoria "Deudas" y pasa a PAGADA si se cubre el total.
-  - editarDeuda(Long deudaId, DeudaCreacionDTO): Permite edicion solo si 
-    cuotasPagadas == 0.
+* DeudaService (unico productor de PAGO_DEUDA y unico lugar donde se calculan saldos)
+  - crearDeuda(DeudaCreacionDTO): Resuelve las condiciones con MotorFinanciero,
+    calcula la tabla y persiste montoTotal, valorCuota, tasas y costos.
+  - obtenerDeudasPorUsuario(String rut): Lista via proyeccion JPQL y enriquece
+    cada DTO en memoria (motor + calendario + ImputacionPagos).
+  - registrarPago(Long deudaId, PagoDeudaDTO): valida propiedad y estado
+    PENDIENTE; calcula el monto segun modoPago; crea el PAGO_DEUDA (SignoMovimiento),
+    asocia categoria "Deudas" y pasa a PAGADA si se cubre el total. Devuelve
+    ResultadoPago(deuda, movimiento).
+  - editarDeuda(Long deudaId, DeudaCreacionDTO): sin pagos recalcula todas las
+    condiciones; con pagos solo nombre/descripcion/tipoDeuda/cuotasPagadasPrevias
+    (recalcula montoPagadoPrevio); enviar condiciones/montoTotal/cantidadCuotas -> 409.
   - cancelarDeuda(Long deudaId): Pasa estado a CANCELADA si no esta PAGADA.
+  - obtenerAmortizacion(Long deudaId): cronograma con estado/pagado/previa.
+  - obtenerDeuda(Long deudaId): ficha enriquecida (valida propiedad -> 403).
+  - obtenerPagos(Long deudaId, page, size): historial paginado con desglose en
+    memoria (imputacion acumulada menos la anterior), una sola consulta.
+  - ResultadoPago (record interno): deuda resultante + movimiento creado.
+
+* PresupuestoService (T5)
+  - obtenerConfiguracion / guardarConfiguracion: 50/30/20 (suma exacta 100.00,
+    ningun porcentaje negativo) y reemplazo de asignaciones a metas (valida
+    propiedad de cada meta).
+  - obtenerCategorias / reemplazarCategorias: limites por categoria (valida
+    categoria existente, limite > 0 y sin repetidos).
+  - obtenerEjecucionCategorias(rut, month, year): gastado vs. limite y estado.
+  - calcularEjecucionGeneral(rut, YearMonth): base reutilizable por /ejecucion/me
+    y por el historial (no se duplica).
+  - obtenerHistorial(rut, desde, hasta): mes a mes, formato YYYY-MM, max 24 meses.
+
+* SimulacionService (T1b, sin persistencia)
+  - simularCredito(SimulacionCreditoRequestDTO): resuelve y calcula con el motor,
+    arma condiciones normalizadas, resumen educativo, tabla, comparacion de plazos
+    (max 5) y advertencias (CAE referencial; sobreendeudamiento si >30% del ingreso).
 
 * CategoriaService
   - obtenerTodas(): Retorna la coleccion de categorias como DTOs.
+
+* Paquete service/finanzas (motor financiero puro, sin BD ni Spring)
+  - CalculoFinancieroService: cuota francesa, tabla de amortizacion, CAE y
+    conversion de tasas; biseccion para tasas implicitas y CAE con costos.
+  - CalendarioCuotas: fechas de vencimiento mensuales (dia ancla) y conteo de cuotas.
+  - ResolutorCondiciones: valida y normaliza CondicionesCreditoInput (reglas por
+    modalidad en %; SIN_INTERES no admite tasa, TASA_CONOCIDA exige una sola tasa,
+    CUOTA_CONOCIDA exige valorCuota > 0 y no admite tasas).
+  - ImputacionPagos: clase pura que reparte los pagos cuota a cuota (interes ->
+    costo adicional -> capital); expone EstadoCuota, montoProximaCuotaImpaga,
+    capitalImputado y contarPagadas. Nada se persiste.
+  - MotorFinanciero: fachada de los tres componentes (resolver, calcular,
+    fechasVencimiento).
+  - CondicionesCredito / ResultadoCalculo / CuotaAmortizacion: records de entrada,
+    salida y fila de tabla.
+  - CalculoFinancieroException: excepcion de negocio (HTTP 400).
+
+* service/movimiento
+  - SignoMovimiento: regla canonica de signo. aplicar(tipo, monto) devuelve el
+    monto en valor absoluto con escala 2 (HALF_UP) y lo niega si el tipo es
+    GASTO_GENERAL, PAGO_DEUDA o ABONO_META; monto 0/nulo -> IllegalArgumentException.
+    esNegativo(tipo) informa el signo. Es la unica clase que llama a negate() sobre
+    montos de movimientos.
+  - FechasMovimiento: unica frontera entre java.time (LocalDate/YearMonth) y
+    java.util.Date; zona fijada una sola vez (systemDefault).
 
 * ReporteService & Generadores
   - exportarMovimientos(String rut, String alcance, String formato, Integer mes, Integer anio):
@@ -650,28 +1097,46 @@ MODULO: REPORTES (/api/reportes)
   - Optional<Usuario> findByEmail(String email)
   - boolean existsByEmail(String email)
 
-* MovimientoRepository
+* MovimientoRepository (extends JpaRepository + JpaSpecificationExecutor)
   - List<Movimiento> findByUsuarioRutOrderByFechaDesc(String rut)
   - Page<Movimiento> findByUsuarioRutOrderByFechaDesc(String rut, Pageable pageable)
   - @Query("SELECT SUM(m.monto) FROM Movimiento m WHERE m.usuario.rut = :rut")
-    Double findSaldoByUsuarioRut(@Param("rut") String rut)
+    BigDecimal findSaldoByUsuarioRut(@Param("rut") String rut)
   - List<Movimiento> findByDeuda(Deuda deuda)
+  - List<Movimiento> findByDeudaIdAndTipoMovimientoOrderByFechaAscIdAsc(Long, TipoMovimiento)
+    (historial de pagos en orden de imputacion, una sola consulta)
+  - List<Movimiento> findByMetaAhorroId(Long metaId)
   - List<Movimiento> findByUsuarioRutAndFechaBetween(String rut, Date start, Date end)
+  - List<Movimiento> findByUsuarioRutAndFechaGreaterThanEqualAndFechaLessThan(rut, desde, hastaExclusivo)
+    (ventana semiabierta de un mes completo, T5; usa BigDecimal)
+  - boolean existsByMovimientoOrigenId(Long movimientoOrigenId)
+    (¿el ingreso tiene abonos de Smart-Split vinculados? T4)
+
+* MovimientoSpecifications (clase pura de armado de consultas, T4)
+  - conFiltros(String rut, MovimientoFiltroDTO): combina el RUT obligatorio con
+    los filtros opcionales (desde/hasta ISO, tipo, categoria, magnitud del monto,
+    q escapado). Delega la conversion de fechas en FechasMovimiento.
 
 * MetaAhorroRepository
   - List<MetaAhorro> findByUsuarioRut(String rut)
   - @Query("SELECT COALESCE(SUM(m.monto), 0.0) FROM Movimiento m WHERE m.metaAhorro.id = :metaId")
-    Double findTotalAhorradoByMetaId(@Param("metaId") Long metaId)
+    BigDecimal findTotalAhorradoByMetaId(@Param("metaId") Long metaId)
 
 * DeudaRepository
   - List<Deuda> findByUsuarioRut(String rut)
   - @Query(...) List<DeudaResponseDTO> findDeudasDTOByUsuarioRut(@Param("rut") String rut)
     (Proyección JPQL con constructor DTO y agregaciones SUM/COUNT; resuelve N+1 queries en una sola consulta)
   - @Query(...) Optional<DeudaResponseDTO> findDeudaDTOById(@Param("deudaId") Long deudaId)
-  - @Query("SELECT COALESCE(SUM(m.monto), 0.0) FROM Movimiento m WHERE m.deuda.id = :deudaId AND m.tipoMovimiento = 'PAGO_DEUDA'")
-    Double findTotalPagadoPorDeuda(@Param("deudaId") Long deudaId)
-  - @Query("SELECT COUNT(m) FROM Movimiento m WHERE m.deuda.id = :deudaId AND m.tipoMovimiento = 'PAGO_DEUDA'")
+  - @Query("SELECT COALESCE(SUM(m.monto), 0) FROM Movimiento m WHERE m.deuda.id = :deudaId AND m.tipoMovimiento = TipoMovimiento.PAGO_DEUDA")
+    BigDecimal findTotalPagadoPorDeuda(@Param("deudaId") Long deudaId)
+  - @Query("SELECT COUNT(m) FROM Movimiento m WHERE m.deuda.id = :deudaId AND m.tipoMovimiento = TipoMovimiento.PAGO_DEUDA")
     Integer countPagosPorDeuda(@Param("deudaId") Long deudaId)
+  - La proyeccion usa los fragmentos PROYECCION_DEUDA + AGRUPAMIENTO_DEUDA (JPQL),
+    ambos sobre el enum TipoMovimiento.PAGO_DEUDA (sin comillas).
+
+* PresupuestoCategoriaRepository (T5)
+  - List<PresupuestoCategoria> findByUsuarioRut(String rut)
+  - void deleteByUsuarioRut(String rut) (el PUT reemplaza el conjunto completo)
 
 * ConfiguracionPresupuestoRepository
   - Optional<ConfiguracionPresupuesto> findByUsuarioRut(String usuarioRut)
@@ -710,6 +1175,90 @@ MODULO: REPORTES (/api/reportes)
 ================================================================================
 8. REGLAS DE NEGOCIO Y FLUJOS DE TRABAJO (MAPAS CONCEPTUALES EN TEXTO)
 ================================================================================
+
+--------------------------------------------------------------------------------
+REGLAS TRANSVERSALES (T1d, T2, T3, T4, T5)
+--------------------------------------------------------------------------------
+
+R1. SIGNO CANONICO DE LOS MOVIMIENTOS (T1d)
+- El signo lo impone el tipo, no el cliente ni el productor:
+    Positivos: INGRESO_GENERAL, RETIRO_META
+    Negativos: GASTO_GENERAL, PAGO_DEUDA, ABONO_META
+- SignoMovimiento.aplicar(tipo, monto) devuelve el monto en valor absoluto con
+  escala 2 (HALF_UP) y lo niega si corresponde. Monto 0 o nulo, o tipo sin signo
+  definido -> IllegalArgumentException (HTTP 400).
+- Productores obligados a usarlo: MovimientoService.registrarMovimiento,
+  DeudaService.registrarPago, MetaAhorroService (abonar, retirar y el reintegro
+  al eliminar meta) y SmartSplitProcessor.
+- Es la unica clase que llama a negate() sobre montos de movimientos. Saldo =
+  SUM(MOVIMIENTO.monto).
+- Si se agrega un valor a TipoMovimiento hay que actualizar SignoMovimiento y el
+  CHECK de la BD en la misma tarea.
+- Red de seguridad en la BD (V4): CHECK chk_movimiento_signo sobre MOVIMIENTO:
+    (tipo IN ('INGRESO_GENERAL','RETIRO_META') AND monto > 0)
+    OR (tipo IN ('GASTO_GENERAL','PAGO_DEUDA','ABONO_META') AND monto < 0).
+  Se creo NOT VALID (el historico podia violarlo y el arranque no falla), pero
+  desde ya rechaza INSERT/UPDATE invalidos. El script trae la consulta de
+  diagnostico y el VALIDATE comentados; V8 finalmente valida el constraint.
+
+R2. INVARIANTE DE METAS
+- Tras abonar, retirar, Smart-Split y eliminar, montoActual de la meta =
+  -(suma de movimientos ABONO_META vinculados a esa meta).
+- Al eliminar una meta con ahorro se crea un RETIRO_META (positivo) por el total
+  ahorrado, SIN vincular a la meta.
+
+R3. IMPUTACION DE PAGOS (T2/T3)
+- ImputacionPagos (clase pura, service.finanzas) reparte los pagos reales cuota
+  por cuota y, dentro de cada cuota, en este orden: interes -> costo adicional ->
+  capital. Las cuotasPagadasPrevias cuentan como completas ya pagadas y los pagos
+  reales empiezan en la siguiente. Nada de la imputacion se persiste.
+- DeudaService.registrarPago es el UNICO productor de PAGO_DEUDA; POST
+  /api/movimientos con ese tipo delega en el. modoPago CUOTA_CALCULADA cobra lo
+  que falta de la proxima cuota impaga (cuota + costo adicional);
+  MONTO_PERSONALIZADO (por defecto) exige monto > 0. Sobrepago o deuda no
+  PENDIENTE -> 409; deuda ajena -> 403.
+- Detalle e historial (T3): GET /api/deudas/{id} (ficha con derivados),
+  /amortizacion (estado PAGADA|PARCIAL|PENDIENTE, montoPagado, previa) y /pagos
+  (paginado fecha desc; desglose = imputacion acumulada tras ese pago menos la
+  anterior, en memoria y con una sola consulta). CuotaSimulacionDTO.from(tabla,
+  fechas) es el mapper compartido por el simulador y el detalle.
+- DeudaResponseDTO calcula en memoria, sobre la proyeccion JPQL y sin consultas
+  extra: tasas en porcentaje, valorCuota, fechaUltimaCuota, montoPagado,
+  montoRestante/totalPorPagar, saldoCapital, cuotasPagadas, proximaCuota*,
+  interesesPagados. Si una deuda no se puede recalcular, sus derivados quedan en
+  null y el listado sigue.
+
+R4. HISTORIAL FILTRADO Y EDICION DE MOVIMIENTOS (T4)
+- GET /api/movimientos/paginados/me acepta filtros opcionales (desde/hasta ISO
+  inclusivos, tipoMovimiento, categoriaId, montoMin/montoMax contra la magnitud
+  (valor absoluto) del monto, q case-insensitive con % y _ escapados) via JPA
+  Specifications, siempre filtrando por el RUT del token. 400 si desde>hasta,
+  montoMin/montoMax negativos o montoMin>montoMax.
+- PUT/DELETE /api/movimientos/{id} solo aplican a INGRESO_GENERAL y GASTO_GENERAL
+  sin deuda ni meta (el resto -> 409 "se modifica desde su modulo"), exigen
+  propiedad (ajeno -> 403) y rechazan con 409 un ingreso con movimientos derivados
+  (movimiento_origen_id). La fecha no se edita; el monto se reescribe con
+  SignoMovimiento.
+- El PUT es parcial: descripcion, monto y categoriaId son opcionales y solo se
+  aplican los enviados (no nulos); los omitidos conservan su valor. Los
+  movimientos historicos sin vinculo no tienen esa restriccion.
+- FechasMovimiento (service.movimiento) es la unica clase que mezcla java.time
+  con java.util.Date; la zona se fija una sola vez.
+
+R5. PRESUPUESTO POR CATEGORIA E HISTORIAL (T5)
+- PresupuestoService calcula el mes completo en la ventana semiabierta
+  [inicioDeMes, inicioDeMesSiguiente) de FechasMovimiento.
+- GET/PUT /categorias/me lee/reemplaza el conjunto de limites (PUT valida
+  categoria existente, limite > 0 y sin repetidas; si no -> 400), siempre por el
+  RUT del token.
+- GET /categorias/ejecucion/me: gastado = suma en abs de GASTO_GENERAL y
+  PAGO_DEUDA de esa categoria en el mes; estado = EstadoEjecucion.desdePorcentaje
+  (UMBRAL_ALERTA=80, UMBRAL_EXCEDIDO=100) -> OK / ALERTA / EXCEDIDO.
+- GET /historial/me?desde&hasta (YYYY-MM, inclusivos) reutiliza
+  calcularEjecucionGeneral mes a mes; max 24 meses, rango invertido o formato
+  invalido -> 400. Un mes sin ingresos devuelve ceros (sin dividir por 0).
+- POST /me exige necesidades + deseos + ahorro = 100.00 (compareTo) y ningun
+  porcentaje negativo; responde ConfiguracionPresupuestoResponseDTO (no la entidad).
 
 --------------------------------------------------------------------------------
 FLUJO 1: REGISTRO Y AUTENTICACION
@@ -754,7 +1303,14 @@ Al Iniciar Sesion (Login):
 FLUJO 2: REGISTRO DE MOVIMIENTOS Y ALGORITMO SMART-SPLIT
 --------------------------------------------------------------------------------
 
+Nota: el signo del movimiento lo impone SignoMovimiento segun el tipo; el monto
+llega en positivo. Los tipos ABONO_META y RETIRO_META no se registran por este
+endpoint (400): se crean desde /api/metas. PAGO_DEUDA delega en DeudaService.
+
 [POST /api/movimientos (MovimientoRegistroDTO)]
+                      |
+                      v
+     [Validar tipo registrable + fijar signo]
                       |
                       v
             [¿Tipo de Movimiento?]
@@ -764,17 +1320,18 @@ FLUJO 2: REGISTRO DE MOVIMIENTOS Y ALGORITMO SMART-SPLIT
   (PAGO_DEUDA)              (INGRESO_GENERAL)
         |                           |
         v                           v
-[Asociar Deuda por ID]       [¿aplicarPresupuesto == true?]
-        |                           |
-        v                     +-----+-----+
-[Comprobar si nuevo           |           |
- total salda la deuda]      (NO)         (SI)
-        |                     |           |
-        v                     v           v
-[Marcar PAGADA si aplica]  [Guardar] [SmartSplitProcessor.procesarDistribucion()]
+[Delegar en              [¿aplicarPresupuesto == true?]
+ DeudaService.registrarPago]      |
+        |                     +-----+-----+
+        v                     |           |
+[PAGO_DEUDA negativo,     (NO)         (SI)
+ categoria 'Deudas']       |           |
+        |                  v           v
+        |             [Guardar]  [Guardar ingreso y
+        |                         SmartSplitProcessor.procesarDistribucion()]
+        v                                 |
+[Estado de la deuda: PAGADA?]        [¿config.activo == true?]
         |                                 |
-        v                           [¿config.activo == true?]
-[Guardar Movimiento Principal]            |
                                     +-----+-----+
                                     |           |
                                   (NO)         (SI)
@@ -798,6 +1355,7 @@ FLUJO 2: REGISTRO DE MOVIMIENTOS Y ALGORITMO SMART-SPLIT
                           en el saldo              [Para cada asignacion con % > 0:
                           principal.               - MontoAbono = MontoAhorro * %Asignacion
                                                    - Crear Movimiento ABONO_META (-monto)
+                                                   - Dejar movimientoOrigen = ingreso (T4)
                                                    - Categorizar como 'Ahorro'
                                                    - Actualizar meta.montoActual (+monto)
                                                    - Guardar en BD]
@@ -805,7 +1363,7 @@ FLUJO 2: REGISTRO DE MOVIMIENTOS Y ALGORITMO SMART-SPLIT
                                           +--------------+
                                           |
                                           v
-                               [Guardar Movimiento Principal]
+                               [Ingreso ya guardado antes del reparto (T4)]
                                           |
                                           v
                                [Retornar 201 Created]
@@ -815,25 +1373,39 @@ FLUJO 3: CICLO DE VIDA Y AMORTIZACION DE DEUDAS
 --------------------------------------------------------------------------------
 
 Estado Inicial:
-[Crear Deuda] ---> Estado: PENDIENTE (cuotasPagadas = 0, montoPagado = 0)
+[Crear Deuda via condiciones -> MotorFinanciero] -> PENDIENTE
      |
-     +--- (PUT /api/deudas/{id}) -------> [Permitido solo si cuotasPagadas == 0]
+     +--- (PUT /api/deudas/{id}): sin pagos recalcula todo; con pagos solo
+     |      etiqueta y cuotasPagadasPrevias (condiciones -> 409)
      |
      +--- (PATCH /api/deudas/{id}/cancelar) -> [Pasa a Estado: CANCELADA]
+     |
+     +--- (GET /api/deudas/{id})            -> ficha enriquecida
+     +--- (GET /api/deudas/{id}/amortizacion) -> cronograma con estado por cuota
+     +--- (GET /api/deudas/{id}/pagos)      -> historial paginado con desglose
      |
      +--- (POST /api/deudas/{id}/pagar):
                |
                v
-          [Crear movimiento PAGO_DEUDA con monto negativo]
+          [Validar propiedad y estado PENDIENTE]
+               |
+               v
+          [Determinar monto segun modoPago]
+           - CUOTA_CALCULADA: lo que falta de la proxima cuota impaga
+           - MONTO_PERSONALIZADO: monto enviado (> 0)
+               |
+               v
+          [ImputacionPagos: interes -> costo adicional -> capital]
+               |
+               v
+          [Crear movimiento PAGO_DEUDA negativo (SignoMovimiento)]
                |
                v
           [Asociar categoria 'Deudas' automaticamente]
                |
                v
-          [Total Pagado = Suma de pagos historicos de la deuda]
-               |
-               v
-          [¿Total Pagado >= Monto Total de la Deuda?]
+          [montoPagado = cuotas previas + pagos reales;
+           ¿Total Pagado >= Monto Total de la Deuda?]
                |
              +-+-+
              |   |
@@ -842,6 +1414,8 @@ Estado Inicial:
              |   +--> [Actualizar Estado a: PAGADA]
              |
              +------> [Deuda permanece en: PENDIENTE]
+Nota: los saldos y estados se recalculan en memoria (nada de la imputacion se
+persiste); la BD solo guarda el movimiento PAGO_DEUDA.
 
 --------------------------------------------------------------------------------
 FLUJO 4: METAS DE AHORRO Y ELIMINACION CON REEMBOLSO
@@ -961,6 +1535,44 @@ FLUJO 6: GENERACION Y EXPORTACION DE REPORTES (PATRON STRATEGY)
                                 v
      [Descarga directa del archivo en el dispositivo del cliente]
 
+--------------------------------------------------------------------------------
+FLUJO 7: PRESUPUESTO POR CATEGORIA E HISTORIAL (T5)
+--------------------------------------------------------------------------------
+
+[PUT /api/presupuestos/categorias/me (lista de limites)]
+                     |
+                     v
+   [Validar: categoria existe, limite > 0, sin repetidas] --(error)--> 400
+                     |
+                     v
+   [deleteByUsuarioRut + saveAll (reemplazo total del conjunto)]
+
+[GET /api/presupuestos/categorias/ejecucion/me?month=M&year=Y]
+                     |
+                     v
+   [Ventana del mes: [inicioDeMes, inicioDeMesSiguiente)]
+                     |
+                     v
+   [Para cada limite: gastado = abs(GASTO_GENERAL + PAGO_DEUDA de la categoria)]
+                     |
+                     v
+   [porcentajeUsado = gastado * 100 / limite (0 si limite <= 0)]
+                     |
+                     v
+   [estado = EstadoEjecucion.desdePorcentaje:
+    < 80 OK | >= 80 ALERTA | >= 100 EXCEDIDO]
+
+[GET /api/presupuestos/historial/me?desde=YYYY-MM&hasta=YYYY-MM]
+                     |
+                     v
+   [Validar formato, desde <= hasta y rango <= 24 meses] --(error)--> 400
+                     |
+                     v
+   [Para cada mes: calcularEjecucionGeneral (codigo reutilizado)]
+                     |
+                     v
+   [List<HistorialPresupuestoDTO> (un mes sin ingresos devuelve ceros)]
+
 ================================================================================
 9. CONFIGURACIONES, SEGURIDAD, DESPLIEGUE Y DEVOPS
 ================================================================================
@@ -979,10 +1591,15 @@ FLUJO 6: GENERACION Y EXPORTACION DE REPORTES (PATRON STRATEGY)
   * Cabeceras autorizadas: Authorization, Content-Type, X-Requested-With.
 
 9.2. POBLADO Y MIGRACION DE DATOS (Flyway)
-- Responsable unico: los scripts Flyway versionados.
-  * Esquema: V1__init_schema.sql (DDL de las tablas).
+- Responsable unico: los scripts Flyway versionados (V1 a V8).
+  * Esquema base: V1__init_schema.sql (DDL de las tablas).
   * Poblado inicial de las 10 categorias con iconos, colores y tipo:
     V2__seed_categories.sql.
+  * Evolucion del esquema: V3 (condiciones de credito en DEUDA), V4 (CHECK de
+    signo, NOT VALID), V5 (movimiento_origen_id), V6 (PRESUPUESTO_CATEGORIA),
+    V7 (renombrado temporal de constraints a mayusculas) y V8 (normalizacion a
+    minusculas, validacion del CHECK de signo, indices y RLS). El detalle esta
+    en la seccion 10.
 - Las semillas son idempotentes: usan ON CONFLICT DO NOTHING, por lo que
   re-ejecutar la migracion no duplica filas.
 - No existe ninguna clase Java CommandLineRunner que pueble datos en tiempo de
@@ -1056,9 +1673,16 @@ Beneficios obtenidos:
 
 10.2. DEPENDENCIAS MAVEN (pom.xml)
 --------------------------------------------------------------------------------
-Dependencia unica de modulo Flyway ademas de flyway-core:
+La version de Flyway se fija de forma explicita con la propiedad
+<flyway.version>10.20.0</flyway.version> (sobrescribe la del BOM). Ademas de
+flyway-core se declara el modulo de PostgreSQL:
 
-  <!-- flyway-core: version gestionada por el BOM de Spring Boot 3.3 (Flyway 10.x) -->
+  <properties>
+      <java.version>21</java.version>
+      <flyway.version>10.20.0</flyway.version>
+  </properties>
+
+  <!-- flyway-core: version fijada por la propiedad flyway.version (10.20.0) -->
   <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-core</artifactId>
@@ -1070,8 +1694,8 @@ Dependencia unica de modulo Flyway ademas de flyway-core:
   </dependency>
 
 Notas:
-- flyway-core no declara version explicita; hereda la version 10.x del BOM
-  de spring-boot-starter-parent 3.3.0.
+- flyway-core no declara version en la dependencia; hereda la propiedad
+  flyway.version (10.20.0).
 - flyway-database-postgresql es obligatorio desde Flyway 10 para el soporte
   explicito de PostgreSQL (antes estaba integrado en flyway-core).
 - Las dependencias de Oracle (ucp, ojdbc11, oraclepki, ojdbc11-production) y
@@ -1130,7 +1754,13 @@ Ubicacion: src/main/resources/db/migration/
   └── postgresql/                        ← Motor unico: PostgreSQL (Supabase)
       ├── V1__init_schema.sql            (DDL: creacion de las 7 tablas)
       ├── V2__seed_categories.sql        (DML: 10 categorias con ON CONFLICT)
-      └── V3__deuda_condiciones_credito.sql (DEUDA con condiciones de credito)
+      ├── V3__deuda_condiciones_credito.sql (DEUDA + condiciones de credito)
+      ├── V4__movimiento_check_signo.sql (CHECK chk_movimiento_signo, NOT VALID)
+      ├── V5__movimiento_origen_id.sql   (movimiento_origen_id + FK + indice)
+      ├── V6__presupuesto_categoria.sql  (PRESUPUESTO_CATEGORIA + RLS)
+      ├── V7__rename_constraints.sql     (rebautiza constraints de V3-V6)
+      └── V8__normalizar_constraints_indices_rls.sql (minusculas, valida CHECK,
+          indices faltantes y RLS en las 8 tablas)
 
 Convencion de nombrado Flyway:
   V{version}__{descripcion}.sql
@@ -1173,6 +1803,10 @@ Constraints implementados:
     * DEUDA.estado IN ('PENDIENTE','PAGADA','CANCELADA')
     * MOVIMIENTO.tipo_movimiento IN ('INGRESO_GENERAL','GASTO_GENERAL',
       'PAGO_DEUDA','ABONO_META','RETIRO_META')
+Nota: V1 solo crea 7 tablas. La octava (PRESUPUESTO_CATEGORIA) llega en V6, y
+los CHECK de DEUDA.tipo_deuda/modalidad_calculo, el CHECK de signo de MOVIMIENTO
+y las restricciones de PRESUPUESTO_CATEGORIA se agregan en V3, V4 y V6; V8 los
+normaliza y valida (ver 10.7).
 
 10.6. DETALLE DE V2__seed_categories.sql (POBLADO DE CATEGORIAS)
 --------------------------------------------------------------------------------
@@ -1200,7 +1834,58 @@ Estrategia de idempotencia:
     Aprovecha la clausula nativa de PostgreSQL para inserciones condicionales
     sin duplicados.
 
-10.7. ELIMINACION DEL DATALOADER LEGACY
+10.7. DETALLE DE V3 A V8 (EVOLUCION DEL ESQUEMA)
+--------------------------------------------------------------------------------
+Los scripts V1..V6 ya estan aplicados: no se editan; su nombre y contenido se
+corrigen siempre con un script nuevo.
+
+V3__deuda_condiciones_credito.sql (T1c)
+- Amplia DEUDA con las condiciones del credito: tipo_deuda (default 'OTRO'),
+  modalidad_calculo (default 'SIN_INTERES'), monto_capital, gastos_iniciales,
+  costo_adicional_por_cuota, tasa_mensual NUMERIC(12,8) (fraccion), valor_cuota,
+  fecha_primera_cuota, cuotas_pagadas_previas, monto_pagado_previo,
+  carga_anual_equivalente y costo_total_credito.
+- Agrega CHECK: chk_tipo_deuda, chk_modalidad_calculo y
+  chk_cuotas_pagadas_previas (>= 0).
+- Backfill del historico y luego SET NOT NULL sobre monto_capital, valor_cuota y
+  costo_total_credito.
+
+V4__movimiento_check_signo.sql (T1d)
+- Red de seguridad del signo canonico: CHECK chk_movimiento_signo sobre
+  MOVIMIENTO, creado NOT VALID para no bloquear el arranque si el historico tiene
+  signos invertidos. Aun NOT VALID, PostgreSQL ya rechaza INSERT/UPDATE que lo
+  violen.
+- Incluye (comentadas) la consulta de diagnostico de filas invalidas y la
+  sentencia VALIDATE CONSTRAINT.
+
+V5__movimiento_origen_id.sql (T4)
+- Agrega movimiento_origen_id BIGINT (autoreferencia nullable) + FK
+  fk_movimiento_origen + indice idx_movimiento_origen_id.
+- Deja rastro del INGRESO_GENERAL que origina los ABONO_META de Smart-Split; los
+  movimientos historicos y no vinculados quedan en NULL.
+
+V6__presupuesto_categoria.sql (T5)
+- CREATE TABLE presupuesto_categoria (limite mensual por usuario y categoria) con
+  pk_presupuesto_categoria, fk_presup_cat_usuario, fk_presup_cat_categoria,
+  uq_presup_cat_usuario_cat y chk_presup_cat_limite (limite_mensual > 0).
+- Habilita RLS en la tabla nueva.
+
+V7__rename_constraints.sql
+- Renombra a MAYUSCULAS (entre comillas dobles) los constraints creados en V3..V6,
+  para alinearlos con los prefijos PK_/UQ_/FK_/CHK_ de la guia. No toca datos ni
+  definiciones. Es un paso intermedio: PostgreSQL pliega a minusculas todo
+  identificador sin comillas.
+
+V8__normalizar_constraints_indices_rls.sql
+- Revierte V7: vuelve a dejar los nombres de constraint en minusculas.
+- Valida de verdad el CHECK de signo (VALIDATE CONSTRAINT chk_movimiento_signo).
+- Crea 6 indices de filtro/FK: idx_movimiento_usuario_fecha,
+  idx_movimiento_deuda, idx_movimiento_meta, idx_movimiento_categoria,
+  idx_deuda_usuario y idx_meta_usuario.
+- Habilita RLS (idempotente) en las 8 tablas de dominio de public. flyway_schema_history
+  no se toca. El backend conecta con el rol postgres, que ignora RLS.
+
+10.8. ELIMINACION DEL DATALOADER LEGACY
 --------------------------------------------------------------------------------
 Archivo eliminado: com.example.saveup.config.DataLoader (CommandLineRunner)
 
@@ -1217,9 +1902,9 @@ Implicaciones:
     absorbida por V2__seed_categories.sql.
   - Si en el futuro se requiere una migracion de datos compleja (ej.
     normalizacion de registros existentes), se crea un nuevo script Flyway
-    (V3, V4, ...); nunca se reactiva un cargador imperativo en Java.
+    (V9, V10, ...); nunca se reactiva un cargador imperativo en Java.
 
-10.8. FLUJO DE EJECUCION DE FLYWAY AL ARRANQUE
+10.9. FLUJO DE EJECUCION DE FLYWAY AL ARRANQUE
 --------------------------------------------------------------------------------
 
 [Spring Boot arranca]
@@ -1254,7 +1939,7 @@ Implicaciones:
               v
 [Aplicacion lista para recibir peticiones]
 
-10.9. GUIA PARA FUTURAS MIGRACIONES
+10.10. GUIA PARA FUTURAS MIGRACIONES
 --------------------------------------------------------------------------------
 Para anadir cambios al esquema o datos semilla:
 
@@ -1262,9 +1947,9 @@ Para anadir cambios al esquema o datos semilla:
    - src/main/resources/db/migration/postgresql/V{n}__descripcion.sql
    Calcula n mirando el ultimo script existente en esa carpeta.
 
-2. Respetar la numeracion secuencial (V3, V4, V5, ...).
+2. Respetar la numeracion secuencial (V9, V10, ...).
 
-3. NUNCA modificar scripts ya aplicados (V1, V2, V3). Flyway valida checksums
+3. NUNCA modificar scripts ya aplicados (V1..V8). Flyway valida checksums
    y rechazara el arranque si detecta alteraciones.
 
 4. Para cambios de esquema:
