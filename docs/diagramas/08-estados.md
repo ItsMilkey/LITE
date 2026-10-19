@@ -1,6 +1,6 @@
 # 08 — Diagramas de estado
 
-**Tipo mermaid:** `stateDiagram-v2` · **Estado:** completo (verificado contra el código en HEAD `9e9385e`)
+**Tipo mermaid:** `stateDiagram-v2` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
 
 ## Qué responde
 Ciclo de vida de una deuda (`EstadoDeuda`) y derivación del estado de ejecución de un límite presupuestario (`EstadoEjecucion`).

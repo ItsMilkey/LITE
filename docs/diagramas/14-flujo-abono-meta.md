@@ -1,6 +1,6 @@
 # 14 — Flujo: abono, retiro y eliminación de meta
 
-**Tipo mermaid:** `sequenceDiagram` · **Estado:** completo (verificado contra el código en HEAD `9e9385e`)
+**Tipo mermaid:** `sequenceDiagram` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
 
 ## Qué responde
 Cómo se abona y retira de una meta de ahorro, cómo se ajusta `montoActual` y cómo se reintegran los fondos al eliminar una meta.

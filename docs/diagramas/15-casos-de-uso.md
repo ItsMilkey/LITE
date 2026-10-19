@@ -1,6 +1,6 @@
 # 15 — Mapa de casos de uso por módulo
 
-**Tipo mermaid:** `flowchart` (mermaid no tiene diagrama UML de casos de uso) · **Estado:** completo (verificado contra el código en HEAD `9e9385e`)
+**Tipo mermaid:** `flowchart` (mermaid no tiene diagrama UML de casos de uso) · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
 
 ## Qué responde
 Los casos de uso cubiertos por el backend, agrupados por módulo y ligados al actor Usuario.
@@ -97,5 +97,5 @@ flowchart LR
 
 ## Notas y "por confirmar"
 - El `flowchart` conecta al actor con **cada módulo** (subgraph) para mantener la legibilidad; el detalle caso→endpoint está en la tabla.
-- La **trazabilidad a historias de usuario** queda pendiente para otra sesión (ver `README.md` de este directorio).
+- La **trazabilidad a historias de usuario** vive en [`../historias-de-usuario/README.md`](../historias-de-usuario/README.md) (24 / 24 casos de uso cubiertos).
 - Casos no cubiertos aquí como flujo de secuencia propio: los reportes y la verificación de propiedad anti-IDOR se describen en [`03-componentes.md`](03-componentes.md) y [`09-flujo-auth.md`](09-flujo-auth.md).

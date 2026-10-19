@@ -1,6 +1,6 @@
 # 13 — Flujo: presupuesto 50/30/20 y ejecución
 
-**Tipo mermaid:** `sequenceDiagram` · **Estado:** completo (verificado contra el código en HEAD `9e9385e`)
+**Tipo mermaid:** `sequenceDiagram` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
 
 ## Qué responde
 Cómo se guarda la configuración 50/30/20, cómo se calcula la ejecución por tipo y por categoría y cómo se arma el historial mensual.

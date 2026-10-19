@@ -1,6 +1,6 @@
 # 09 — Flujo: autenticación y JWT
 
-**Tipo mermaid:** `sequenceDiagram` · **Estado:** completo (verificado contra el código en HEAD `9e9385e`)
+**Tipo mermaid:** `sequenceDiagram` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
 
 ## Qué responde
 Cómo se registra y autentica un usuario, cómo se emite el JWT en el login y cómo se valida en cada petición posterior.

@@ -1,6 +1,6 @@
 # 04 — Paquetes y regla de dependencia
 
-**Tipo mermaid:** `classDiagram` · **Estado:** completo (verificado contra el código en HEAD `9e9385e`)
+**Tipo mermaid:** `classDiagram` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
 
 ## Qué responde
 Cómo se organizan los paquetes y cuál es la dirección permitida de las dependencias: `controller → service → repository → model`, con `dto` transversal.

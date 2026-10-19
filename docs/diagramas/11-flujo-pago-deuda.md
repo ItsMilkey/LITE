@@ -1,6 +1,6 @@
 # 11 — Flujo: pago de deuda
 
-**Tipo mermaid:** `sequenceDiagram` · **Estado:** completo (verificado contra el código en HEAD `9e9385e`)
+**Tipo mermaid:** `sequenceDiagram` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
 
 ## Qué responde
 Cómo se registra un pago contra una deuda, cómo se determina el monto, cómo se crea el movimiento `PAGO_DEUDA` y cómo se recalculan los saldos por imputación.

@@ -1,6 +1,6 @@
 # 12 — Flujo: simulación de crédito
 
-**Tipo mermaid:** `sequenceDiagram` · **Estado:** completo (verificado contra el código en HEAD `9e9385e`)
+**Tipo mermaid:** `sequenceDiagram` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
 
 ## Qué responde
 Cómo se procesa `POST /api/simulaciones/credito`: resolución de condiciones, cálculo en el motor financiero puro y armado del DTO de respuesta, sin persistir nada.

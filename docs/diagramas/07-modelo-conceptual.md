@@ -1,6 +1,6 @@
 # 07 — Modelo conceptual del dominio
 
-**Tipo mermaid:** `mindmap` · **Estado:** completo (verificado contra el código en HEAD `9e9385e`)
+**Tipo mermaid:** `mindmap` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
 
 ## Qué responde
 Los conceptos del dominio y cómo se relacionan: saldo, presupuesto 50/30/20, ejecución, imputación de pagos, Smart-Split, carga anual equivalente y el signo del movimiento. Alineado con `docs/GLOSSARY.md`.

@@ -1,6 +1,6 @@
 # 01 — Diagrama de contexto (C4 Nivel 1)
 
-**Tipo mermaid:** `C4Context` · **Estado:** completo (verificado contra el código en HEAD `9e9385e`)
+**Tipo mermaid:** `C4Context` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
 
 ## Qué responde
 Quién usa SaveUp Lite, qué es el sistema como caja negra y con qué sistemas externos reales se relaciona.
@@ -22,7 +22,7 @@ C4Context
 
     System(saveup, "SaveUp Lite", "Backend REST de finanzas personales. Spring Boot 3.3.0 / Java 21. API stateless con JWT. Expone /api/usuarios, /api/movimientos, /api/saldos, /api/metas, /api/deudas, /api/presupuestos, /api/reportes y /api/simulaciones.")
 
-    System_Ext(cliente, "App movil / Frontend", "Cliente HTTP (Ionic / Angular / Capacitor). Origenes declarados en CORS: localhost:8100, localhost:4200 y capacitor://localhost.")
+    System_Ext(cliente, "App movil / Frontend", "Cliente HTTP (app movil en Flutter). Origenes declarados hoy en CORS: localhost:8100, localhost:4200, capacitor://localhost y localhost (pendientes de actualizar para el cliente Flutter).")
 
     System_Ext(supabase, "PostgreSQL - Supabase", "Base de datos unica de dev y prod (Session Pooler, sslmode=require). Esquema de 8 tablas versionado por Flyway 10.")
 

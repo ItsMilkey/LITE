@@ -3,7 +3,7 @@
 Esquemas y mapas de la arquitectura y el dominio del backend en formato [mermaid.js](https://mermaid.js.org/).
 Un archivo por diagrama. Todos los bloques `mermaid` están verificados: renderizan sin error con `mermaid-cli`.
 
-> **Commit de HEAD verificado:** `9e9385e` (`documentación actualizada`).
+> **Commit de HEAD verificado:** `446a9f5` (`Pruebas locales`).
 > El código manda sobre la documentación: cualquier desajuste se registra como **discrepancia**
 > en la sección correspondiente.
 
@@ -11,21 +11,21 @@ Un archivo por diagrama. Todos los bloques `mermaid` están verificados: renderi
 
 | # | Diagrama | Tipo mermaid | Qué pregunta responde | Fuentes usadas | Commit | Discrepancias |
 |---|---|---|---|---|---|---|
-| 01 | [Contexto](01-contexto.md) | `C4Context` | ¿Quién usa el sistema y con qué sistemas externos habla? | `.agents/rules/00-*`, `application-*.properties`, `keep_alive.yml`, `SecurityConfig` | `9e9385e` | D1 |
-| 02 | [Contenedores](02-contenedores.md) | `C4Container` | ¿Qué unidades ejecutables hay y dónde corren? | `pom.xml`, `Dockerfile`, `application-*.properties`, `db/migration/postgresql/V1..V7` | `9e9385e` | D1 |
-| 03 | [Componentes](03-componentes.md) | `C4Component` | ¿Qué componentes internos tiene la API y en qué capas? | `src/main/java/com/example/saveup/**` | `9e9385e` | D2 |
-| 04 | [Paquetes](04-paquetes.md) | `classDiagram` | ¿Qué paquetes hay y cuál es la dirección de dependencia? | `src/main/java/com/example/saveup/**`, `.agents/rules/00-*` | `9e9385e` | — |
-| 05 | [Modelo ER](05-modelo-er.md) | `erDiagram` (+ `classDiagram`) | ¿Qué tablas, FKs, cardinalidades y enums existen? | `V1..V7`, `model/**`, `model/enums/**` | `9e9385e` | D3 |
-| 06 | [Despliegue](06-despliegue.md) | `C4Deployment` | ¿Cómo se construye, empaqueta y despliega? | `Dockerfile`, `application-*.properties`, `keep_alive.yml` | `9e9385e` | D1 |
-| 07 | [Modelo conceptual](07-modelo-conceptual.md) | `mindmap` | ¿Cómo se relacionan los conceptos del dominio? | `docs/GLOSSARY.md`, `docs/CONTEXT.md`, `SignoMovimiento`, `service/finanzas/**` | `9e9385e` | D4 |
-| 08 | [Estados](08-estados.md) | `stateDiagram-v2` | ¿Cómo evolucionan `EstadoDeuda` y `EstadoEjecucion`? | `enums/**`, `DeudaService`, `PresupuestoService` | `9e9385e` | — |
-| 09 | [Flujo: auth](09-flujo-auth.md) | `sequenceDiagram` | ¿Cómo se registra, loguea y valida un JWT? | `UsuarioController`, `UsuarioService`, `security/**`, `SecurityConfig` | `9e9385e` | — |
-| 10 | [Flujo: Smart-Split](10-flujo-movimiento-smart-split.md) | `sequenceDiagram` | ¿Cómo un ingreso reparte abonos a metas? | `MovimientoService`, `SmartSplitProcessor`, `SignoMovimiento` | `9e9385e` | — |
-| 11 | [Flujo: pago de deuda](11-flujo-pago-deuda.md) | `sequenceDiagram` | ¿Cómo se paga una deuda y se imputan los pagos? | `DeudaController`, `DeudaService`, `ImputacionPagos`, `SignoMovimiento` | `9e9385e` | — |
-| 12 | [Flujo: simulación](12-flujo-simulacion.md) | `sequenceDiagram` | ¿Cómo se simula un crédito sin persistir? | `SimulacionController`, `SimulacionService`, `service/finanzas/**`, `PorcentajeTasa` | `9e9385e` | — |
-| 13 | [Flujo: presupuesto](13-flujo-presupuesto.md) | `sequenceDiagram` | ¿Cómo se calcula 50/30/20, la ejecución y el historial? | `ConfiguracionPresupuestoController`, `PresupuestoService`, `FechasMovimiento`, `EstadoEjecucion` | `9e9385e` | — |
-| 14 | [Flujo: abono a meta](14-flujo-abono-meta.md) | `sequenceDiagram` | ¿Cómo se abona, retira y reintegra una meta? | `MetaAhorroController`, `MetaAhorroService`, `SignoMovimiento`, `MetaAhorroRepository` | `9e9385e` | — |
-| 15 | [Casos de uso](15-casos-de-uso.md) | `flowchart` | ¿Qué casos de uso cubre cada módulo? | `docs/CONTEXT.md`, `controller/**`, `docs/tareas/T0..T5`, `T1d` | `9e9385e` | — |
+| 01 | [Contexto](01-contexto.md) | `C4Context` | ¿Quién usa el sistema y con qué sistemas externos habla? | `.agents/rules/00-*`, `application-*.properties`, `keep_alive.yml`, `SecurityConfig` | `446a9f5` | D1 |
+| 02 | [Contenedores](02-contenedores.md) | `C4Container` | ¿Qué unidades ejecutables hay y dónde corren? | `pom.xml`, `Dockerfile`, `application-*.properties`, `db/migration/postgresql/V1..V8` | `446a9f5` | D1 |
+| 03 | [Componentes](03-componentes.md) | `C4Component` | ¿Qué componentes internos tiene la API y en qué capas? | `src/main/java/com/example/saveup/**` | `446a9f5` | D2 |
+| 04 | [Paquetes](04-paquetes.md) | `classDiagram` | ¿Qué paquetes hay y cuál es la dirección de dependencia? | `src/main/java/com/example/saveup/**`, `.agents/rules/00-*` | `446a9f5` | — |
+| 05 | [Modelo ER](05-modelo-er.md) | `erDiagram` (+ `classDiagram`) | ¿Qué tablas, FKs, cardinalidades y enums existen? | `V1..V8`, `model/**`, `model/enums/**` | `446a9f5` | D3 |
+| 06 | [Despliegue](06-despliegue.md) | `C4Deployment` | ¿Cómo se construye, empaqueta y despliega? | `Dockerfile`, `application-*.properties`, `keep_alive.yml` | `446a9f5` | D1 |
+| 07 | [Modelo conceptual](07-modelo-conceptual.md) | `mindmap` | ¿Cómo se relacionan los conceptos del dominio? | `docs/GLOSSARY.md`, `docs/CONTEXT.md`, `SignoMovimiento`, `service/finanzas/**` | `446a9f5` | D4 |
+| 08 | [Estados](08-estados.md) | `stateDiagram-v2` | ¿Cómo evolucionan `EstadoDeuda` y `EstadoEjecucion`? | `enums/**`, `DeudaService`, `PresupuestoService` | `446a9f5` | — |
+| 09 | [Flujo: auth](09-flujo-auth.md) | `sequenceDiagram` | ¿Cómo se registra, loguea y valida un JWT? | `UsuarioController`, `UsuarioService`, `security/**`, `SecurityConfig` | `446a9f5` | — |
+| 10 | [Flujo: Smart-Split](10-flujo-movimiento-smart-split.md) | `sequenceDiagram` | ¿Cómo un ingreso reparte abonos a metas? | `MovimientoService`, `SmartSplitProcessor`, `SignoMovimiento` | `446a9f5` | — |
+| 11 | [Flujo: pago de deuda](11-flujo-pago-deuda.md) | `sequenceDiagram` | ¿Cómo se paga una deuda y se imputan los pagos? | `DeudaController`, `DeudaService`, `ImputacionPagos`, `SignoMovimiento` | `446a9f5` | — |
+| 12 | [Flujo: simulación](12-flujo-simulacion.md) | `sequenceDiagram` | ¿Cómo se simula un crédito sin persistir? | `SimulacionController`, `SimulacionService`, `service/finanzas/**`, `PorcentajeTasa` | `446a9f5` | — |
+| 13 | [Flujo: presupuesto](13-flujo-presupuesto.md) | `sequenceDiagram` | ¿Cómo se calcula 50/30/20, la ejecución y el historial? | `ConfiguracionPresupuestoController`, `PresupuestoService`, `FechasMovimiento`, `EstadoEjecucion` | `446a9f5` | — |
+| 14 | [Flujo: abono a meta](14-flujo-abono-meta.md) | `sequenceDiagram` | ¿Cómo se abona, retira y reintegra una meta? | `MetaAhorroController`, `MetaAhorroService`, `SignoMovimiento`, `MetaAhorroRepository` | `446a9f5` | — |
+| 15 | [Casos de uso](15-casos-de-uso.md) | `flowchart` | ¿Qué casos de uso cubre cada módulo? | `docs/CONTEXT.md`, `controller/**`, `docs/tareas/T0..T5`, `T1d` | `446a9f5` | — |
 
 ## Validación
 
@@ -68,16 +68,27 @@ Si el código contradice a un doc, gana el código y se anota abajo.
 - **D4 — "CAE" ambiguo.** `docs/GLOSSARY.md` advierte que "CAE" designa dos cosas (Carga Anual Equivalente y el
   Crédito con Aval del Estado). En el código el indicador financiero se llama siempre `cargaAnualEquivalente`;
   los diagramas respetan esa denominación.
+- **D5 — Migraciones al día (V8).** Los diagramas se verificaron con `V1..V7`; el HEAD actual añade
+  `V8__normalizar_constraints_indices_rls.sql`, que renombra los constraints a minúscula, valida
+  `chk_movimiento_signo`, crea 6 índices de FK/filtro y activa RLS en las 8 tablas de dominio. No cambia
+  el esquema lógico (tablas, FKs, enums), solo su coherencia y su seguridad; el rango de fuentes ya dice
+  `V1..V8`. **Gana el código.**
+- **D6 — Cliente del frontend.** Los diagramas describen un cliente "Ionic / Angular / Capacitor"; el
+  frontend de producto se implementará en **Flutter**. Los orígenes siguen siendo los declarados en
+  `app.cors.allowed-origins` (`localhost:8100`, `localhost:4200`, `capacitor://localhost`, `localhost`):
+  todavía **no** hay un origen Flutter en la configuración.
 
 ## "Por confirmar"
 
-- **Orígenes del cliente frontend:** no hay código de frontend en este repositorio; los orígenes representados
-  provienen solo de `app.cors.allowed-origins`.
+- **Orígenes del cliente frontend:** no hay código de frontend en este repositorio. El cliente de producto
+  será una app **Flutter** (ver D6); los orígenes representados provienen solo de `app.cors.allowed-origins`
+  y no incluyen todavía un origen Flutter.
 - **Comentario desactualizado en `application.properties`:** el texto dice "Activa el perfil dev", pero el valor
   real es `spring.profiles.active=prod` (dev y prod usan el mismo PostgreSQL, así que no cambia el modelo de datos).
 - Los diagramas no representan un sistema externo de reporting ni colas/mensajería porque **no existen** en el código.
 
-## Pendiente (otra sesión)
+## Historias de usuario
 
-- **Historias de usuario y su trazabilidad** a los casos de uso de [`15-casos-de-uso.md`](15-casos-de-uso.md):
-  el repositorio aún no contiene el catálogo de historias de usuario.
+- Catálogo en [`../historias-de-usuario/README.md`](../historias-de-usuario/README.md): **24 / 24** casos de uso
+  cubiertos (UC1–UC24), con trazabilidad HU ↔ caso de uso ↔ endpoint ↔ tarea y marca de estado
+  (**implementada / parcial / backlog**).

@@ -1,6 +1,6 @@
 # 10 — Flujo: movimiento con Smart-Split
 
-**Tipo mermaid:** `sequenceDiagram` · **Estado:** completo (verificado contra el código en HEAD `9e9385e`)
+**Tipo mermaid:** `sequenceDiagram` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
 
 ## Qué responde
 Cómo se registra un movimiento, cómo se fija su signo por tipo y cómo un `INGRESO_GENERAL` con Smart-Split genera `ABONO_META` por cada meta asignada.

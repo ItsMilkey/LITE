@@ -1,6 +1,6 @@
 # 03 — Diagrama de componentes (C4 Nivel 3)
 
-**Tipo mermaid:** `C4Component` · **Estado:** completo (verificado contra el código en HEAD `9e9385e`)
+**Tipo mermaid:** `C4Component` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
 
 ## Qué responde
 Qué componentes internos tiene la API y cómo se reparten en capas y subdominios (`controller`, `service`, `service.finanzas`, `service.movimiento`, `service.report`, `repository`, `security`, `config`, `dto`).
