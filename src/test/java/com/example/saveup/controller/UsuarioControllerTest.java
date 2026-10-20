@@ -136,7 +136,7 @@ class UsuarioControllerTest {
     }
 
     @Test
-    @DisplayName("GET /me → 200 y la entidad Usuario serializada omite el hash")
+    @DisplayName("GET /me → 200 con UsuarioResponseDTO y sin hash")
     void me_noExponeHash() throws Exception {
         when(usuarioRepository.findById(RUT)).thenReturn(Optional.of(usuarioConHash));
 
@@ -144,7 +144,10 @@ class UsuarioControllerTest {
                         .header("Authorization", "Bearer " + validToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rut").value(RUT))
+                .andExpect(jsonPath("$.nombre").value(usuarioConHash.getNombre()))
+                .andExpect(jsonPath("$.apellido").value(usuarioConHash.getApellido()))
                 .andExpect(jsonPath("$.email").value(EMAIL))
+                .andExpect(jsonPath("$.fechaRegistro").exists())
                 .andExpect(jsonPath("$.contrasena").doesNotExist())
                 .andExpect(result -> assertFalse(
                         result.getResponse().getContentAsString().contains(HASH_EN_BD),

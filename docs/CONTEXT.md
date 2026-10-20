@@ -17,7 +17,7 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 - PRESUPUESTO_CATEGORIA(id, usuario, categoria, limiteMensual > 0; UNIQUE(usuario, categoria)) — límite mensual recurrente por categoría
 
 ## Endpoints (protegidos salvo register/login)
-- /api/usuarios: POST register · POST login · GET me
+- /api/usuarios: POST register · POST login · GET me (UsuarioResponseDTO, sin entidad ni hash)
 - /api/saldos/me
 - /api/movimientos: POST · GET me (?limit) · GET paginados/me (?page&size&desde&hasta&tipoMovimiento&categoriaId&montoMin&montoMax&q) · PUT {id} · DELETE {id}
   POST solo acepta INGRESO_GENERAL, GASTO_GENERAL y PAGO_DEUDA. ABONO_META y RETIRO_META se rechazan con 400:
@@ -34,7 +34,10 @@ Todos los errores usan `application/problem+json`:
 `{type:"about:blank", title, status, detail, instance, codigo, errores?, idError?}`.
 `codigo` es estable para el cliente; `detail` va en español y no expone clases, SQL, rutas internas ni trazas.
 `errores[]` solo en validación y `campo` usa el nombre JSON (p. ej. `condiciones.montoCapital`). `idError` solo en 500;
-el mismo UUID queda en el log con la traza. Los 4xx se registran sin traza.
+el mismo UUID queda en el log con la traza. Los 4xx se registran a INFO con status, `codigo`, método y path (sin query);
+`DataIntegrityViolationException` mantiene el WARN. Los 500 se registran a ERROR con traza e `idError`.
+- Paginación centralizada en `Paginacion.crear`: `page >= 0` y `1 <= size <= 100`; fuera de rango → 400 DATOS_INVALIDOS.
+  Aplica a movimientos paginados, pagos de deuda y al `limit` de `/api/movimientos/me`.
 
 | Código | HTTP | Cuándo |
 |---|---|---|

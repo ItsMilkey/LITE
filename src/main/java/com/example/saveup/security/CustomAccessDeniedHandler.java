@@ -5,6 +5,8 @@ import com.example.saveup.error.ProblemaHttp;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.AccessDeniedException;
@@ -18,6 +20,8 @@ import java.util.List;
 @Component
 public class CustomAccessDeniedHandler implements AccessDeniedHandler {
 
+    private static final Logger LOG = LoggerFactory.getLogger(CustomAccessDeniedHandler.class);
+
     private final ObjectMapper objectMapper;
 
     public CustomAccessDeniedHandler(ObjectMapper objectMapper) {
@@ -27,6 +31,10 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response,
                        AccessDeniedException accessDeniedException) throws IOException {
+        LOG.info("Error 4xx status={} codigo={} metodo={} path={}",
+                CodigoError.PROHIBIDO.getStatus().value(), CodigoError.PROHIBIDO.name(),
+                request.getMethod(), request.getRequestURI());
+
         ProblemDetail problema = ProblemaHttp.crear(CodigoError.PROHIBIDO,
                 CodigoError.PROHIBIDO.getDetail(), CodigoError.PROHIBIDO.getStatus(),
                 request, List.of(), null);

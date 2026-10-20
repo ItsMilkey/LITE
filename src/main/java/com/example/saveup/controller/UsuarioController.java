@@ -4,6 +4,7 @@ import com.example.saveup.dto.LoginResponseDTO;
 import com.example.saveup.dto.MensajeResponseDTO;
 import com.example.saveup.dto.UsuarioLoginDTO;
 import com.example.saveup.dto.UsuarioRegistroDTO;
+import com.example.saveup.dto.UsuarioResponseDTO;
 import com.example.saveup.model.Usuario;
 import com.example.saveup.security.JwtService;
 import com.example.saveup.security.SecurityUtils;
@@ -45,9 +46,8 @@ public class UsuarioController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<Usuario> obtenerPerfilActual() {
+    public ResponseEntity<UsuarioResponseDTO> obtenerPerfilActual() {
         String rutAutenticado = securityUtils.getAuthenticatedRut();
-        Usuario usuario = usuarioService.obtenerPerfil(rutAutenticado);
-        return ResponseEntity.ok(usuario);
+        return ResponseEntity.ok(usuarioService.obtenerPerfil(rutAutenticado));
     }
 }

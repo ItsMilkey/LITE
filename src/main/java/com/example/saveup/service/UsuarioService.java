@@ -2,6 +2,7 @@ package com.example.saveup.service;
 
 import com.example.saveup.dto.UsuarioLoginDTO;
 import com.example.saveup.dto.UsuarioRegistroDTO;
+import com.example.saveup.dto.UsuarioResponseDTO;
 import com.example.saveup.error.CodigoError;
 import com.example.saveup.error.ErrorNegocio;
 import com.example.saveup.model.MetaAhorro;
@@ -80,10 +81,10 @@ public class UsuarioService {
         }
     }
 
-    public Usuario obtenerPerfil(String rut) {
+    public UsuarioResponseDTO obtenerPerfil(String rut) {
         Usuario usuario = usuarioRepository.findById(rut)
                 .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Usuario no encontrado con RUT: " + rut));
-        usuario.setContrasena(null);
-        return usuario;
+        return new UsuarioResponseDTO(usuario.getRut(), usuario.getNombre(), usuario.getApellido(),
+                usuario.getEmail(), usuario.getFechaRegistro());
     }
 }

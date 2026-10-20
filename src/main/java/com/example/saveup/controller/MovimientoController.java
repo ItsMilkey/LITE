@@ -5,10 +5,10 @@ import com.example.saveup.dto.MovimientoFiltroDTO;
 import com.example.saveup.dto.MovimientoRegistroDTO;
 import com.example.saveup.dto.MovimientoResponseDTO;
 import com.example.saveup.dto.PageResponseDTO;
+import com.example.saveup.pagination.Paginacion;
 import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.MovimientoService;
 import jakarta.validation.Valid;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -57,7 +57,7 @@ public class MovimientoController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         String rut = securityUtils.getAuthenticatedRut();
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "fecha"));
+        Pageable pageable = Paginacion.crear(page, size, Sort.by(Sort.Direction.DESC, "fecha"));
         return ResponseEntity.ok(movimientoService.obtenerMovimientosPaginados(rut, pageable, filtro));
     }
 

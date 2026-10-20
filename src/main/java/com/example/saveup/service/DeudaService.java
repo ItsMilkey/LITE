@@ -19,6 +19,7 @@ import com.example.saveup.model.enums.ModalidadCalculo;
 import com.example.saveup.model.enums.ModoPago;
 import com.example.saveup.model.enums.TipoDeuda;
 import com.example.saveup.model.enums.TipoMovimiento;
+import com.example.saveup.pagination.Paginacion;
 import com.example.saveup.repository.CategoriaRepository;
 import com.example.saveup.repository.DeudaRepository;
 import com.example.saveup.repository.MovimientoRepository;
@@ -35,6 +36,7 @@ import com.example.saveup.service.movimiento.SignoMovimiento;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -292,9 +294,7 @@ public class DeudaService {
      */
     @Transactional(readOnly = true)
     public PageResponseDTO<PagoDeudaResponseDTO> obtenerPagos(Long deudaId, int page, int size) {
-        if (page < 0 || size < 1) {
-            throw new IllegalArgumentException("page debe ser >= 0 y size >= 1.");
-        }
+        Pageable pageable = Paginacion.crear(page, size);
 
         Deuda deuda = deudaRepository.findById(deudaId)
                 .orElseThrow(() -> new EntityNotFoundException("Deuda no encontrada con ID: " + deudaId));
@@ -310,20 +310,23 @@ public class DeudaService {
 
         int total = historial.size();
 
+        int numeroPagina = pageable.getPageNumber();
+        int tamanoPagina = pageable.getPageSize();
+
         PageResponseDTO<PagoDeudaResponseDTO> respuesta = new PageResponseDTO<>();
-        respuesta.setCurrentPage(page);
+        respuesta.setCurrentPage(numeroPagina);
         respuesta.setTotalItems(total);
-        respuesta.setTotalPages((total + size - 1) / size);
+        respuesta.setTotalPages((total + tamanoPagina - 1) / tamanoPagina);
 
         // (long) evita el desbordamiento de int con page grandes: si el offset cae
         // fuera del historial devolvemos una página vacía en lugar de un 500.
-        long offset = (long) page * size;
+        long offset = (long) numeroPagina * tamanoPagina;
         if (offset >= total) {
             respuesta.setContent(List.of());
             return respuesta;
         }
 
-        respuesta.setContent(historial.subList((int) offset, (int) Math.min(offset + size, total)));
+        respuesta.setContent(historial.subList((int) offset, (int) Math.min(offset + tamanoPagina, total)));
         return respuesta;
     }
 

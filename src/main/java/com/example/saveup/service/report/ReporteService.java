@@ -13,6 +13,11 @@ import java.util.stream.Collectors;
 @Service
 public class ReporteService {
 
+    private static final int MES_MIN = 1;
+    private static final int MES_MAX = 12;
+    private static final int ANIO_MIN = 2000;
+    private static final int ANIO_MAX = 2100;
+
     private final MovimientoRepository movimientoRepository;
     private final Map<String, ReporteGenerator> strategies;
 
@@ -24,6 +29,7 @@ public class ReporteService {
     }
 
     public ReporteGenerado exportarMovimientos(String rut, String alcance, String formato, Integer mes, Integer anio) {
+        validarPeriodo(mes, anio);
 
         // 1. Obtener Datos
         List<Movimiento> movimientos;
@@ -55,6 +61,15 @@ public class ReporteService {
                 + generator.getFileExtension();
 
         return new ReporteGenerado(filename, generator.getContentType(), content);
+    }
+
+    private void validarPeriodo(Integer mes, Integer anio) {
+        if (mes != null && (mes < MES_MIN || mes > MES_MAX)) {
+            throw new IllegalArgumentException("El mes debe estar entre 1 y 12.");
+        }
+        if (anio != null && (anio < ANIO_MIN || anio > ANIO_MAX)) {
+            throw new IllegalArgumentException("El año debe estar entre 2000 y 2100.");
+        }
     }
 
     // Inner DTO helper

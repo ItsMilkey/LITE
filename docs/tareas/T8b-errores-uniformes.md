@@ -16,6 +16,8 @@ Un único formato de error, estable y documentado, que el cliente Flutter pueda 
 - codigo: texto estable (enum CodigoError); el cliente decide el mensaje a mostrar con él.
 - errores: solo en validación.
 - idError: solo en 500; el mismo UUID queda en el log junto con la traza. Un 500 nunca expone mensajes ni trazas internas.
+- Logging: cada 4xx manejado deja una línea INFO con status, `codigo`, método y path (sin query string, cuerpo ni mensaje);
+  `DataIntegrityViolationException` sigue en WARN; los 500 se registran en ERROR con traza e `idError`.
 
 ## Mapeo aprobado
 | Código | HTTP | Cuándo |
@@ -38,6 +40,14 @@ Un único formato de error, estable y documentado, que el cliente Flutter pueda 
   meta protegida, retiro excesivo) se lanzan con `ErrorNegocio(CONFLICTO_REGLA_NEGOCIO, mensaje)` y detail específico.
 - `IllegalStateException` ya NO se traduce a 409: es un fallo interno o una invariante y termina en 500 ERROR_INTERNO.
 - `GET /api/presupuestos/me` sin configuración responde 404 NO_ENCONTRADO.
+- `GET /api/usuarios/me` devuelve `UsuarioResponseDTO` (`rut`, `nombre`, `apellido`, `email`, `fechaRegistro`), nunca la entidad ni el hash.
+- Todos los endpoints paginados usan `Paginacion.crear(page, size)`: `page >= 0` y `1 <= size <= 100`; fuera de rango →
+  400 DATOS_INVALIDOS con detail en español. Incluye movimientos paginados, pagos de deuda y el `limit` de `/api/movimientos/me`.
+- Los reportes mensuales validan `mes` (1–12) y `anio` (2000–2100) antes de construir `YearMonth`; una entrada inválida → 400 DATOS_INVALIDOS.
+- Los errores de conversión de Spring (`typeMismatch`, fechas, enums en `@ModelAttribute`) se responden como PARAMETRO_INVALIDO con
+  `"El valor no tiene el formato esperado"`; nunca se copian mensajes internos de Spring.
+- `BindException` con todos sus errores de tipo `typeMismatch` → PARAMETRO_INVALIDO; el resto → VALIDACION_FALLIDA. Un enum
+  desconocido en el cuerpo JSON → SOLICITUD_INVALIDA.
 
 ## Cambios
 1. CodigoError (enum), ErrorNegocio y GlobalExceptionHandler (@RestControllerAdvice).
@@ -54,3 +64,8 @@ Un único formato de error, estable y documentado, que el cliente Flutter pueda 
 - Ningún controlador devuelve ResponseEntity<?> ni captura excepciones (verificado con búsqueda).
 - Éxitos con DTOs nombrados (`LoginResponseDTO`, `SaldoResponseDTO`, `MensajeResponseDTO`); POST de creación 201 y
   DELETE de meta 204.
+- Todos los códigos de la tabla afirman `Content-Type: application/problem+json` con un helper común.
+- Cobertura adicional: paginación inválida (`page=-1`, `size=0`, `size=101`), reporte con `mes=13` o año fuera de rango,
+  `desde=abc`/`tipoMovimiento=FOO` → PARAMETRO_INVALIDO, enum inválido en body, parámetro faltante, DataIntegrity 409 sin
+  mensaje interno, contraseña incorrecta con el mismo mensaje que email inexistente, 500 por `IllegalStateException` con el
+  mismo `idError` en el log, `Accept: application/json`/`*/*` y `/api/usuarios/me` como DTO.

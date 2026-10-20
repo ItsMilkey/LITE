@@ -5,6 +5,8 @@ import com.example.saveup.error.ProblemaHttp;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.AuthenticationException;
@@ -18,6 +20,8 @@ import java.util.List;
 @Component
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
+    private static final Logger LOG = LoggerFactory.getLogger(CustomAuthenticationEntryPoint.class);
+
     private final ObjectMapper objectMapper;
 
     public CustomAuthenticationEntryPoint(ObjectMapper objectMapper) {
@@ -29,6 +33,9 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
                          AuthenticationException authException) throws IOException {
         CodigoError codigo = request.getAttribute(JwtAuthenticationFilter.ATTR_CODIGO_ERROR)
                 instanceof CodigoError c ? c : CodigoError.NO_AUTENTICADO;
+
+        LOG.info("Error 4xx status={} codigo={} metodo={} path={}",
+                codigo.getStatus().value(), codigo.name(), request.getMethod(), request.getRequestURI());
 
         ProblemDetail problema = ProblemaHttp.crear(codigo, codigo.getDetail(), codigo.getStatus(),
                 request, List.of(), null);

@@ -15,7 +15,6 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.BindException;
-import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -42,11 +41,17 @@ import java.util.UUID;
 public class GlobalExceptionHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String MENSAJE_FORMATO_INVALIDO = "El valor no tiene el formato esperado";
 
     @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
     public ResponseEntity<ProblemDetail> validacion(BindException ex, HttpServletRequest request) {
+        List<FieldError> erroresCampo = ex.getBindingResult().getFieldErrors();
+        if (!erroresCampo.isEmpty() && erroresCampo.stream().allMatch(this::esTypeMismatch)) {
+            return respuesta(CodigoError.PARAMETRO_INVALIDO, null, HttpStatus.BAD_REQUEST,
+                    request, erroresTipoMismatch(erroresCampo), null);
+        }
         return respuesta(CodigoError.VALIDACION_FALLIDA, null, HttpStatus.BAD_REQUEST,
-                request, erroresDe(ex.getBindingResult()), null);
+                request, erroresDe(erroresCampo), null);
     }
 
     @ExceptionHandler(HandlerMethodValidationException.class)
@@ -121,7 +126,7 @@ public class GlobalExceptionHandler {
                 : ex.getMessage();
         LOG.warn("Conflicto de integridad en {}: {}", request.getRequestURI(), causa);
         return respuesta(CodigoError.CONFLICTO_REGLA_NEGOCIO, null, HttpStatus.CONFLICT,
-                request, List.of(), null);
+                request, List.of(), null, false);
     }
 
     @ExceptionHandler(ErrorNegocio.class)
@@ -158,16 +163,29 @@ public class GlobalExceptionHandler {
                 request, List.of(), idError);
     }
 
-    private List<ErrorCampo> erroresDe(BindingResult bindingResult) {
-        return bindingResult.getFieldErrors().stream()
+    private List<ErrorCampo> erroresDe(List<FieldError> erroresCampo) {
+        return erroresCampo.stream()
                 .map(this::aErrorCampo)
                 .toList();
     }
 
+    private List<ErrorCampo> erroresTipoMismatch(List<FieldError> erroresCampo) {
+        return erroresCampo.stream()
+                .map(error -> new ErrorCampo(error.getField(), MENSAJE_FORMATO_INVALIDO))
+                .toList();
+    }
+
+    private boolean esTypeMismatch(FieldError error) {
+        return error.isBindingFailure() || "typeMismatch".equals(error.getCode());
+    }
+
     private ErrorCampo aErrorCampo(FieldError error) {
-        String mensaje = error.getDefaultMessage() != null
-                ? error.getDefaultMessage()
-                : "Valor inválido.";
+        String mensaje = esTypeMismatch(error)
+                ? MENSAJE_FORMATO_INVALIDO
+                : error.getDefaultMessage();
+        if (mensaje == null || mensaje.isBlank()) {
+            mensaje = MENSAJE_FORMATO_INVALIDO;
+        }
         return new ErrorCampo(error.getField(), mensaje);
     }
 
@@ -177,6 +195,20 @@ public class GlobalExceptionHandler {
                                                     HttpServletRequest request,
                                                     List<ErrorCampo> errores,
                                                     String idError) {
+        return respuesta(codigo, detalle, status, request, errores, idError, true);
+    }
+
+    private ResponseEntity<ProblemDetail> respuesta(CodigoError codigo,
+                                                    String detalle,
+                                                    HttpStatus status,
+                                                    HttpServletRequest request,
+                                                    List<ErrorCampo> errores,
+                                                    String idError,
+                                                    boolean registrarInfo) {
+        if (registrarInfo && status.is4xxClientError()) {
+            LOG.info("Error 4xx status={} codigo={} metodo={} path={}",
+                    status.value(), codigo.name(), request.getMethod(), request.getRequestURI());
+        }
         return ResponseEntity.status(status)
                 .contentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .body(ProblemaHttp.crear(codigo, detalle, status, request, errores, idError));

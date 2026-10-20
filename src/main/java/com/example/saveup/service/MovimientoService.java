@@ -14,6 +14,7 @@ import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.Usuario;
 import com.example.saveup.model.enums.ModoPago;
 import com.example.saveup.model.enums.TipoMovimiento;
+import com.example.saveup.pagination.Paginacion;
 import com.example.saveup.repository.CategoriaRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.MovimientoSpecifications;
@@ -22,7 +23,6 @@ import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.movimiento.SignoMovimiento;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -163,8 +163,8 @@ public class MovimientoService {
 
         List<Movimiento> movimientos;
 
-        if (limit != null && limit > 0) {
-            Pageable pageable = PageRequest.of(0, limit);
+        if (limit != null) {
+            Pageable pageable = Paginacion.crear(0, limit);
             movimientos = movimientoRepository.findByUsuarioRutOrderByFechaDesc(rut, pageable).getContent();
         } else {
             movimientos = movimientoRepository.findByUsuarioRutOrderByFechaDesc(rut);
