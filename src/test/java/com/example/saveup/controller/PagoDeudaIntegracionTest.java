@@ -344,7 +344,7 @@ class PagoDeudaIntegracionTest {
                                 {"monto":150000,"descripcion":"Pago excesivo"}
                                 """))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.codigo").value("DEUDA_SOBREPAGO"));
     }
 
     @Test
@@ -370,7 +370,7 @@ class PagoDeudaIntegracionTest {
                                 {"monto":10000,"descripcion":"Cuota extra"}
                                 """))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.codigo").value("CONFLICTO_REGLA_NEGOCIO"));
     }
 
     @Test

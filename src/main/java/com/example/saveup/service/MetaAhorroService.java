@@ -3,6 +3,8 @@ package com.example.saveup.service;
 import com.example.saveup.dto.AbonoRetiroDTO;
 import com.example.saveup.dto.MetaAhorroCreacionDTO;
 import com.example.saveup.dto.MetaAhorroResponseDTO;
+import com.example.saveup.error.CodigoError;
+import com.example.saveup.error.ErrorNegocio;
 import com.example.saveup.model.MetaAhorro;
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.Usuario;
@@ -112,7 +114,8 @@ public class MetaAhorroService {
         java.math.BigDecimal totalAhorradoRaw = metaAhorroRepository.findTotalAhorradoByMetaId(metaId);
         java.math.BigDecimal totalAhorrado = (totalAhorradoRaw != null ? totalAhorradoRaw : java.math.BigDecimal.ZERO).abs();
         if (montoRetiro.compareTo(totalAhorrado) > 0) {
-            throw new IllegalStateException("El monto a retirar no puede ser mayor al total ahorrado.");
+            throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
+                    "El monto a retirar no puede ser mayor al total ahorrado.");
         }
 
         Movimiento retiro = new Movimiento();
@@ -143,7 +146,8 @@ public class MetaAhorroService {
 
         // No se puede eliminar la meta por defecto "Ahorros"
         if ("Ahorros".equalsIgnoreCase(meta.getNombre())) {
-            throw new IllegalStateException("La meta por defecto 'Ahorros' no se puede eliminar.");
+            throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
+                    "La meta por defecto 'Ahorros' no se puede eliminar.");
         }
 
         java.math.BigDecimal totalAhorradoRaw = metaAhorroRepository.findTotalAhorradoByMetaId(metaId);

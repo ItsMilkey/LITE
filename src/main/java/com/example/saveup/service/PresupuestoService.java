@@ -39,7 +39,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
+
 import java.util.Set;
 
 /**
@@ -96,10 +96,13 @@ public class PresupuestoService {
 
     // ─────────────────────────── Configuración 50/30/20 ───────────────────────────
 
-    /** Configuración del usuario, si existe. */
+    /** Configuración del usuario; si no existe, responde 404 NO_ENCONTRADO. */
     @Transactional(readOnly = true)
-    public Optional<ConfiguracionPresupuestoResponseDTO> obtenerConfiguracion(String rut) {
-        return configuracionPresupuestoRepository.findByUsuarioRut(rut).map(this::aDTO);
+    public ConfiguracionPresupuestoResponseDTO obtenerConfiguracion(String rut) {
+        return configuracionPresupuestoRepository.findByUsuarioRut(rut)
+                .map(this::aDTO)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "No hay configuración de presupuesto para el usuario."));
     }
 
     /**

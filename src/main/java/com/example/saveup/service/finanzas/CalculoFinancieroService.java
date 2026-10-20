@@ -239,7 +239,8 @@ public class CalculoFinancieroService {
         BigDecimal sumaCuotas = cuota.multiply(BigDecimal.valueOf(n));
         int cmp = sumaCuotas.compareTo(capital);
         if (cmp < 0) {
-            throw new CalculoFinancieroException("Los pagos no cubren el capital");
+            throw new CalculoFinancieroException(
+                    "Con esa cuota y esa cantidad de cuotas no se alcanza a pagar el capital. Revisa los datos.");
         }
         if (cmp == 0) {
             return BigDecimal.ZERO;
@@ -247,7 +248,8 @@ public class CalculoFinancieroService {
 
         BigDecimal vp1 = valorPresente(cuota, BigDecimal.ONE, n);
         if (vp1.compareTo(capital) >= 0) {
-            throw new CalculoFinancieroException("No hay raíz en el rango");
+            throw new CalculoFinancieroException(
+                    "No fue posible calcular la tasa con esos datos. Revisa los valores ingresados.");
         }
 
         BigDecimal lo = BigDecimal.ZERO;
@@ -299,7 +301,8 @@ public class CalculoFinancieroService {
             vp0 = vp0.add(flujo);
         }
         if (vp0.compareTo(objetivo) < 0) {
-            throw new CalculoFinancieroException("Los pagos no cubren el capital");
+            throw new CalculoFinancieroException(
+                    "Con esa cuota y esa cantidad de cuotas no se alcanza a pagar el capital. Revisa los datos.");
         }
         if (vp0.compareTo(objetivo) == 0) {
             return BigDecimal.ZERO;
@@ -311,7 +314,8 @@ public class CalculoFinancieroService {
             vp1 = vp1.add(flujos.get(k).divide(divisor, MC));
         }
         if (vp1.compareTo(objetivo) >= 0) {
-            throw new CalculoFinancieroException("No hay raíz en el rango");
+            throw new CalculoFinancieroException(
+                    "No fue posible calcular la tasa con esos datos. Revisa los valores ingresados.");
         }
 
         // Función normalizada: positivo ⇒ raíz a la derecha (subir tasa)

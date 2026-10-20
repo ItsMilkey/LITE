@@ -197,8 +197,8 @@ class CalculoFinancieroServiceTest {
         
         CalculoFinancieroException ex = assertThrows(CalculoFinancieroException.class,
                 () -> service.calcular(c));
-        assertTrue(ex.getMessage().toLowerCase().contains("no hay raíz en el rango"),
-                "Mensaje debe indicar que no hay raíz en el rango");
+        assertTrue(ex.getMessage().toLowerCase().contains("no fue posible calcular la tasa"),
+                "Mensaje debe indicar que no se pudo calcular la tasa");
     }
 
     // ──────────────────────── Test 7: CUOTA_CONOCIDA ────────────────────────
@@ -245,8 +245,8 @@ class CalculoFinancieroServiceTest {
 
             CalculoFinancieroException ex = assertThrows(CalculoFinancieroException.class,
                     () -> service.calcular(c));
-            assertTrue(ex.getMessage().toLowerCase().contains("no cubren el capital"),
-                    "Mensaje debe indicar que los pagos no cubren el capital");
+            assertTrue(ex.getMessage().toLowerCase().contains("no se alcanza a pagar el capital"),
+                    "Mensaje debe indicar que no se alcanza a pagar el capital");
         }
 
         @Test
@@ -258,8 +258,8 @@ class CalculoFinancieroServiceTest {
 
             CalculoFinancieroException ex = assertThrows(CalculoFinancieroException.class,
                     () -> service.calcular(c));
-            assertTrue(ex.getMessage().toLowerCase().contains("no hay raíz en el rango"),
-                    "Mensaje debe indicar que no hay raíz en el rango");
+            assertTrue(ex.getMessage().toLowerCase().contains("no fue posible calcular la tasa"),
+                    "Mensaje debe indicar que no se pudo calcular la tasa");
         }
     }
 

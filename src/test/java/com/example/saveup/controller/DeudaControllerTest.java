@@ -254,7 +254,7 @@ class DeudaControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
     }
 
     // ──────────────────────── 6. Editar con pagos → 409 ────────────────────────
@@ -277,7 +277,7 @@ class DeudaControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.codigo").value("CONFLICTO_REGLA_NEGOCIO"));
     }
 
     // ──────────────────────── 7. Amortización ajena → 403 ────────────────────────
@@ -297,7 +297,8 @@ class DeudaControllerTest {
         mockMvc.perform(get("/api/deudas/1/amortizacion")
                         .header("Authorization", "Bearer " + validToken))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.title").value("Forbidden"));
+                .andExpect(jsonPath("$.codigo").value("PROHIBIDO"))
+                .andExpect(jsonPath("$.title").value("Prohibido"));
     }
 
     // ──────────────────────── 8. Amortización CUOTA_CONOCIDA → 200 ────────────────────────

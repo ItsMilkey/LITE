@@ -154,7 +154,7 @@ class PresupuestoCategoriaControllerTest {
                         .param("desde", "2024-01").param("hasta", "2026-02")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
     }
 
     @Test
@@ -177,7 +177,7 @@ class PresupuestoCategoriaControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"porcentajeNecesidades\":50.00,\"porcentajeDeseos\":30.00,\"porcentajeAhorro\":21.00}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
     }
 
     @Test

@@ -1,6 +1,8 @@
 # T8b — Errores uniformes (RFC 7807 / problem+json)
 Depende de: T8a (opcional). Modelo sugerido: Opus o Gemini Pro para el plan; Sonnet 4.6 Thinking para implementar. Empieza con el inventario y espera mi "ok".
 
+**Estado: implementado.** Inventario aprobado con los 13 códigos de la tabla de abajo.
+
 ## Objetivo
 Un único formato de error, estable y documentado, que el cliente Flutter pueda mapear a mensajes localizados. Hoy cada controlador captura excepciones y responde {"error": mensaje}, y muchos devuelven ResponseEntity<?>, lo que además impide generar un contrato OpenAPI con tipos.
 
@@ -15,15 +17,27 @@ Un único formato de error, estable y documentado, que el cliente Flutter pueda 
 - errores: solo en validación.
 - idError: solo en 500; el mismo UUID queda en el log junto con la traza. Un 500 nunca expone mensajes ni trazas internas.
 
-## Mapeo
-- Validación de DTO o de parámetros → 400 VALIDACION_FALLIDA (con errores[]).
-- JSON malformado, enum desconocido → 400 SOLICITUD_INVALIDA. Parámetro faltante o de tipo incorrecto → 400 PARAMETRO_INVALIDO.
-- IllegalArgumentException, CalculoFinancieroException → 400 DATOS_INVALIDOS.
-- EntityNotFoundException → 404 NO_ENCONTRADO. AccessDeniedException → 403 PROHIBIDO. Sin token o token inválido → 401 NO_AUTENTICADO.
-- IllegalStateException → 409 CONFLICTO_REGLA_NEGOCIO.
-- Errores de negocio con código propio: excepción ErrorNegocio(CodigoError) con su status (por ejemplo DEUDA_SOBREPAGO, DEUDA_NO_PENDIENTE, MOVIMIENTO_NO_EDITABLE, EMAIL_YA_REGISTRADO), según la lista aprobada.
-- Cualquier otra excepción → 500 ERROR_INTERNO.
-- Rutas inexistentes, 405 y 415 también salen en este formato.
+## Mapeo aprobado
+| Código | HTTP | Cuándo |
+|---|---|---|
+| VALIDACION_FALLIDA | 400 | Bean Validation de DTO o parámetros; incluye `errores[]` |
+| SOLICITUD_INVALIDA | 400/405/415 | JSON malformado, enum desconocido, método o Content-Type no soportado |
+| PARAMETRO_INVALIDO | 400 | Parámetro faltante o con tipo incorrecto |
+| DATOS_INVALIDOS | 400 | IllegalArgumentException o CalculoFinancieroException |
+| NO_AUTENTICADO | 401 | Token ausente o inválido |
+| TOKEN_EXPIRADO | 401 | Token válido pero expirado; el cliente debe volver al login |
+| CREDENCIALES_INVALIDAS | 401 | Email inexistente o contraseña incorrecta, mismo mensaje |
+| PROHIBIDO | 403 | Recurso de otro usuario; detail fijo |
+| NO_ENCONTRADO | 404 | EntityNotFoundException o ruta inexistente |
+| CONFLICTO_REGLA_NEGOCIO | 409 | ErrorNegocio o DataIntegrityViolationException |
+| USUARIO_YA_REGISTRADO | 409 | RUT o email duplicado; mensaje genérico |
+| DEUDA_SOBREPAGO | 409 | El pago supera el saldo por pagar |
+| ERROR_INTERNO | 500 | Cualquier otra excepción o invariante interna (incluye IllegalStateException) |
+
+- Los conflictos de negocio sin código propio (deuda ya pagada, condiciones congeladas, movimiento no editable,
+  meta protegida, retiro excesivo) se lanzan con `ErrorNegocio(CONFLICTO_REGLA_NEGOCIO, mensaje)` y detail específico.
+- `IllegalStateException` ya NO se traduce a 409: es un fallo interno o una invariante y termina en 500 ERROR_INTERNO.
+- `GET /api/presupuestos/me` sin configuración responde 404 NO_ENCONTRADO.
 
 ## Cambios
 1. CodigoError (enum), ErrorNegocio y GlobalExceptionHandler (@RestControllerAdvice).
@@ -33,8 +47,10 @@ Un único formato de error, estable y documentado, que el cliente Flutter pueda 
 5. docs/CONTEXT.md: tabla de códigos y su status.
 
 ## Criterios de aceptación (tests)
-- Un test por cada fila del mapeo, con MockMvc.
-- Validación con dos campos inválidos → errores[] con ambos.
-- 500 por excepción inesperada: sin mensaje interno, con idError.
-- 401 sin token y 403 sobre una deuda ajena tienen formato problem+json.
-- Ningún controlador devuelve ResponseEntity<?> (verifícalo con búsqueda).
+- Un test por cada fila del mapeo, con MockMvc. `DEUDA_SOBREPAGO` se cubre en `PagoDeudaIntegracionTest`.
+- Validación con dos campos inválidos → errores[] con ambos y `campo` con el nombre JSON.
+- 500 por excepción inesperada: sin mensaje interno, con idError (mismo UUID en el log).
+- 401 sin token vs. token expirado devuelven NO_AUTENTICADO y TOKEN_EXPIRADO; 403 sobre una deuda ajena usa detail fijo.
+- Ningún controlador devuelve ResponseEntity<?> ni captura excepciones (verificado con búsqueda).
+- Éxitos con DTOs nombrados (`LoginResponseDTO`, `SaldoResponseDTO`, `MensajeResponseDTO`); POST de creación 201 y
+  DELETE de meta 204.

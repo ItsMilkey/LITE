@@ -3,7 +3,6 @@ package com.example.saveup.service.report;
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.service.movimiento.FechasMovimiento;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.YearMonth;
@@ -14,13 +13,11 @@ import java.util.stream.Collectors;
 @Service
 public class ReporteService {
 
-    @Autowired
-    private MovimientoRepository movimientoRepository;
-
+    private final MovimientoRepository movimientoRepository;
     private final Map<String, ReporteGenerator> strategies;
 
-    @Autowired
-    public ReporteService(List<ReporteGenerator> generators) {
+    public ReporteService(MovimientoRepository movimientoRepository, List<ReporteGenerator> generators) {
+        this.movimientoRepository = movimientoRepository;
         // Mapa: "CSV" -> CsvReporteGenerator
         this.strategies = generators.stream()
                 .collect(Collectors.toMap(ReporteGenerator::getFormato, g -> g));

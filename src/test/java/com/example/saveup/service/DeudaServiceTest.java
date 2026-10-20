@@ -7,6 +7,8 @@ import com.example.saveup.dto.PageResponseDTO;
 import com.example.saveup.dto.PagoDeudaDTO;
 import com.example.saveup.dto.PagoDeudaResponseDTO;
 import com.example.saveup.dto.SimulacionCreditoResponseDTO.CuotaSimulacionDTO;
+import com.example.saveup.error.CodigoError;
+import com.example.saveup.error.ErrorNegocio;
 import com.example.saveup.model.Categoria;
 import com.example.saveup.model.Deuda;
 import com.example.saveup.model.Movimiento;
@@ -328,6 +330,25 @@ class DeudaServiceTest {
         assertEquals(0, invalida.getCuotasPagadas());
     }
 
+    @Test
+    @DisplayName("Un IllegalArgumentException al enriquecer también deja los derivados en null")
+    void obtenerDeudasPorUsuario_illegalArgumentEnEnriquecimiento_mantieneListado() {
+        when(usuarioRepository.existsById(RUT)).thenReturn(true);
+
+        DeudaResponseDTO invalida = proyeccion(2L, new BigDecimal("100000.00"), 10,
+                EstadoDeuda.PENDIENTE, BigDecimal.ZERO, 0L, ModalidadCalculo.SIN_INTERES,
+                new BigDecimal("100000.00"), BigDecimal.ZERO, new BigDecimal("10000.00"),
+                11, BigDecimal.ZERO, null);
+
+        when(deudaRepository.findDeudasDTOByUsuarioRut(RUT)).thenReturn(List.of(invalida));
+
+        List<DeudaResponseDTO> result = deudaService.obtenerDeudasPorUsuario(RUT);
+
+        assertEquals(1, result.size());
+        assertNull(invalida.getTotalPorPagar(), "La deuda inválida no rompe el listado");
+        assertNull(invalida.getSaldoCapital());
+    }
+
     // ──────────────────────── editar ────────────────────────
 
     @Test
@@ -362,7 +383,7 @@ class DeudaServiceTest {
     }
 
     @Test
-    @DisplayName("Editar con pagos: cambiar las condiciones financieras → IllegalStateException (409)")
+    @DisplayName("Editar con pagos: cambiar las condiciones financieras → ErrorNegocio (409)")
     void editarDeuda_conPagos_condicionesBloqueadas() {
         stubBuscarDeuda();
         when(deudaRepository.countPagosPorDeuda(1L)).thenReturn(1);
@@ -376,7 +397,8 @@ class DeudaServiceTest {
         dto.setNombre("Deuda");
         dto.setCondiciones(condiciones);
 
-        assertThrows(IllegalStateException.class, () -> deudaService.editarDeuda(1L, dto));
+        ErrorNegocio ex = assertThrows(ErrorNegocio.class, () -> deudaService.editarDeuda(1L, dto));
+        assertEquals(CodigoError.CONFLICTO_REGLA_NEGOCIO, ex.getCodigo());
         verify(deudaRepository, never()).save(any(Deuda.class));
     }
 
@@ -486,7 +508,7 @@ class DeudaServiceTest {
     }
 
     @Test
-    @DisplayName("Sobrepago → 409 (IllegalStateException)")
+    @DisplayName("Sobrepago → 409 (DEUDA_SOBREPAGO)")
     void registrarPago_sobrepago_devuelve409() {
         PagoDeudaDTO pagoDTO = new PagoDeudaDTO();
         pagoDTO.setMonto(new BigDecimal("100001.00"));
@@ -495,9 +517,10 @@ class DeudaServiceTest {
         stubBuscarDeuda();
         when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(BigDecimal.ZERO);
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
+        ErrorNegocio ex = assertThrows(ErrorNegocio.class,
                 () -> deudaService.registrarPago(1L, pagoDTO));
-        assertTrue(ex.getMessage().contains("supera el total por pagar"));
+        assertEquals(CodigoError.DEUDA_SOBREPAGO, ex.getCodigo());
+        assertTrue(ex.getMessage().contains("supera lo que queda por pagar"));
         verifyNoInteractions(movimientoRepository);
     }
 
@@ -512,8 +535,9 @@ class DeudaServiceTest {
             deuda.setEstado(estadoCerrado);
             stubBuscarDeuda();
 
-            IllegalStateException ex = assertThrows(IllegalStateException.class,
+            ErrorNegocio ex = assertThrows(ErrorNegocio.class,
                     () -> deudaService.registrarPago(1L, pagoDTO));
+            assertEquals(CodigoError.CONFLICTO_REGLA_NEGOCIO, ex.getCodigo());
             assertTrue(ex.getMessage().contains("pendientes"));
             verifyNoInteractions(movimientoRepository);
         }

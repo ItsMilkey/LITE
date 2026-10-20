@@ -235,7 +235,7 @@ class MovimientoServiceTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> movimientoService.registrarMovimiento(dto));
 
-        assertTrue(ex.getMessage().contains("/api/metas"),
+        assertTrue(ex.getMessage().contains("sección de metas"),
                 "El mensaje debe indicar dónde sí se registra este tipo");
         verifyNoInteractions(movimientoRepository);
     }

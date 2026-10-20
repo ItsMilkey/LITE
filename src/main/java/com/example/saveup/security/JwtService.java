@@ -1,6 +1,7 @@
 package com.example.saveup.security;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -52,6 +53,18 @@ public class JwtService {
         try {
             Claims claims = extractAllClaims(token);
             return !claims.getExpiration().before(new Date());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Distingue un token caducado de uno ausente o inválido. */
+    public boolean isTokenExpired(String token) {
+        try {
+            extractAllClaims(token);
+            return false;
+        } catch (ExpiredJwtException e) {
+            return true;
         } catch (Exception e) {
             return false;
         }

@@ -258,7 +258,7 @@ class MovimientoFiltrosEdicionTest {
                         .param("hasta", "2026-01-01")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
     }
 
     @Test
@@ -269,7 +269,7 @@ class MovimientoFiltrosEdicionTest {
                         .param("montoMax", "1000")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
     }
 
     @Test
@@ -279,13 +279,13 @@ class MovimientoFiltrosEdicionTest {
                         .param("montoMin", "-1")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
 
         mockMvc.perform(get("/api/movimientos/paginados/me")
                         .param("montoMax", "-1")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
     }
 
     // ─────────────────────────── Edición ───────────────────────────
@@ -335,7 +335,8 @@ class MovimientoFiltrosEdicionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"monto\":50,\"descripcion\":\"Hack\"}"))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.title").value("Forbidden"));
+                .andExpect(jsonPath("$.codigo").value("PROHIBIDO"))
+                .andExpect(jsonPath("$.title").value("Prohibido"));
     }
 
     @Test
@@ -349,11 +350,12 @@ class MovimientoFiltrosEdicionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"monto\":500,\"descripcion\":\"Editado\"}"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error", containsString("módulo")));
+                .andExpect(jsonPath("$.codigo").value("CONFLICTO_REGLA_NEGOCIO"))
+                .andExpect(jsonPath("$.detail", containsString("deudas o metas")));
     }
 
     @Test
-    @DisplayName("Editar un ingreso con abonos de Smart-Split vinculados → 409 Conflict")
+    @DisplayName("Editar un ingreso con abonos automáticos vinculados → 409 Conflict")
     void editarIngresoConSmartSplit_409() throws Exception {
         Movimiento ingreso = movimiento(usuario, fecha(2026, 8, 4), TipoMovimiento.INGRESO_GENERAL,
                 "100000.00", "Sueldo", null, null);
@@ -364,7 +366,8 @@ class MovimientoFiltrosEdicionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"monto\":90000,\"descripcion\":\"Corregido\"}"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error", containsString("Smart-Split")));
+                .andExpect(jsonPath("$.codigo").value("CONFLICTO_REGLA_NEGOCIO"))
+                .andExpect(jsonPath("$.detail", containsString("abonos automáticos")));
     }
 
     @Test
@@ -456,7 +459,7 @@ class MovimientoFiltrosEdicionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"monto\":50,\"descripcion\":\"Editado\"}"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.codigo").value("CONFLICTO_REGLA_NEGOCIO"));
 
         mockMvc.perform(delete("/api/movimientos/" + gasto.getId())
                         .header("Authorization", "Bearer " + token))
@@ -477,7 +480,7 @@ class MovimientoFiltrosEdicionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"monto\":2000,\"descripcion\":\"Editado\"}"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.codigo").value("CONFLICTO_REGLA_NEGOCIO"));
 
         mockMvc.perform(delete("/api/movimientos/" + ingreso.getId())
                         .header("Authorization", "Bearer " + token))

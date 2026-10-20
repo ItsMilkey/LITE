@@ -8,6 +8,8 @@ import com.example.saveup.dto.PageResponseDTO;
 import com.example.saveup.dto.PagoDeudaDTO;
 import com.example.saveup.dto.PagoDeudaResponseDTO;
 import com.example.saveup.dto.SimulacionCreditoResponseDTO.CuotaSimulacionDTO;
+import com.example.saveup.error.CodigoError;
+import com.example.saveup.error.ErrorNegocio;
 import com.example.saveup.model.Categoria;
 import com.example.saveup.model.Deuda;
 import com.example.saveup.model.Movimiento;
@@ -111,7 +113,7 @@ public class DeudaService {
      *
      * @return la deuda resultante y el movimiento creado (negativo, por SignoMovimiento)
      * @throws IllegalArgumentException si el monto pedido no es válido (400)
-     * @throws IllegalStateException    si se viola una regla de negocio (409)
+     * @throws ErrorNegocio             si se viola una regla de negocio (409)
      */
     @Transactional
     public ResultadoPago registrarPago(Long deudaId, PagoDeudaDTO pagoDTO) {
@@ -121,14 +123,15 @@ public class DeudaService {
         securityUtils.validarPropietario(deuda.getUsuario().getRut());
 
         if (deuda.getEstado() != EstadoDeuda.PENDIENTE) {
-            throw new IllegalStateException(
-                    "Solo se pueden registrar pagos en deudas pendientes. Estado actual: " + deuda.getEstado());
+            throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
+                    "Solo se pueden registrar pagos en deudas pendientes.");
         }
 
         BigDecimal pagosReales = totalPagadoReal(deudaId);
         BigDecimal totalPorPagar = totalPorPagar(deuda, pagosReales);
         if (totalPorPagar.signum() <= 0) {
-            throw new IllegalStateException("La deuda no tiene saldo pendiente por pagar.");
+            throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
+                    "La deuda no tiene saldo pendiente por pagar.");
         }
 
         List<CuotaAmortizacion> tabla = tablaAmortizacion(deuda);
@@ -137,9 +140,7 @@ public class DeudaService {
                 : montoPersonalizado(pagoDTO.getMonto());
 
         if (montoPago.compareTo(totalPorPagar) > 0) {
-            throw new IllegalStateException(
-                    "El monto del pago (" + montoPago.toPlainString()
-                            + ") supera el total por pagar (" + totalPorPagar.toPlainString() + ").");
+            throw new ErrorNegocio(CodigoError.DEUDA_SOBREPAGO);
         }
 
         Categoria categoriaDeudas = categoriaRepository.findByNombre("Deudas")
@@ -176,7 +177,7 @@ public class DeudaService {
             // cambiarlas invalidaría los pagos ya imputados. Sí se pueden corregir
             // la etiqueta y cuotasPagadasPrevias (T1c).
             if (dto.getCondiciones() != null || dto.getMontoTotal() != null || dto.getCantidadCuotas() != null) {
-                throw new IllegalStateException(
+                throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
                         "No se pueden editar las condiciones de una deuda que ya tiene pagos registrados.");
             }
             aplicarEtiquetaYPrevias(deuda, dto);
@@ -220,7 +221,8 @@ public class DeudaService {
         securityUtils.validarPropietario(deuda.getUsuario().getRut());
 
         if (deuda.getEstado() == EstadoDeuda.PAGADA) {
-            throw new IllegalStateException("No se puede cancelar una deuda que ya fue pagada.");
+            throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
+                    "No se puede cancelar una deuda que ya fue pagada.");
         }
 
         deuda.setEstado(EstadoDeuda.CANCELADA);
@@ -466,7 +468,8 @@ public class DeudaService {
     private BigDecimal montoCuotaCalculada(List<CuotaAmortizacion> tabla, Deuda deuda, BigDecimal pagosReales) {
         BigDecimal monto = ImputacionPagos.montoProximaCuotaImpaga(tabla, deuda.getCuotasPagadasPrevias(), pagosReales);
         if (monto.signum() <= 0) {
-            throw new IllegalStateException("La deuda no tiene cuotas pendientes de pago.");
+            throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
+                    "La deuda no tiene cuotas pendientes de pago.");
         }
         return monto;
     }
@@ -513,7 +516,7 @@ public class DeudaService {
             aplicarDerivadosTasa(dto);
             aplicarDerivadosCalendario(dto);
             aplicarSaldos(dto, tabla);
-        } catch (CalculoFinancieroException e) {
+        } catch (CalculoFinancieroException | IllegalArgumentException e) {
             LOG.warn("No se pudieron calcular los derivados de la deuda {}: {}", dto.getId(), e.getMessage());
         }
         return dto;

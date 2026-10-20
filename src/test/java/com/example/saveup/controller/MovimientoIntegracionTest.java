@@ -129,19 +129,23 @@ class MovimientoIntegracionTest {
     }
 
     @Test
-    @DisplayName("ABONO_META y RETIRO_META siguen rechazándose con 400 (se registran solo desde /api/metas)")
+    @DisplayName("ABONO_META y RETIRO_META siguen rechazándose con 400 (se registran solo desde la sección de metas)")
     void tiposDeMeta_rechazados400() throws Exception {
         postMovimiento("""
                 {"monto":50000,"descripcion":"Abono directo","tipoMovimiento":"ABONO_META"}
                 """)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("/api/metas")));
+                .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
+                .andExpect(jsonPath("$.detail", org.hamcrest.Matchers.containsString("sección de metas")))
+                .andExpect(jsonPath("$.detail", org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("/api/metas"))));
 
         postMovimiento("""
                 {"monto":50000,"descripcion":"Retiro directo","tipoMovimiento":"RETIRO_META"}
                 """)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("/api/metas")));
+                .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
+                .andExpect(jsonPath("$.detail", org.hamcrest.Matchers.containsString("sección de metas")));
     }
 
     @Test
@@ -151,7 +155,7 @@ class MovimientoIntegracionTest {
                 {"monto":10000,"descripcion":"Cuota","tipoMovimiento":"PAGO_DEUDA"}
                 """)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
     }
 
     @Test
@@ -161,7 +165,7 @@ class MovimientoIntegracionTest {
                 {"monto":0,"descripcion":"Movimiento vacío","tipoMovimiento":"GASTO_GENERAL"}
                 """)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
     }
 
     @Test
@@ -189,7 +193,7 @@ class MovimientoIntegracionTest {
                 {"monto":150000,"descripcion":"Pago excesivo","tipoMovimiento":"PAGO_DEUDA","deudaId":1}
                 """)
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.codigo").value("DEUDA_SOBREPAGO"));
     }
 
     @Test

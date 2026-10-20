@@ -7,7 +7,6 @@ import com.example.saveup.dto.MovimientoResponseDTO;
 import com.example.saveup.dto.PageResponseDTO;
 import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.MovimientoService;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -17,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/movimientos")
@@ -33,34 +31,20 @@ public class MovimientoController {
     }
 
     @PostMapping
-    public ResponseEntity<?> registrarMovimiento(@Valid @RequestBody MovimientoRegistroDTO dto) {
-        try {
-            MovimientoResponseDTO nuevoMovimiento = movimientoService.registrarMovimiento(dto);
-            return new ResponseEntity<>(nuevoMovimiento, HttpStatus.CREATED);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (IllegalStateException e) {
-            // Regla de negocio violada (p. ej. sobrepago o deuda cerrada): mismo 409 que /api/deudas/{id}/pagar.
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.CONFLICT);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
-        } catch (Exception e) {
-            return new ResponseEntity<>(Map.of("error", "Ocurrió un error inesperado."), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    public ResponseEntity<MovimientoResponseDTO> registrarMovimiento(
+            @Valid @RequestBody MovimientoRegistroDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(movimientoService.registrarMovimiento(dto));
     }
 
     /**
      * Endpoint basado estrictamente en el contexto del usuario autenticado en la sesión JWT.
      */
     @GetMapping("/me")
-    public ResponseEntity<?> obtenerMovimientosMe(@RequestParam(required = false) Integer limit) {
-        try {
-            String rut = securityUtils.getAuthenticatedRut();
-            List<MovimientoResponseDTO> movimientos = movimientoService.obtenerMovimientosPorUsuario(rut, limit);
-            return ResponseEntity.ok(movimientos);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        }
+    public ResponseEntity<List<MovimientoResponseDTO>> obtenerMovimientosMe(
+            @RequestParam(required = false) Integer limit) {
+        String rut = securityUtils.getAuthenticatedRut();
+        return ResponseEntity.ok(movimientoService.obtenerMovimientosPorUsuario(rut, limit));
     }
 
     /**
@@ -68,22 +52,13 @@ public class MovimientoController {
      * opcionales (T4). Sin filtros se comporta como antes (fecha desc).
      */
     @GetMapping("/paginados/me")
-    public ResponseEntity<?> obtenerMovimientosPaginadosMe(
+    public ResponseEntity<PageResponseDTO<MovimientoResponseDTO>> obtenerMovimientosPaginadosMe(
             @ModelAttribute MovimientoFiltroDTO filtro,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size
-    ) {
-        try {
-            String rut = securityUtils.getAuthenticatedRut();
-            Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "fecha"));
-            PageResponseDTO<MovimientoResponseDTO> movimientos =
-                    movimientoService.obtenerMovimientosPaginados(rut, pageable, filtro);
-            return ResponseEntity.ok(movimientos);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
-        }
+            @RequestParam(defaultValue = "50") int size) {
+        String rut = securityUtils.getAuthenticatedRut();
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "fecha"));
+        return ResponseEntity.ok(movimientoService.obtenerMovimientosPaginados(rut, pageable, filtro));
     }
 
     /**
@@ -91,31 +66,17 @@ public class MovimientoController {
      * no es editable. Tipos no permitidos o ingreso con Smart-Split → 409.
      */
     @PutMapping("/{id}")
-    public ResponseEntity<?> editarMovimiento(@PathVariable Long id, @Valid @RequestBody MovimientoEdicionDTO dto) {
-        try {
-            MovimientoResponseDTO movimiento = movimientoService.editarMovimiento(id, dto);
-            return ResponseEntity.ok(movimiento);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (IllegalStateException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.CONFLICT);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<MovimientoResponseDTO> editarMovimiento(
+            @PathVariable Long id, @Valid @RequestBody MovimientoEdicionDTO dto) {
+        return ResponseEntity.ok(movimientoService.editarMovimiento(id, dto));
     }
 
     /**
      * Elimina un movimiento propio (T4) con las mismas reglas que la edición.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminarMovimiento(@PathVariable Long id) {
-        try {
-            movimientoService.eliminarMovimiento(id);
-            return ResponseEntity.noContent().build();
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (IllegalStateException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.CONFLICT);
-        }
+    public ResponseEntity<Void> eliminarMovimiento(@PathVariable Long id) {
+        movimientoService.eliminarMovimiento(id);
+        return ResponseEntity.noContent().build();
     }
 }

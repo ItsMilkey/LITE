@@ -2,18 +2,18 @@ package com.example.saveup.controller;
 
 import com.example.saveup.dto.DeudaCreacionDTO;
 import com.example.saveup.dto.DeudaResponseDTO;
+import com.example.saveup.dto.PageResponseDTO;
 import com.example.saveup.dto.PagoDeudaDTO;
+import com.example.saveup.dto.PagoDeudaResponseDTO;
+import com.example.saveup.dto.SimulacionCreditoResponseDTO.CuotaSimulacionDTO;
 import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.DeudaService;
-import com.example.saveup.service.finanzas.CalculoFinancieroException;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/deudas")
@@ -28,113 +28,52 @@ public class DeudaController {
         this.securityUtils = securityUtils;
     }
 
-    // Endpoint para crear una nueva deuda
     @PostMapping
-    public ResponseEntity<?> crearDeuda(@Valid @RequestBody DeudaCreacionDTO dto) {
-        try {
-            DeudaResponseDTO nuevaDeuda = deudaService.crearDeuda(dto);
-            return new ResponseEntity<>(nuevaDeuda, HttpStatus.CREATED);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (CalculoFinancieroException | IllegalArgumentException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<DeudaResponseDTO> crearDeuda(@Valid @RequestBody DeudaCreacionDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(deudaService.crearDeuda(dto));
     }
 
     /**
      * Endpoint preferido (Implicit Context): Obtiene deudas del usuario autenticado.
      */
     @GetMapping("/me")
-    public ResponseEntity<?> obtenerDeudasMe() {
-        try {
-            String rutAutenticado = securityUtils.getAuthenticatedRut();
-            List<DeudaResponseDTO> deudas = deudaService.obtenerDeudasPorUsuario(rutAutenticado);
-            return ResponseEntity.ok(deudas);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        }
+    public ResponseEntity<List<DeudaResponseDTO>> obtenerDeudasMe() {
+        String rutAutenticado = securityUtils.getAuthenticatedRut();
+        return ResponseEntity.ok(deudaService.obtenerDeudasPorUsuario(rutAutenticado));
     }
-    
-    // Endpoint para registrar el pago de una cuota
+
     @PostMapping("/{deudaId}/pagar")
-    public ResponseEntity<?> registrarPago(@PathVariable Long deudaId, @Valid @RequestBody PagoDeudaDTO pagoDTO) {
-        try {
-            DeudaResponseDTO deudaActualizada = deudaService.registrarPago(deudaId, pagoDTO).deuda();
-            return ResponseEntity.ok(deudaActualizada);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (IllegalStateException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.CONFLICT);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<DeudaResponseDTO> registrarPago(@PathVariable Long deudaId,
+                                                          @Valid @RequestBody PagoDeudaDTO pagoDTO) {
+        return ResponseEntity.ok(deudaService.registrarPago(deudaId, pagoDTO).deuda());
     }
-    
-    // Endpoint para editar una deuda (con restricciones de negocio)
+
     @PutMapping("/{deudaId}")
-    public ResponseEntity<?> editarDeuda(@PathVariable Long deudaId, @Valid @RequestBody DeudaCreacionDTO dto) {
-        try {
-            DeudaResponseDTO deudaActualizada = deudaService.editarDeuda(deudaId, dto);
-            return ResponseEntity.ok(deudaActualizada);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (IllegalStateException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.CONFLICT);
-        } catch (CalculoFinancieroException | IllegalArgumentException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<DeudaResponseDTO> editarDeuda(@PathVariable Long deudaId,
+                                                        @Valid @RequestBody DeudaCreacionDTO dto) {
+        return ResponseEntity.ok(deudaService.editarDeuda(deudaId, dto));
     }
 
-    // Endpoint para cancelar una deuda (soft delete)
     @PatchMapping("/{deudaId}/cancelar")
-    public ResponseEntity<?> cancelarDeuda(@PathVariable Long deudaId) {
-        try {
-            DeudaResponseDTO deudaCancelada = deudaService.cancelarDeuda(deudaId);
-            return ResponseEntity.ok(deudaCancelada);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (IllegalStateException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.CONFLICT);
-        }
+    public ResponseEntity<DeudaResponseDTO> cancelarDeuda(@PathVariable Long deudaId) {
+        return ResponseEntity.ok(deudaService.cancelarDeuda(deudaId));
     }
 
-    // Endpoint para obtener la tabla de amortización
     @GetMapping("/{deudaId}/amortizacion")
-    public ResponseEntity<?> obtenerAmortizacion(@PathVariable Long deudaId) {
-        try {
-            java.util.List<com.example.saveup.dto.SimulacionCreditoResponseDTO.CuotaSimulacionDTO> amortizacion = deudaService.obtenerAmortizacion(deudaId);
-            return ResponseEntity.ok(amortizacion);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (CalculoFinancieroException | IllegalArgumentException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<List<CuotaSimulacionDTO>> obtenerAmortizacion(@PathVariable Long deudaId) {
+        return ResponseEntity.ok(deudaService.obtenerAmortizacion(deudaId));
     }
 
-    // Endpoint para obtener el detalle de una deuda (valida propiedad → 403)
     @GetMapping("/{deudaId}")
-    public ResponseEntity<?> obtenerDeuda(@PathVariable Long deudaId) {
-        try {
-            DeudaResponseDTO deuda = deudaService.obtenerDeuda(deudaId);
-            return ResponseEntity.ok(deuda);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (CalculoFinancieroException | IllegalArgumentException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<DeudaResponseDTO> obtenerDeuda(@PathVariable Long deudaId) {
+        return ResponseEntity.ok(deudaService.obtenerDeuda(deudaId));
     }
 
-    // Endpoint paginado con el historial de pagos y su desglose capital/interés/costos
     @GetMapping("/{deudaId}/pagos")
-    public ResponseEntity<?> obtenerPagos(@PathVariable Long deudaId,
-                                          @RequestParam(defaultValue = "0") int page,
-                                          @RequestParam(defaultValue = "20") int size) {
-        try {
-            return ResponseEntity.ok(deudaService.obtenerPagos(deudaId, page, size));
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<PageResponseDTO<PagoDeudaResponseDTO>> obtenerPagos(
+            @PathVariable Long deudaId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(deudaService.obtenerPagos(deudaId, page, size));
     }
 }

@@ -135,7 +135,7 @@ class SimulacionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").exists());
+                .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
 
         verifyNoInteractions(deudaRepository, movimientoRepository, usuarioRepository, metaAhorroRepository);
     }

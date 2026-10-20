@@ -7,6 +7,8 @@ import com.example.saveup.dto.MovimientoRegistroDTO;
 import com.example.saveup.dto.MovimientoResponseDTO;
 import com.example.saveup.dto.PageResponseDTO;
 import com.example.saveup.dto.PagoDeudaDTO;
+import com.example.saveup.error.CodigoError;
+import com.example.saveup.error.ErrorNegocio;
 import com.example.saveup.model.Categoria;
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.Usuario;
@@ -223,7 +225,7 @@ public class MovimientoService {
      *
      * @throws jakarta.persistence.EntityNotFoundException si el movimiento no existe (404)
      * @throws org.springframework.security.access.AccessDeniedException si es de otro usuario (403)
-     * @throws IllegalStateException si el tipo no es editable o el ingreso tiene Smart-Split (409)
+     * @throws ErrorNegocio si el tipo no es editable o el ingreso tiene Smart-Split (409)
      */
     @Transactional
     public MovimientoResponseDTO editarMovimiento(Long id, MovimientoEdicionDTO dto) {
@@ -249,7 +251,7 @@ public class MovimientoService {
      *
      * @throws jakarta.persistence.EntityNotFoundException si el movimiento no existe (404)
      * @throws org.springframework.security.access.AccessDeniedException si es de otro usuario (403)
-     * @throws IllegalStateException si el tipo no es editable o el ingreso tiene Smart-Split (409)
+     * @throws ErrorNegocio si el tipo no es editable o el ingreso tiene Smart-Split (409)
      */
     @Transactional
     public void eliminarMovimiento(Long id) {
@@ -273,13 +275,12 @@ public class MovimientoService {
         if (!TIPOS_EDITABLES.contains(movimiento.getTipoMovimiento())
                 || movimiento.getDeuda() != null
                 || movimiento.getMetaAhorro() != null) {
-            throw new IllegalStateException(
-                    "Este movimiento solo se modifica desde su módulo (deudas o metas); "
-                            + "por este endpoint solo se editan o eliminan INGRESO_GENERAL y GASTO_GENERAL.");
+            throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
+                    "Este movimiento no se puede editar ni eliminar desde aquí; hazlo desde deudas o metas.");
         }
         if (movimientoRepository.existsByMovimientoOrigenId(movimiento.getId())) {
-            throw new IllegalStateException(
-                    "Este ingreso tiene abonos automáticos de Smart-Split vinculados y no se puede editar ni eliminar.");
+            throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
+                    "Este ingreso generó abonos automáticos a tus metas y no se puede editar ni eliminar.");
         }
     }
 
@@ -317,8 +318,7 @@ public class MovimientoService {
         }
         if (!TIPOS_PERMITIDOS.contains(tipo)) {
             throw new IllegalArgumentException(
-                    "El tipo " + tipo + " no se registra por este endpoint: "
-                            + "los movimientos hacia y desde metas se crean desde /api/metas.");
+                    "Los movimientos hacia y desde metas se registran desde la sección de metas.");
         }
     }
 

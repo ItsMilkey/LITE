@@ -1,10 +1,10 @@
 package com.example.saveup.security;
 
+import com.example.saveup.error.CodigoError;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -19,8 +19,15 @@ import java.util.List;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JwtService jwtService;
+    /** Atributo que el entry point lee para distinguir TOKEN_EXPIRADO. */
+    public static final String ATTR_CODIGO_ERROR =
+            JwtAuthenticationFilter.class.getName() + ".codigoError";
+
+    private final JwtService jwtService;
+
+    public JwtAuthenticationFilter(JwtService jwtService) {
+        this.jwtService = jwtService;
+    }
 
     @Override
     protected void doFilterInternal(
@@ -51,6 +58,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
+        } else if (jwtService.isTokenExpired(jwt)) {
+            request.setAttribute(ATTR_CODIGO_ERROR, CodigoError.TOKEN_EXPIRADO);
         }
 
         filterChain.doFilter(request, response);

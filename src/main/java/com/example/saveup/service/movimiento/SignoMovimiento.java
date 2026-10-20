@@ -50,8 +50,8 @@ public final class SignoMovimiento {
      * @param tipo tipo del movimiento; no puede ser nulo.
      * @param monto monto con cualquier signo; no puede ser nulo ni cero.
      * @return el monto en valor absoluto si el tipo es positivo, o negado si es negativo.
-     * @throws IllegalArgumentException si el tipo es nulo, si el monto es nulo o cero,
-     *                                  o si el tipo no está registrado.
+     * @throws IllegalArgumentException si el tipo o el monto son nulos, o el monto es cero.
+     * @throws IllegalStateException    si el tipo no está registrado (invariante interna).
      */
     public static BigDecimal aplicar(TipoMovimiento tipo, BigDecimal monto) {
         if (tipo == null) {
@@ -68,7 +68,7 @@ public final class SignoMovimiento {
 
         Boolean negativo = ES_NEGATIVO.get(tipo);
         if (negativo == null) {
-            throw new IllegalArgumentException(
+            throw new IllegalStateException(
                     "Tipo de movimiento sin signo definido: " + tipo
                             + ". Regístralo en SignoMovimiento y en el CHECK de la base de datos.");
         }
@@ -83,7 +83,7 @@ public final class SignoMovimiento {
         }
         Boolean negativo = ES_NEGATIVO.get(tipo);
         if (negativo == null) {
-            throw new IllegalArgumentException(
+            throw new IllegalStateException(
                     "Tipo de movimiento sin signo definido: " + tipo);
         }
         return negativo;

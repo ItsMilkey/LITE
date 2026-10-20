@@ -3,11 +3,8 @@ package com.example.saveup.service;
 import com.example.saveup.dto.CategoriaDTO;
 import com.example.saveup.model.Categoria;
 import com.example.saveup.repository.CategoriaRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.example.saveup.model.Categoria;
-import com.example.saveup.repository.CategoriaRepository;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -15,8 +12,11 @@ import java.util.stream.Collectors;
 @Service
 public class CategoriaService {
 
-    @Autowired
-    private CategoriaRepository categoriaRepository;
+    private final CategoriaRepository categoriaRepository;
+
+    public CategoriaService(CategoriaRepository categoriaRepository) {
+        this.categoriaRepository = categoriaRepository;
+    }
 
     @Transactional(readOnly = true)
     public List<CategoriaDTO> obtenerTodas() {

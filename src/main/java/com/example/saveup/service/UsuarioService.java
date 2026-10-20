@@ -2,11 +2,12 @@ package com.example.saveup.service;
 
 import com.example.saveup.dto.UsuarioLoginDTO;
 import com.example.saveup.dto.UsuarioRegistroDTO;
+import com.example.saveup.error.CodigoError;
+import com.example.saveup.error.ErrorNegocio;
 import com.example.saveup.model.MetaAhorro;
 import com.example.saveup.model.Usuario;
 import com.example.saveup.repository.MetaAhorroRepository;
 import com.example.saveup.repository.UsuarioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -15,29 +16,30 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class UsuarioService {
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final MetaAhorroRepository metaAhorroRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    public UsuarioService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder,
+                          MetaAhorroRepository metaAhorroRepository) {
+        this.usuarioRepository = usuarioRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.metaAhorroRepository = metaAhorroRepository;
+    }
 
-    @Autowired
-    private MetaAhorroRepository metaAhorroRepository;
     /**
      * Registra un nuevo usuario en el sistema.
      * Valida la existencia, codifica la contraseña y guarda el nuevo usuario.
      *
      * @param usuarioDTO Datos del usuario provenientes del frontend.
-     * @throws IllegalStateException si el RUT o el email ya están en uso.
+     * @throws ErrorNegocio si el RUT o el email ya están en uso.
      */
 
     @Transactional
     public void registrarUsuario(UsuarioRegistroDTO usuarioDTO) {
-        if (usuarioRepository.existsById(usuarioDTO.getRut())) {
-            throw new IllegalStateException("El RUT ingresado ya está registrado.");
-        }
-        if (usuarioRepository.existsByEmail(usuarioDTO.getEmail())) {
-            throw new IllegalStateException("El correo electrónico ya está en uso.");
+        if (usuarioRepository.existsById(usuarioDTO.getRut())
+                || usuarioRepository.existsByEmail(usuarioDTO.getEmail())) {
+            throw new ErrorNegocio(CodigoError.USUARIO_YA_REGISTRADO);
         }
 
         Usuario nuevoUsuario = new Usuario();

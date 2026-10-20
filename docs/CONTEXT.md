@@ -21,13 +21,36 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 - /api/saldos/me
 - /api/movimientos: POST · GET me (?limit) · GET paginados/me (?page&size&desde&hasta&tipoMovimiento&categoriaId&montoMin&montoMax&q) · PUT {id} · DELETE {id}
   POST solo acepta INGRESO_GENERAL, GASTO_GENERAL y PAGO_DEUDA. ABONO_META y RETIRO_META se rechazan con 400:
-  se registran únicamente desde /api/metas/{id}/abonar y /api/metas/{id}/retirar, donde existe la meta que los respalda.
+  se registran únicamente desde la sección de metas, donde existe la meta que los respalda.
 - /api/categorias: GET
 - /api/metas: POST · GET me · POST {id}/abonar · POST {id}/retirar · PUT {id} · DELETE {id}
 - /api/deudas: POST · GET me · GET {id} · POST {id}/pagar · PUT {id} · PATCH {id}/cancelar · GET {id}/amortizacion · GET {id}/pagos (?page&size, fecha desc)
-- /api/presupuestos: GET me (DTO) · POST me (DTO; porcentajes deben sumar 100.00 y ninguno ser negativo) · GET ejecucion/me (?month&year) · GET categorias/me · PUT categorias/me · GET categorias/ejecucion/me (?month&year) · GET historial/me (?desde&hasta=YYYY-MM)
+- /api/presupuestos: GET me (DTO; sin configuración → 404 NO_ENCONTRADO) · POST me (DTO; porcentajes deben sumar 100.00 y ninguno ser negativo) · GET ejecucion/me (?month&year) · GET categorias/me · PUT categorias/me · GET categorias/ejecucion/me (?month&year) · GET historial/me (?desde&hasta=YYYY-MM)
 - /api/reportes/movimientos/exportar (?alcance&formato&mes&anio)
 - /api/simulaciones: POST credito (simulación sin persistencia, motor financiero + resumen educativo)
+
+## Errores uniformes (T8b)
+Todos los errores usan `application/problem+json`:
+`{type:"about:blank", title, status, detail, instance, codigo, errores?, idError?}`.
+`codigo` es estable para el cliente; `detail` va en español y no expone clases, SQL, rutas internas ni trazas.
+`errores[]` solo en validación y `campo` usa el nombre JSON (p. ej. `condiciones.montoCapital`). `idError` solo en 500;
+el mismo UUID queda en el log con la traza. Los 4xx se registran sin traza.
+
+| Código | HTTP | Cuándo |
+|---|---|---|
+| VALIDACION_FALLIDA | 400 | Bean Validation de DTO o parámetros; incluye `errores[]` |
+| SOLICITUD_INVALIDA | 400/405/415 | JSON malformado, enum desconocido, método o Content-Type no soportado |
+| PARAMETRO_INVALIDO | 400 | Parámetro faltante o con tipo incorrecto |
+| DATOS_INVALIDOS | 400 | IllegalArgumentException o CalculoFinancieroException (entrada inválida) |
+| NO_AUTENTICADO | 401 | Token ausente o inválido |
+| TOKEN_EXPIRADO | 401 | Token válido pero expirado; el cliente puede volver al login sin ambigüedad |
+| CREDENCIALES_INVALIDAS | 401 | Email inexistente o contraseña incorrecta, con el mismo mensaje |
+| PROHIBIDO | 403 | Recurso de otro usuario; el detail es fijo |
+| NO_ENCONTRADO | 404 | EntityNotFoundException o ruta inexistente |
+| CONFLICTO_REGLA_NEGOCIO | 409 | Regla de negocio (ErrorNegocio) o DataIntegrityViolationException |
+| USUARIO_YA_REGISTRADO | 409 | RUT o email duplicado, con mensaje genérico |
+| DEUDA_SOBREPAGO | 409 | El pago supera el saldo por pagar |
+| ERROR_INTERNO | 500 | Cualquier otra excepción o invariante interna (incluye IllegalStateException) |
 
 ## Reglas vigentes
 - Signo del movimiento (T1d): el signo lo impone el tipo, no el cliente. `SignoMovimiento.aplicar(tipo, monto)` devuelve el monto en valor absoluto con escala 2 (HALF_UP) y lo niega si el tipo es GASTO_GENERAL, PAGO_DEUDA o ABONO_META. Monto 0 o nulo → IllegalArgumentException (400). Es la única clase que llama a `.negate()` sobre montos de movimientos.
@@ -54,5 +77,5 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 Dos usos con un mismo motor de cálculo: (1) simular un endeudamiento antes de contraerlo (cuánto cuesta, por cuánto tiempo, efecto de tasa y plazo, con fines de decisión y educación financiera) y (2) llevar la deuda real al detalle (cuánto falta, historial de pagos). Una deuda guardada = condiciones de una simulación + pagos.
 
 ## Tareas pendientes (docs/tareas/)
-[x] T0 BigDecimal · [x] T1a motor financiero y calendario · [x] T1b simulador (sin persistir) · [x] T1c deuda con condiciones, fechas y cuotas previas · [x] T2 pagos, imputación y saldos · [x] T3 detalle de deuda (ficha, cronograma, historial) · [x] T4 filtros y edición de movimientos · [x] T5 presupuesto por categoría e historial · [x] T8a contrato de datos (fechas, zona y dinero) · BACKLOG.md (diferido)
+[x] T0 BigDecimal · [x] T1a motor financiero y calendario · [x] T1b simulador (sin persistir) · [x] T1c deuda con condiciones, fechas y cuotas previas · [x] T2 pagos, imputación y saldos · [x] T3 detalle de deuda (ficha, cronograma, historial) · [x] T4 filtros y edición de movimientos · [x] T5 presupuesto por categoría e historial · [x] T8a contrato de datos (fechas, zona y dinero) · [x] T8b errores uniformes · BACKLOG.md (diferido)
 Orden: [x] T0 → [x] T1a → [x] T1b (el frontend ya puede consumirlo) → [x] T1c → [x] T2 → [x] T3. T4 y T5 solo dependen de T0.

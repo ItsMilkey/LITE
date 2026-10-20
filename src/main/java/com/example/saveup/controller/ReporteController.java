@@ -2,7 +2,6 @@ package com.example.saveup.controller;
 
 import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.report.ReporteService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -15,11 +14,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/reportes")
 public class ReporteController {
 
-    @Autowired
-    private ReporteService reporteService;
+    private final ReporteService reporteService;
+    private final SecurityUtils securityUtils;
 
-    @Autowired
-    private SecurityUtils securityUtils;
+    public ReporteController(ReporteService reporteService, SecurityUtils securityUtils) {
+        this.reporteService = reporteService;
+        this.securityUtils = securityUtils;
+    }
 
     @GetMapping("/movimientos/exportar")
     public ResponseEntity<byte[]> exportarMovimientos(

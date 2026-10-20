@@ -5,34 +5,30 @@ import com.example.saveup.dto.MetaAhorroCreacionDTO;
 import com.example.saveup.dto.MetaAhorroResponseDTO;
 import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.MetaAhorroService;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/metas")
 public class MetaAhorroController {
 
-    @Autowired
-    private MetaAhorroService metaAhorroService;
+    private final MetaAhorroService metaAhorroService;
 
-    @Autowired
-    private SecurityUtils securityUtils;
+    private final SecurityUtils securityUtils;
+
+    public MetaAhorroController(MetaAhorroService metaAhorroService, SecurityUtils securityUtils) {
+        this.metaAhorroService = metaAhorroService;
+        this.securityUtils = securityUtils;
+    }
 
     @PostMapping
-    public ResponseEntity<?> crearMeta(@Valid @RequestBody MetaAhorroCreacionDTO dto) {
-        try {
-            MetaAhorroResponseDTO nuevaMeta = metaAhorroService.crearMeta(dto);
-            return new ResponseEntity<>(nuevaMeta, HttpStatus.CREATED);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        }
+    public ResponseEntity<MetaAhorroResponseDTO> crearMeta(
+            @Valid @RequestBody MetaAhorroCreacionDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(metaAhorroService.crearMeta(dto));
     }
 
     /**
@@ -45,52 +41,26 @@ public class MetaAhorroController {
     }
 
     @PostMapping("/{metaId}/abonar")
-    public ResponseEntity<?> abonarAMeta(@PathVariable Long metaId, @Valid @RequestBody AbonoRetiroDTO dto) {
-        try {
-            MetaAhorroResponseDTO metaActualizada = metaAhorroService.realizarAbono(metaId, dto);
-            return ResponseEntity.ok(metaActualizada);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<MetaAhorroResponseDTO> abonarAMeta(
+            @PathVariable Long metaId, @Valid @RequestBody AbonoRetiroDTO dto) {
+        return ResponseEntity.ok(metaAhorroService.realizarAbono(metaId, dto));
     }
 
     @PostMapping("/{metaId}/retirar")
-    public ResponseEntity<?> retirarDeMeta(@PathVariable Long metaId, @Valid @RequestBody AbonoRetiroDTO dto) {
-        try {
-            MetaAhorroResponseDTO metaActualizada = metaAhorroService.realizarRetiro(metaId, dto);
-            return ResponseEntity.ok(metaActualizada);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (IllegalStateException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.CONFLICT);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<MetaAhorroResponseDTO> retirarDeMeta(
+            @PathVariable Long metaId, @Valid @RequestBody AbonoRetiroDTO dto) {
+        return ResponseEntity.ok(metaAhorroService.realizarRetiro(metaId, dto));
     }
 
     @PutMapping("/{metaId}")
-    public ResponseEntity<?> editarMeta(@PathVariable Long metaId, @Valid @RequestBody MetaAhorroCreacionDTO dto) {
-        try {
-            MetaAhorroResponseDTO metaActualizada = metaAhorroService.editarMeta(metaId, dto);
-            return ResponseEntity.ok(metaActualizada);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (IllegalStateException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.CONFLICT);
-        }
+    public ResponseEntity<MetaAhorroResponseDTO> editarMeta(
+            @PathVariable Long metaId, @Valid @RequestBody MetaAhorroCreacionDTO dto) {
+        return ResponseEntity.ok(metaAhorroService.editarMeta(metaId, dto));
     }
 
     @DeleteMapping("/{metaId}")
-    public ResponseEntity<?> eliminarMeta(@PathVariable Long metaId) {
-        try {
-            metaAhorroService.eliminarMeta(metaId);
-            return ResponseEntity.ok(Map.of("message", "Meta eliminada correctamente. Los fondos han sido devueltos a tu saldo principal."));
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (IllegalStateException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.CONFLICT);
-        }
+    public ResponseEntity<Void> eliminarMeta(@PathVariable Long metaId) {
+        metaAhorroService.eliminarMeta(metaId);
+        return ResponseEntity.noContent().build();
     }
 }

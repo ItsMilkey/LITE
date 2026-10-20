@@ -3,6 +3,8 @@ package com.example.saveup.service;
 import com.example.saveup.dto.AbonoRetiroDTO;
 import com.example.saveup.dto.MetaAhorroCreacionDTO;
 import com.example.saveup.dto.MetaAhorroResponseDTO;
+import com.example.saveup.error.CodigoError;
+import com.example.saveup.error.ErrorNegocio;
 import com.example.saveup.model.Categoria;
 import com.example.saveup.model.MetaAhorro;
 import com.example.saveup.model.Movimiento;
@@ -221,7 +223,8 @@ class MetaAhorroServiceTest {
 
         when(metaAhorroRepository.findById(1L)).thenReturn(Optional.of(meta));
 
-        assertThrows(IllegalStateException.class, () -> metaAhorroService.eliminarMeta(1L));
+        ErrorNegocio ex = assertThrows(ErrorNegocio.class, () -> metaAhorroService.eliminarMeta(1L));
+        assertEquals(CodigoError.CONFLICTO_REGLA_NEGOCIO, ex.getCodigo());
         verifyNoInteractions(movimientoRepository);
     }
 
@@ -275,7 +278,9 @@ class MetaAhorroServiceTest {
         when(metaAhorroRepository.findTotalAhorradoByMetaId(1L))
                 .thenReturn(new java.math.BigDecimal("100000.00"));
 
-        assertThrows(IllegalStateException.class, () -> metaAhorroService.realizarRetiro(1L, dto));
+        ErrorNegocio ex = assertThrows(ErrorNegocio.class,
+                () -> metaAhorroService.realizarRetiro(1L, dto));
+        assertEquals(CodigoError.CONFLICTO_REGLA_NEGOCIO, ex.getCodigo());
         verifyNoInteractions(movimientoRepository);
     }
 }
