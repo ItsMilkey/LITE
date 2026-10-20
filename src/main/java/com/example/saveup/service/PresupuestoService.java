@@ -424,7 +424,7 @@ public class PresupuestoService {
     }
 
     private YearMonth resolverMes(Integer month, Integer year) {
-        YearMonth ahora = YearMonth.now();
+        YearMonth ahora = FechasMovimiento.mesActual();
         int m = month != null ? month : ahora.getMonthValue();
         int y = year != null ? year : ahora.getYear();
         if (m < 1 || m > 12) {

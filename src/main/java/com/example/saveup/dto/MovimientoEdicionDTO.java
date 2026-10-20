@@ -18,7 +18,7 @@ import java.math.BigDecimal;
 @Data
 public class MovimientoEdicionDTO {
 
-    @Digits(integer = 17, fraction = 2, message = "El monto debe tener como máximo 17 enteros y 2 decimales")
+    @Digits(integer = 13, fraction = 2, message = "El monto debe tener como máximo 13 enteros y 2 decimales")
     private BigDecimal monto;
 
     @Size(max = 100, message = "La descripción no puede superar los 100 caracteres")

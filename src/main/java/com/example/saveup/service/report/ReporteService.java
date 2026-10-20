@@ -2,12 +2,11 @@ package com.example.saveup.service.report;
 
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.repository.MovimientoRepository;
+import com.example.saveup.service.movimiento.FechasMovimiento;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.Date;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -32,22 +31,11 @@ public class ReporteService {
         // 1. Obtener Datos
         List<Movimiento> movimientos;
         if ("MENSUAL".equalsIgnoreCase(alcance) && mes != null && anio != null) {
-            LocalDate startLocal = LocalDate.of(anio, mes, 1);
-            LocalDate endLocal = startLocal.plusMonths(1); // Inicio del próximo mes (exclusivo en lógica, inclusivo si
-                                                           // usamos between depende de JPA)
-            // Ajustamos check: Between suele ser inclusivo-inclusivo. Restamos 1 segundo o
-            // día.
-            // Para seguridad, usaremos primer dia del mes a las 00:00 y ultimo dia a las
-            // 23:59
-
-            Date startDate = Date.from(startLocal.atStartOfDay(ZoneId.systemDefault()).toInstant());
-            // Fin del mes: Primer dia del OTRO mes menos 1 segundo? O simplemente usamos
-            // dia 31?
-            // Mejor: startLocal.plusMonths(1).minusDays(1) -> atTime(Max)
-            Date endDate = Date
-                    .from(startLocal.plusMonths(1).atStartOfDay(ZoneId.systemDefault()).minusNanos(1).toInstant());
-
-            movimientos = movimientoRepository.findByUsuarioRutAndFechaBetween(rut, startDate, endDate);
+            // Ventana semiabierta [inicio del mes, inicio del mes siguiente) en la
+            // zona del negocio: el último día entra completo sin importar la hora.
+            YearMonth mesReporte = YearMonth.of(anio, mes);
+            movimientos = movimientoRepository.findByUsuarioRutAndFechaGreaterThanEqualAndFechaLessThan(
+                    rut, FechasMovimiento.inicioDeMes(mesReporte), FechasMovimiento.inicioDeMesSiguiente(mesReporte));
         } else {
             // COMPLETO
             movimientos = movimientoRepository.findByUsuarioRutOrderByFechaDesc(rut);

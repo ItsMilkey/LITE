@@ -1,6 +1,7 @@
 package com.example.saveup.service.report;
 
 import com.example.saveup.model.Movimiento;
+import com.example.saveup.service.movimiento.FechasMovimiento;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -31,7 +32,7 @@ public class CsvReporteGenerator implements ReporteGenerator {
 
         for (Movimiento m : movimientos) {
             // Fecha
-            csv.append(m.getFecha().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+            csv.append(FechasMovimiento.aFechaLocal(m.getFecha())
                     .format(dateFormatter))
                     .append(CSV_SEPARATOR);
 

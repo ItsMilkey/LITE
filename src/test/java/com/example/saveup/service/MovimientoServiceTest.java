@@ -24,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -192,7 +193,7 @@ class MovimientoServiceTest {
         when(movimientoRepository.save(any(Movimiento.class))).thenAnswer(inv -> {
             Movimiento m = inv.getArgument(0);
             m.setId((long) guardados.size() + 1);
-            m.setFecha(new Date());
+            m.setFecha(Date.from(Instant.parse("2026-10-15T12:00:00Z")));
             guardados.add(m);
             return m;
         });
@@ -336,7 +337,7 @@ class MovimientoServiceTest {
         movimiento.setId(50L);
         movimiento.setMonto(java.math.BigDecimal.valueOf(monto).setScale(2));
         movimiento.setDescripcion("Cuota");
-        movimiento.setFecha(new Date());
+        movimiento.setFecha(Date.from(Instant.parse("2026-10-15T12:00:00Z")));
         movimiento.setTipoMovimiento(TipoMovimiento.PAGO_DEUDA);
         return MovimientoResponseDTO.from(movimiento);
     }

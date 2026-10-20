@@ -22,7 +22,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -61,7 +61,7 @@ class MetaAhorroServiceTest {
         meta.setNombre("Fondo de emergencia");
         meta.setMontoObjetivo(new java.math.BigDecimal("500000.00"));
         meta.setMontoActual(new java.math.BigDecimal("100000.00"));
-        meta.setFechaLimite(new Date());
+        meta.setFechaLimite(LocalDate.of(2027, 11, 7));
         meta.setUsuario(usuario);
     }
 
@@ -71,7 +71,7 @@ class MetaAhorroServiceTest {
         MetaAhorroCreacionDTO dto = new MetaAhorroCreacionDTO();
         dto.setNombre("Fondo de emergencia");
         dto.setMontoObjetivo(new java.math.BigDecimal("500000.00"));
-        dto.setFechaLimite(new Date());
+        dto.setFechaLimite(LocalDate.of(2027, 11, 7));
 
         when(securityUtils.getAuthenticatedRut()).thenReturn("12345678-9");
         when(usuarioRepository.findById("12345678-9")).thenReturn(Optional.of(usuario));

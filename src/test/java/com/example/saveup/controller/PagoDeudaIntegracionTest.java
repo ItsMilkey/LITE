@@ -28,6 +28,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -110,7 +111,7 @@ class PagoDeudaIntegracionTest {
             Movimiento m = inv.getArgument(0);
             if (m.getId() == null) {
                 m.setId(siguienteMovimientoId.getAndIncrement());
-                m.setFecha(new Date());
+                m.setFecha(Date.from(Instant.parse("2026-10-15T12:00:00Z")));
                 movimientos.add(m);
             }
             return m;
@@ -153,7 +154,7 @@ class PagoDeudaIntegracionTest {
             d.setEstado(EstadoDeuda.PENDIENTE);
         }
         if (d.getFechaCreacion() == null) {
-            d.setFechaCreacion(new Date());
+            d.setFechaCreacion(Date.from(Instant.parse("2026-10-15T12:00:00Z")));
         }
     }
 
@@ -305,7 +306,7 @@ class PagoDeudaIntegracionTest {
         ingreso.setUsuario(usuario);
         ingreso.setMonto(new BigDecimal("20000.00"));
         ingreso.setDescripcion("Sueldo");
-        ingreso.setFecha(new Date());
+        ingreso.setFecha(Date.from(Instant.parse("2026-10-15T12:00:00Z")));
         ingreso.setTipoMovimiento(TipoMovimiento.INGRESO_GENERAL);
         movimientos.add(ingreso);
 
