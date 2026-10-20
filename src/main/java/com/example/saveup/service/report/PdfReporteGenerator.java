@@ -2,6 +2,7 @@ package com.example.saveup.service.report;
 
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.enums.TipoMovimiento;
+import com.example.saveup.service.movimiento.FechasMovimiento;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
@@ -38,7 +39,7 @@ public class PdfReporteGenerator implements ReporteGenerator {
             title.setAlignment(Element.ALIGN_CENTER);
             document.add(title);
 
-            Paragraph subtitle = new Paragraph("Generado el: " + java.time.LocalDate.now().toString(), subtitleFont);
+            Paragraph subtitle = new Paragraph("Generado el: " + FechasMovimiento.hoy().toString(), subtitleFont);
             subtitle.setAlignment(Element.ALIGN_CENTER);
             subtitle.setSpacingAfter(20f);
             document.add(subtitle);
@@ -69,7 +70,7 @@ public class PdfReporteGenerator implements ReporteGenerator {
                 Color bgColor = alternate ? lightGray : Color.WHITE;
                 alternate = !alternate;
 
-                addCell(table, m.getFecha().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                addCell(table, FechasMovimiento.aFechaLocal(m.getFecha())
                         .format(dateFormatter), dataFont, bgColor, Element.ALIGN_CENTER);
 
                 String tipo = "Otro";

@@ -37,6 +37,7 @@ import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
@@ -83,7 +84,7 @@ class DeudaServiceTest {
         deuda.setCantidadCuotas(10);
         deuda.setEstado(EstadoDeuda.PENDIENTE);
         deuda.setUsuario(usuario);
-        deuda.setFechaCreacion(new Date());
+        deuda.setFechaCreacion(Date.from(Instant.parse("2026-10-15T12:00:00Z")));
         deuda.setModalidadCalculo(ModalidadCalculo.SIN_INTERES);
         deuda.setMontoCapital(new BigDecimal("100000.00"));
         deuda.setTasaMensual(BigDecimal.ZERO);
@@ -96,7 +97,7 @@ class DeudaServiceTest {
 
     // ──────────────────────── helpers ────────────────────────
 
-    private static final Date HOY = new Date();
+    private static final Date HOY = Date.from(Instant.parse("2026-10-15T12:00:00Z"));
 
     /** Deuda SIN_INTERES sin pagos, como la devuelve la proyección JPQL. */
     private static DeudaResponseDTO proyeccion(Long id, BigDecimal montoTotal, int cuotas, BigDecimal pagosReales) {
@@ -157,7 +158,7 @@ class DeudaServiceTest {
         d.setCantidadCuotas(cuotas);
         d.setEstado(EstadoDeuda.PENDIENTE);
         d.setUsuario(usuario);
-        d.setFechaCreacion(new Date());
+        d.setFechaCreacion(Date.from(Instant.parse("2026-10-15T12:00:00Z")));
         d.setModalidadCalculo(modalidad);
         d.setMontoCapital(capital);
         d.setTasaMensual(calculo.tasaMensual());

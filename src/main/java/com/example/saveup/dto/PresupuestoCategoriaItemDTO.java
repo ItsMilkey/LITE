@@ -1,5 +1,6 @@
 package com.example.saveup.dto;
 
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
@@ -21,6 +22,7 @@ public class PresupuestoCategoriaItemDTO {
 
     @NotNull(message = "El límite mensual es obligatorio")
     @Positive(message = "El límite mensual debe ser mayor a 0")
+    @Digits(integer = 13, fraction = 2, message = "El límite mensual debe tener como máximo 13 enteros y 2 decimales")
     private BigDecimal limiteMensual;
 
     public PresupuestoCategoriaItemDTO(Long categoriaId, BigDecimal limiteMensual) {

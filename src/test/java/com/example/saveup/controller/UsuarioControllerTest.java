@@ -18,6 +18,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
 import java.util.Date;
 import java.util.Optional;
 
@@ -68,7 +69,7 @@ class UsuarioControllerTest {
         usuarioConHash.setApellido("Perez");
         usuarioConHash.setEmail(EMAIL);
         usuarioConHash.setContrasena(HASH_EN_BD);
-        usuarioConHash.setFechaRegistro(new Date());
+        usuarioConHash.setFechaRegistro(Date.from(Instant.parse("2026-10-15T12:00:00Z")));
 
         validToken = jwtService.generateToken(RUT, EMAIL);
     }
@@ -113,7 +114,7 @@ class UsuarioControllerTest {
         usuarioLogin.setApellido("Perez");
         usuarioLogin.setEmail(EMAIL);
         usuarioLogin.setContrasena(hashReal);
-        usuarioLogin.setFechaRegistro(new Date());
+        usuarioLogin.setFechaRegistro(Date.from(Instant.parse("2026-10-15T12:00:00Z")));
 
         when(usuarioRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuarioLogin));
 

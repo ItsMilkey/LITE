@@ -27,7 +27,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.Calendar;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Date;
 
 import static org.hamcrest.Matchers.containsString;
@@ -538,9 +539,7 @@ class MovimientoFiltrosEdicionTest {
     }
 
     private Date fecha(int anio, int mes, int dia) {
-        Calendar c = Calendar.getInstance();
-        c.clear();
-        c.set(anio, mes - 1, dia, 12, 0, 0);
-        return c.getTime();
+        return Date.from(LocalDate.of(anio, mes, dia).atTime(12, 0)
+                .atZone(ZoneId.of("America/Santiago")).toInstant());
     }
 }

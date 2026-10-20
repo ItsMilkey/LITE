@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 public class AbonoRetiroDTO {
     @NotNull(message = "El monto es obligatorio")
     @Positive(message = "El monto debe ser positivo")
-    @Digits(integer = 17, fraction = 2, message = "El monto debe tener como máximo 17 enteros y 2 decimales")
+    @Digits(integer = 13, fraction = 2, message = "El monto debe tener como máximo 13 enteros y 2 decimales")
     private BigDecimal monto;
 
     @NotBlank(message = "La descripción es obligatoria")

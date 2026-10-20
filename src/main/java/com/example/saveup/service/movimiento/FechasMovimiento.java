@@ -12,21 +12,20 @@ import java.util.Date;
  * <p>Es el ÚNICO lugar donde ambos tipos se tocan: así ninguna otra clase mezcla
  * {@code java.time} con {@code java.util.Date} (regla .agents/rules/20-java-spring.md).
  *
- * <p>La zona se fija UNA sola vez ({@link ZoneId#systemDefault()}) y se usa de
- * forma consistente en todos los límites, de modo que la ventana inclusiva de
- * {@code desde}/{@code hasta} no se desplace por resoluciones distintas de la zona.
- * Al capturarla una vez, un cambio de zona del JVM no altera la ventana a mitad
- * de ejecución.
+ * <p>La zona es la del negocio (Chile), no la del servidor: un movimiento hecho
+ * el 31-oct a las 23:30 en America/Santiago pertenece a octubre aunque en UTC ya
+ * sea 1-nov. Al ser una constante, la ventana no cambia si la JVM arranca en UTC
+ * (Render) ni si se altera la zona por defecto durante la ejecución.
  */
 public final class FechasMovimiento {
 
-    /** Zona única con la que se interpretan los rangos de fecha del historial. */
-    private static final ZoneId ZONA = ZoneId.systemDefault();
+    /** Zona única del negocio con la que se interpretan fechas, meses y reportes. */
+    private static final ZoneId ZONA = ZoneId.of("America/Santiago");
 
     private FechasMovimiento() {
     }
 
-    /** Instante de inicio (00:00:00.000) del día indicado, en la zona fijada. */
+    /** Instante de inicio (00:00:00.000) del día indicado, en la zona del negocio. */
     public static Date inicioDelDia(LocalDate fecha) {
         return Date.from(fecha.atStartOfDay(ZONA).toInstant());
     }
@@ -52,6 +51,24 @@ public final class FechasMovimiento {
      */
     public static Date inicioDeMesSiguiente(YearMonth mes) {
         return inicioDelDia(mes.plusMonths(1).atDay(1));
+    }
+
+    /**
+     * Día de calendario del negocio en el que ocurrió un instante. Se usa para
+     * mostrar fechas en reportes sin depender de la zona del servidor.
+     */
+    public static LocalDate aFechaLocal(Date instante) {
+        return instante.toInstant().atZone(ZONA).toLocalDate();
+    }
+
+    /** Fecha de hoy en la zona del negocio. */
+    public static LocalDate hoy() {
+        return LocalDate.now(ZONA);
+    }
+
+    /** Mes actual en la zona del negocio (para los endpoints que omiten mes/año). */
+    public static YearMonth mesActual() {
+        return YearMonth.now(ZONA);
     }
 
     /** Zona fijada (expuesta para tests y diagnóstico). */

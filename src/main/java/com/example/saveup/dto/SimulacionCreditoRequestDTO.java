@@ -2,6 +2,7 @@ package com.example.saveup.dto;
 
 import com.example.saveup.model.enums.ModalidadCalculo;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Data;
@@ -19,6 +20,7 @@ public class SimulacionCreditoRequestDTO {
 
     @NotNull(message = "El monto de capital es obligatorio")
     @DecimalMin(value = "0.01", message = "El monto de capital debe ser mayor a 0")
+    @Digits(integer = 13, fraction = 2, message = "El monto de capital debe tener como máximo 13 enteros y 2 decimales")
     private BigDecimal montoCapital;
 
     private Integer cantidadCuotas;
@@ -32,12 +34,16 @@ public class SimulacionCreditoRequestDTO {
 
     private BigDecimal tasaAnualEfectiva;
 
+    @Digits(integer = 13, fraction = 2, message = "El valor de cuota debe tener como máximo 13 enteros y 2 decimales")
     private BigDecimal valorCuota;
 
+    @Digits(integer = 13, fraction = 2, message = "Los gastos iniciales deben tener como máximo 13 enteros y 2 decimales")
     private BigDecimal gastosIniciales;
 
+    @Digits(integer = 13, fraction = 2, message = "El costo adicional por cuota debe tener como máximo 13 enteros y 2 decimales")
     private BigDecimal costoAdicionalPorCuota;
 
+    @Digits(integer = 13, fraction = 2, message = "El ingreso mensual debe tener como máximo 13 enteros y 2 decimales")
     private BigDecimal ingresoMensual;
 
     private List<Integer> cantidadCuotasAlternativas;

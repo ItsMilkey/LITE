@@ -15,14 +15,14 @@ Detente y espera mi "ok".
 
 ## Decisiones (supuestos; cámbialos antes de empezar si no aplican)
 - Instantes (fecha de un movimiento, fechaCreacion): ISO-8601 en UTC con sufijo Z. El cliente los convierte a hora local.
-- Fechas de calendario (fechaPrimeraCuota, fechaUltimaCuota, vencimientos, filtros desde/hasta): yyyy-MM-dd, sin zona.
-- Zona del negocio: America/Santiago, en la propiedad app.zona-horaria (valor por defecto America/Santiago). La usa FechasMovimiento para convertir desde/hasta a instantes y para calcular inicio y fin de mes. Ninguna otra clase usa ZoneId.systemDefault().
-- Persistencia en UTC: JVM, Hibernate (hibernate.jdbc.time_zone=UTC) y Jackson (spring.jackson.time-zone=UTC). No se migran datos (producción no tiene movimientos).
+- Fechas de calendario (fechaPrimeraCuota, fechaUltimaCuota, vencimientos, fechaLimite, filtros desde/hasta): yyyy-MM-dd, sin zona. `MetaAhorro.fechaLimite` se modela como `LocalDate`.
+- Zona del negocio: America/Santiago como constante en FechasMovimiento (sin propiedad app.zona-horaria). La usa FechasMovimiento para convertir desde/hasta a instantes y para calcular inicio y fin de mes, y las clases que muestran fechas (presupuesto y reportes) para el mes actual y el día. Ninguna clase usa ZoneId.systemDefault().
+- Persistencia en UTC: JVM (`-Duser.timezone=UTC`), Hibernate (hibernate.jdbc.time_zone=UTC) y Jackson (spring.jackson.time-zone=UTC). Los tests corren con `-Duser.timezone=${test.timezone}` (UTC por defecto). No se migran datos (producción no tiene movimientos).
 - Dinero: sigue siendo número JSON (no string). Regla: máximo 13 enteros + 2 decimales en todos los DTO de entrada (@Digits(integer=13, fraction=2)), para que cualquier cliente con doubles IEEE-754 los represente sin pérdida. El servidor es la única fuente de aritmética: el cliente solo muestra y envía montos.
 
 ## Cambios
 1. Configuración de zona horaria y Jackson según lo anterior.
-2. FechasMovimiento usa app.zona-horaria; elimina los usos de systemDefault().
+2. FechasMovimiento fija America/Santiago como constante; elimina los usos de systemDefault().
 3. @Digits(integer=13, fraction=2) en los DTO de montos (reemplaza 17).
 4. Actualiza docs/CONTEXT.md (zona del negocio, formatos de fecha, regla de dinero).
 

@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDate;
 
 @Data
 public class MetaAhorroCreacionDTO {
@@ -14,9 +14,9 @@ public class MetaAhorroCreacionDTO {
     private String nombre;
 
     @Positive(message = "El monto objetivo debe ser positivo")
-    @Digits(integer = 17, fraction = 2, message = "El monto objetivo debe tener como máximo 17 enteros y 2 decimales")
+    @Digits(integer = 13, fraction = 2, message = "El monto objetivo debe tener como máximo 13 enteros y 2 decimales")
     private BigDecimal montoObjetivo;
 
     @Future(message = "La fecha límite debe ser en el futuro")
-    private Date fechaLimite;
+    private LocalDate fechaLimite;
 }

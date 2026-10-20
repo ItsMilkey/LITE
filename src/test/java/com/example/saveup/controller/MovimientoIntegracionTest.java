@@ -26,6 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Date;
 import java.util.Optional;
 
@@ -106,12 +107,12 @@ class MovimientoIntegracionTest {
         when(movimientoRepository.save(any(Movimiento.class))).thenAnswer(inv -> {
             Movimiento m = inv.getArgument(0);
             m.setId(99L);
-            m.setFecha(new Date());
+            m.setFecha(Date.from(Instant.parse("2026-10-15T12:00:00Z")));
             return m;
         });
         when(deudaRepository.findTotalPagadoPorDeuda(anyLong())).thenReturn(BigDecimal.ZERO);
         when(deudaRepository.findDeudaDTOById(anyLong())).thenAnswer(inv -> Optional.of(new DeudaResponseDTO(
-                1L, "Deuda", "Desc", new BigDecimal("100000.00"), 10, EstadoDeuda.PENDIENTE, new Date(),
+                1L, "Deuda", "Desc", new BigDecimal("100000.00"), 10, EstadoDeuda.PENDIENTE, Date.from(Instant.parse("2026-10-15T12:00:00Z")),
                 new BigDecimal("-10000.00"), 1L, deuda.getTipoDeuda() != null ? deuda.getTipoDeuda()
                         : com.example.saveup.model.enums.TipoDeuda.OTRO,
                 ModalidadCalculo.SIN_INTERES, new BigDecimal("100000.00"), BigDecimal.ZERO,

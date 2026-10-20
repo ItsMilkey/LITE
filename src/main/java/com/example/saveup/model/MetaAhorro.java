@@ -3,7 +3,7 @@ package com.example.saveup.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "META_AHORRO")
@@ -28,8 +28,7 @@ public class MetaAhorro {
 
     // Nullable para la meta por defecto.
     @Column(name = "FECHA_LIMITE")
-    @Temporal(TemporalType.DATE)
-    private Date fechaLimite;
+    private LocalDate fechaLimite;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "USUARIO_ID", nullable = false)

@@ -26,7 +26,7 @@ public class DeudaCreacionDTO {
     private CondicionesCreditoInput condiciones;
 
     @Positive(message = "El monto total debe ser un número positivo")
-    @Digits(integer = 17, fraction = 2, message = "El monto total debe tener como máximo 17 enteros y 2 decimales")
+    @Digits(integer = 13, fraction = 2, message = "El monto total debe tener como máximo 13 enteros y 2 decimales")
     private BigDecimal montoTotal;
 
     @Positive(message = "La cantidad de cuotas debe ser un número positivo")
