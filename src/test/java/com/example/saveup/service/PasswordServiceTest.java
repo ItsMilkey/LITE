@@ -68,6 +68,7 @@ class PasswordServiceTest {
     @BeforeEach
     void setUp() {
         passwordService = new PasswordService(usuarioRepository, passwordEncoder,
+                new com.example.saveup.security.VerificadorDeContrasena(passwordEncoder),
                 tokenRepository, refreshTokenService, correoService);
 
         usuario = new Usuario();

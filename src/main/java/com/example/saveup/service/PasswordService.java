@@ -6,10 +6,10 @@ import com.example.saveup.model.enums.TipoVerificacion;
 import com.example.saveup.repository.TokenVerificacionRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.TokenOpaco;
+import com.example.saveup.security.VerificadorDeContrasena;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +40,7 @@ public class PasswordService {
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
+    private final VerificadorDeContrasena verificadorDeContrasena;
     private final TokenVerificacionRepository tokenRepository;
     private final RefreshTokenService refreshTokenService;
     private final CorreoService correoService;
@@ -50,11 +51,13 @@ public class PasswordService {
 
     public PasswordService(UsuarioRepository usuarioRepository,
                            PasswordEncoder passwordEncoder,
+                           VerificadorDeContrasena verificadorDeContrasena,
                            TokenVerificacionRepository tokenRepository,
                            RefreshTokenService refreshTokenService,
                            CorreoService correoService) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
+        this.verificadorDeContrasena = verificadorDeContrasena;
         this.tokenRepository = tokenRepository;
         this.refreshTokenService = refreshTokenService;
         this.correoService = correoService;
@@ -128,12 +131,11 @@ public class PasswordService {
      */
     @Transactional
     public void cambiarContrasena(String rut, String contrasenaActual, String nuevaContrasena) {
-        Usuario usuario = usuarioRepository.findById(rut)
-                .orElseThrow(() -> new BadCredentialsException("Credenciales inválidas."));
+        Usuario usuario = usuarioRepository.findById(rut).orElse(null);
 
-        if (!passwordEncoder.matches(contrasenaActual, usuario.getContrasena())) {
-            throw new BadCredentialsException("Credenciales inválidas.");
-        }
+        // Un solo dueño para la comparación de contraseñas críticas; el mensaje
+        // genérico no aclara si falló el RUT o la contraseña.
+        verificadorDeContrasena.verificarContrasena(usuario, contrasenaActual);
 
         usuario.setContrasena(passwordEncoder.encode(nuevaContrasena));
         usuarioRepository.save(usuario);

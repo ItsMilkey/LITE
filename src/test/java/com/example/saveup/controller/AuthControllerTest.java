@@ -233,6 +233,37 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("Flujo completo: logout → reuso del mismo refresh → 401 REFRESH_INVALIDO y revoca TODAS las sesiones activas")
+    void logout_reusoPosterior_revocaTodasLasSesiones() throws Exception {
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(tokenActivo()));
+
+        // 1. Logout: 200 y el token recibido queda revocado (solo ese, sin consumo)
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpo(TOKEN_ORIGINAL)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Sesión cerrada exitosamente"));
+
+        ArgumentCaptor<AuthRefreshToken> guardado = ArgumentCaptor.forClass(AuthRefreshToken.class);
+        verify(refreshTokenRepository).save(guardado.capture());
+        assertNotNull(guardado.getValue().getFechaRevocacion(), "El logout marca FECHA_REVOCACION.");
+        assertNull(guardado.getValue().getFechaUso(), "El logout NO consume el token (no marca FECHA_USO).");
+
+        // 2. El mismo refresh (ya revocado) vuelve a presentarse como credencial
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpo(TOKEN_ORIGINAL)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.codigo").value("REFRESH_INVALIDO"))
+                .andExpect(jsonPath("$.title").value("Sesión inválida"));
+
+        // 3. El reuso se trata como robo: revoca TODAS las sesiones activas del
+        //    usuario y no se emitió ningún par nuevo (solo el save del logout).
+        verify(refreshTokenRepository).revocarActivasDeUsuario(eq(RUT), any());
+        verify(refreshTokenRepository, times(1)).save(any(AuthRefreshToken.class));
+    }
+
+    @Test
     @DisplayName("POST /auth/logout con token desconocido → 200 idempotente (sin enumeración)")
     void logout_tokenDesconocido_idempotente() throws Exception {
         when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.empty());

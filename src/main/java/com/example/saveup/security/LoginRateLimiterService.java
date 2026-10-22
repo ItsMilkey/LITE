@@ -31,6 +31,14 @@ public class LoginRateLimiterService {
     /** Vida de cada contador desde su último cambio (un fallo extiende la ventana). */
     private static final Duration DURACION_VENTANA = Duration.ofMinutes(15);
 
+    /**
+     * Clave del contador: el par (correo del intento, IP del cliente) que
+     * siempre viaja junto. El correo se normaliza a minúsculas en la clave,
+     * así que A@X.com y a@x.com cuentan como el mismo agresor.
+     */
+    public record AccesoLogin(String email, String ip) {
+    }
+
     private final Cache<String, AtomicInteger> intentos = Caffeine.newBuilder()
             .expireAfterWrite(DURACION_VENTANA)
             .build();
@@ -40,8 +48,8 @@ public class LoginRateLimiterService {
      * acumuló el máximo de intentos fallidos. Se consulta ANTES de tocar la BD
      * para que el bloqueo no dependa de ninguna otra capa.
      */
-    public void exigirPermitido(String email, String ip) {
-        AtomicInteger contador = intentos.getIfPresent(clave(email, ip));
+    public void exigirPermitido(AccesoLogin acceso) {
+        AtomicInteger contador = intentos.getIfPresent(clave(acceso.email(), acceso.ip()));
         if (contador != null && contador.get() >= MAX_INTENTOS_FALLIDOS) {
             LOG.info("Login bloqueado por fuerza bruta.");
             throw new BloqueoPorFuerzaBrutaException();
@@ -49,8 +57,8 @@ public class LoginRateLimiterService {
     }
 
     /** Registra un intento fallido (contraseña incorrecta o correo inexistente). */
-    public void registrarFallo(String email, String ip) {
-        intentos.asMap().compute(clave(email, ip), (k, actual) -> {
+    public void registrarFallo(AccesoLogin acceso) {
+        intentos.asMap().compute(clave(acceso.email(), acceso.ip()), (k, actual) -> {
             if (actual == null) {
                 return new AtomicInteger(1);
             }
@@ -60,8 +68,8 @@ public class LoginRateLimiterService {
     }
 
     /** Login exitoso: el usuario probó la clave; se parte de cero otra vez. */
-    public void resetear(String email, String ip) {
-        intentos.invalidate(clave(email, ip));
+    public void resetear(AccesoLogin acceso) {
+        intentos.invalidate(clave(acceso.email(), acceso.ip()));
     }
 
     /**

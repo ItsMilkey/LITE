@@ -20,9 +20,14 @@ class LoginRateLimiterServiceTest {
 
     private final LoginRateLimiterService limiter = new LoginRateLimiterService();
 
+    /** Construye la clave email+IP que toda llamada al limiter necesita. */
+    private LoginRateLimiterService.AccesoLogin acceso(String email, String ip) {
+        return new LoginRateLimiterService.AccesoLogin(email, ip);
+    }
+
     private void registrarFallos(int cuantos, String email, String ip) {
         for (int i = 0; i < cuantos; i++) {
-            limiter.registrarFallo(email, ip);
+            limiter.registrarFallo(acceso(email, ip));
         }
     }
 
@@ -31,13 +36,13 @@ class LoginRateLimiterServiceTest {
     void cuatroFallos_permitidosQuintoBloquea() {
         registrarFallos(LoginRateLimiterService.MAX_INTENTOS_FALLIDOS - 1, EMAIL, IP);
 
-        assertDoesNotThrow(() -> limiter.exigirPermitido(EMAIL, IP),
+        assertDoesNotThrow(() -> limiter.exigirPermitido(acceso(EMAIL, IP)),
                 "Con menos del máximo la IP sigue con permiso de intentar.");
 
-        limiter.registrarFallo(EMAIL, IP);
+        limiter.registrarFallo(acceso(EMAIL, IP));
 
         assertThrows(BloqueoPorFuerzaBrutaException.class,
-                () -> limiter.exigirPermitido(EMAIL, IP),
+                () -> limiter.exigirPermitido(acceso(EMAIL, IP)),
                 "Tras el quinto fallo el par email+IP queda bloqueado.");
     }
 
@@ -45,14 +50,15 @@ class LoginRateLimiterServiceTest {
     @DisplayName("Un login exitoso resetea el contador: vuelve a conceder el máximo de intentos")
     void exito_reseteaElContador() {
         registrarFallos(LoginRateLimiterService.MAX_INTENTOS_FALLIDOS, EMAIL, IP);
-        assertThrows(BloqueoPorFuerzaBrutaException.class, () -> limiter.exigirPermitido(EMAIL, IP));
+        assertThrows(BloqueoPorFuerzaBrutaException.class,
+                () -> limiter.exigirPermitido(acceso(EMAIL, IP)));
 
-        limiter.resetear(EMAIL, IP);
+        limiter.resetear(acceso(EMAIL, IP));
 
-        assertDoesNotThrow(() -> limiter.exigirPermitido(EMAIL, IP));
+        assertDoesNotThrow(() -> limiter.exigirPermitido(acceso(EMAIL, IP)));
         // El fresco reinicio vuelve a tolerar los 5 fallos completos
         registrarFallos(LoginRateLimiterService.MAX_INTENTOS_FALLIDOS - 1, EMAIL, IP);
-        assertDoesNotThrow(() -> limiter.exigirPermitido(EMAIL, IP));
+        assertDoesNotThrow(() -> limiter.exigirPermitido(acceso(EMAIL, IP)));
     }
 
     @Test
@@ -61,9 +67,9 @@ class LoginRateLimiterServiceTest {
         registrarFallos(LoginRateLimiterService.MAX_INTENTOS_FALLIDOS, EMAIL, "79.30.10.2");
 
         assertThrows(BloqueoPorFuerzaBrutaException.class,
-                () -> limiter.exigirPermitido(EMAIL, "79.30.10.2"));
+                () -> limiter.exigirPermitido(acceso(EMAIL, "79.30.10.2")));
 
-        assertDoesNotThrow(() -> limiter.exigirPermitido(EMAIL, "79.30.10.3"),
+        assertDoesNotThrow(() -> limiter.exigirPermitido(acceso(EMAIL, "79.30.10.3")),
                 "Otra IP con el mismo correo no hereda el bloqueo.");
     }
 
@@ -73,24 +79,24 @@ class LoginRateLimiterServiceTest {
         registrarFallos(LoginRateLimiterService.MAX_INTENTOS_FALLIDOS, EMAIL, IP);
 
         assertThrows(BloqueoPorFuerzaBrutaException.class,
-                () -> limiter.exigirPermitido(EMAIL, IP));
+                () -> limiter.exigirPermitido(acceso(EMAIL, IP)));
 
-        assertDoesNotThrow(() -> limiter.exigirPermitido("otro@example.com", IP),
+        assertDoesNotThrow(() -> limiter.exigirPermitido(acceso("otro@example.com", IP)),
                 "Otro correo desde la misma IP no hereda el bloqueo.");
     }
 
     @Test
     @DisplayName("La clave ignora la capitalización del email (A@X.com ≡ a@x.com)")
     void clave_ignoraMayusculasDelEmail() {
-        limiter.registrarFallo("Ana@ExAmPlE.com", IP);
-        limiter.registrarFallo("ANA@example.com", IP);
-        limiter.registrarFallo("ana@EXAMPLE.com", IP);
-        limiter.registrarFallo(EMAIL, IP);
-        limiter.registrarFallo(EMAIL, IP);
+        limiter.registrarFallo(acceso("Ana@ExAmPlE.com", IP));
+        limiter.registrarFallo(acceso("ANA@example.com", IP));
+        limiter.registrarFallo(acceso("ana@EXAMPLE.com", IP));
+        limiter.registrarFallo(acceso(EMAIL, IP));
+        limiter.registrarFallo(acceso(EMAIL, IP));
 
         // 5 fallos en distintos casings del mismo correo ⇒ bloqueado
         assertThrows(BloqueoPorFuerzaBrutaException.class,
-                () -> limiter.exigirPermitido(EMAIL, IP));
+                () -> limiter.exigirPermitido(acceso(EMAIL, IP)));
     }
 
     @Test

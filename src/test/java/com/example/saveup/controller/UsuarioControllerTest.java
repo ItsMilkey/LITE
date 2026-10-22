@@ -385,6 +385,33 @@ class UsuarioControllerTest {
     }
 
     @Test
+    @DisplayName("POST /login con 5 fallos por CORREO INEXISTENTE → la 6ª intentona responde 429 INTENTOS_LOGIN_EXCEDIDOS")
+    void login_correoInexistenteTambienCuenta() throws Exception {
+        // Sin stub de findByEmail: el correo no existe en la BD y cada intento
+        // es un 401 genérico. El parche del review (T9.5): cada intentona suma,
+        // también con correo inexistente, o la enumeración de correos no se frena.
+        String emailFantasma = "enumeracion@example.com";
+
+        for (int i = 0; i < 5; i++) {
+            mockMvc.perform(post("/api/v1/usuarios/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(cuerpoLogin(emailFantasma, PASSWORD)))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.codigo").value("CREDENCIALES_INVALIDAS"));
+        }
+
+        // La 6ª petición con ese correo salta el freno ANTES de tocar la BD
+        mockMvc.perform(post("/api/v1/usuarios/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpoLogin(emailFantasma, PASSWORD)))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.codigo").value("INTENTOS_LOGIN_EXCEDIDOS"));
+
+        // El bloqueo no consultó credenciales: la BD solo vio los 5 primeros
+        verify(usuarioRepository, times(5)).findByEmail(emailFantasma);
+    }
+
+    @Test
     @DisplayName("POST /login: un éxito resetea el contador; los fallos siguientes vuelven a 401 (no 429)")
     void login_exitoReseteaContador() throws Exception {
         String emailReset = "reset@example.com";

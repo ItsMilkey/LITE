@@ -10,6 +10,7 @@ import com.example.saveup.model.Usuario;
 import com.example.saveup.repository.MetaAhorroRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.LoginRateLimiterService;
+import com.example.saveup.security.VerificadorDeContrasena;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,16 +21,19 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
+    private final VerificadorDeContrasena verificadorDeContrasena;
     private final MetaAhorroRepository metaAhorroRepository;
     private final EliminacionDeCuentaService eliminacionDeCuentaService;
     private final LoginRateLimiterService rateLimiter;
 
     public UsuarioService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder,
+                          VerificadorDeContrasena verificadorDeContrasena,
                           MetaAhorroRepository metaAhorroRepository,
                           EliminacionDeCuentaService eliminacionDeCuentaService,
                           LoginRateLimiterService rateLimiter) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
+        this.verificadorDeContrasena = verificadorDeContrasena;
         this.metaAhorroRepository = metaAhorroRepository;
         this.eliminacionDeCuentaService = eliminacionDeCuentaService;
         this.rateLimiter = rateLimiter;
@@ -80,21 +84,28 @@ public class UsuarioService {
      * @throws BadCredentialsException        si el usuario no existe o la contraseña es incorrecta.
      */
     public Usuario autenticarUsuario(UsuarioLoginDTO loginDTO, String ipCliente) {
-        rateLimiter.exigirPermitido(loginDTO.getEmail(), ipCliente);
+        // Todo el ciclo del contador usa la misma clave email+IP (record AccesoLogin).
+        LoginRateLimiterService.AccesoLogin acceso =
+                new LoginRateLimiterService.AccesoLogin(loginDTO.getEmail(), ipCliente);
+        rateLimiter.exigirPermitido(acceso);
 
         // Busca al usuario por email. Si no lo encuentra, lanza excepción.
+        // Un 401 por correo inexistente TAMBIÉN suma intento (T9.5, parche del
+        // review): si no contara, la enumeración de correos quedaría sin freno.
         Usuario usuario = usuarioRepository.findByEmail(loginDTO.getEmail())
-                .orElseThrow(() -> new BadCredentialsException("Credenciales inválidas."));
+                .orElseGet(() -> {
+                    rateLimiter.registrarFallo(acceso);
+                    throw new BadCredentialsException("Credenciales inválidas.");
+                });
 
         // Compara la contraseña del DTO con la contraseña hasheada de la BD.
         if (passwordEncoder.matches(loginDTO.getContrasena(), usuario.getContrasena())) {
-            rateLimiter.resetear(loginDTO.getEmail(), ipCliente);
+            rateLimiter.resetear(acceso);
             return usuario; // Si coinciden, devuelve el usuario y limpia el contador.
-        } else {
-            // Si no coinciden, lanza la misma excepción para no dar pistas a atacantes.
-            rateLimiter.registrarFallo(loginDTO.getEmail(), ipCliente);
-            throw new BadCredentialsException("Credenciales inválidas.");
         }
+        // Si no coinciden, la misma excepción para no dar pistas a atacantes (T9.5).
+        rateLimiter.registrarFallo(acceso);
+        throw new BadCredentialsException("Credenciales inválidas.");
     }
 
     public UsuarioResponseDTO obtenerPerfil(String rut) {
@@ -116,12 +127,11 @@ public class UsuarioService {
      */
     @Transactional
     public void eliminarCuenta(String rut, String contrasena) {
-        Usuario usuario = usuarioRepository.findById(rut)
-                .orElseThrow(() -> new BadCredentialsException("Credenciales inválidas."));
+        Usuario usuario = usuarioRepository.findById(rut).orElse(null);
 
-        if (!passwordEncoder.matches(contrasena, usuario.getContrasena())) {
-            throw new BadCredentialsException("Credenciales inválidas.");
-        }
+        // Un solo dueño para la comparación de contraseñas críticas; el mensaje
+        // genérico no aclara si falló el RUT o la contraseña.
+        verificadorDeContrasena.verificarContrasena(usuario, contrasena);
 
         // Primero los hijos en orden seguro; el usuario al final. Desde V10 las
         // FKs hacia usuario también tienen ON DELETE CASCADE como respaldo.

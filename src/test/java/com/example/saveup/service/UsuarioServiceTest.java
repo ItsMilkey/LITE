@@ -62,6 +62,7 @@ class UsuarioServiceTest {
     @BeforeEach
     void setUp() {
         usuarioService = new UsuarioService(usuarioRepository, passwordEncoder,
+                new com.example.saveup.security.VerificadorDeContrasena(passwordEncoder),
                 metaAhorroRepository, eliminacionDeCuentaService, loginRateLimiterService);
     }
 

@@ -1,5 +1,6 @@
 package com.example.saveup.dto;
 
+import com.example.saveup.validation.ContrasenaValida;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -31,10 +32,10 @@ public class UsuarioRegistroDTO {
     @Schema(description = "Correo electrónico único.", requiredMode = Schema.RequiredMode.REQUIRED)
     private String email;
 
-    @NotBlank(message = "La contraseña es obligatoria")
-    @Size(min = 8, max = 20, message = "La contraseña debe tener entre 8 y 20 caracteres")
-    @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).*$", message = "La contraseña debe contener al menos una letra y un número")
+    @ContrasenaValida
     @Schema(description = "Contraseña de 8 a 20 caracteres, con al menos una letra y un número.",
-            requiredMode = Schema.RequiredMode.REQUIRED)
+            requiredMode = Schema.RequiredMode.REQUIRED,
+            minLength = 8, maxLength = 20,
+            pattern = "^(?=.*[A-Za-z])(?=.*\\d).*$")
     private String contrasena;
 }

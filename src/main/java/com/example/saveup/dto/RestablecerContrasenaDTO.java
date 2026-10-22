@@ -1,9 +1,8 @@
 package com.example.saveup.dto;
 
+import com.example.saveup.validation.ContrasenaValida;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 
 /**
  * Cuerpo de POST /api/v1/auth/restablecer-contrasena (T9.3). Las reglas de la
@@ -17,10 +16,9 @@ public record RestablecerContrasenaDTO(
         @NotBlank(message = "El token es obligatorio")
         String token,
         @Schema(description = "Nueva contraseña: 8 a 20 caracteres, con al menos una letra y un número.",
-                requiredMode = Schema.RequiredMode.REQUIRED)
-        @NotBlank(message = "La nueva contraseña es obligatoria")
-        @Size(min = 8, max = 20, message = "La contraseña debe tener entre 8 y 20 caracteres")
-        @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).*$",
-                message = "La contraseña debe contener al menos una letra y un número")
+                requiredMode = Schema.RequiredMode.REQUIRED,
+                minLength = 8, maxLength = 20,
+                pattern = "^(?=.*[A-Za-z])(?=.*\\d).*$")
+        @ContrasenaValida
         String nuevaContrasena) {
 }
