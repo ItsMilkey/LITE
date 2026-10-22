@@ -223,7 +223,7 @@ class MovimientoServiceTest {
     }
 
     @Test
-    @DisplayName("T1d: ABONO_META se rechaza con 400 (se registra solo desde /api/metas)")
+    @DisplayName("T1d: ABONO_META se rechaza con 400 (se registra solo desde /api/v1/metas)")
     void registrarMovimiento_abonoMeta_rechazado() {
         MovimientoRegistroDTO dto = new MovimientoRegistroDTO();
         dto.setMonto(new java.math.BigDecimal("50000.00"));
@@ -241,7 +241,7 @@ class MovimientoServiceTest {
     }
 
     @Test
-    @DisplayName("T1d: RETIRO_META se rechaza con 400 (se registra solo desde /api/metas)")
+    @DisplayName("T1d: RETIRO_META se rechaza con 400 (se registra solo desde /api/v1/metas)")
     void registrarMovimiento_retiroMeta_rechazado() {
         MovimientoRegistroDTO dto = new MovimientoRegistroDTO();
         dto.setMonto(new java.math.BigDecimal("50000.00"));
@@ -298,7 +298,7 @@ class MovimientoServiceTest {
     }
 
     @Test
-    @DisplayName("T2: un monto negativo desde /api/movimientos se imputa igual que uno positivo")
+    @DisplayName("T2: un monto negativo desde /api/v1/movimientos se imputa igual que uno positivo")
     void registrarMovimiento_pagoDeudaConMontoNegativo_equivaleAPositivo() {
         MovimientoRegistroDTO dto = new MovimientoRegistroDTO();
         dto.setMonto(new java.math.BigDecimal("-20000.00"));

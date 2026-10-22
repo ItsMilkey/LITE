@@ -16,15 +16,15 @@ C4Component
     title SaveUp Lite - Nivel 3: Componentes internos de la API
 
     Container_Boundary(web, "com.example.saveup.controller") {
-        Component(usuarioController, "UsuarioController", "<<RestController>> /api/usuarios", "Registro, login y perfil. Unico consumidor directo de JwtService")
-        Component(saldoController, "SaldoController", "<<RestController>> /api/saldos", "Saldo actual del usuario autenticado")
-        Component(movimientoController, "MovimientoController", "<<RestController>> /api/movimientos", "Registro, historial, filtros, edicion y borrado de movimientos")
-        Component(categoriaController, "CategoriaController", "<<RestController>> /api/categorias", "Listado de categorias")
-        Component(metaController, "MetaAhorroController", "<<RestController>> /api/metas", "Metas: crear, abonar, retirar, editar y eliminar")
-        Component(deudaController, "DeudaController", "<<RestController>> /api/deudas", "Deudas: crear, pagar, editar, cancelar, amortizacion y pagos")
-        Component(presupuestoController, "ConfiguracionPresupuestoController", "<<RestController>> /api/presupuestos", "Configuracion 50/30/20, limites y ejecucion por categoria e historial")
-        Component(reporteController, "ReporteController", "<<RestController>> /api/reportes", "Exportacion de movimientos a CSV o PDF")
-        Component(simulacionController, "SimulacionController", "<<RestController>> /api/simulaciones", "Simulacion de credito sin persistencia")
+        Component(usuarioController, "UsuarioController", "<<RestController>> /api/v1/usuarios", "Registro, login y perfil. Unico consumidor directo de JwtService")
+        Component(saldoController, "SaldoController", "<<RestController>> /api/v1/saldos", "Saldo actual del usuario autenticado")
+        Component(movimientoController, "MovimientoController", "<<RestController>> /api/v1/movimientos", "Registro, historial, filtros, edicion y borrado de movimientos")
+        Component(categoriaController, "CategoriaController", "<<RestController>> /api/v1/categorias", "Listado de categorias")
+        Component(metaController, "MetaAhorroController", "<<RestController>> /api/v1/metas", "Metas: crear, abonar, retirar, editar y eliminar")
+        Component(deudaController, "DeudaController", "<<RestController>> /api/v1/deudas", "Deudas: crear, pagar, editar, cancelar, amortizacion y pagos")
+        Component(presupuestoController, "ConfiguracionPresupuestoController", "<<RestController>> /api/v1/presupuestos", "Configuracion 50/30/20, limites y ejecucion por categoria e historial")
+        Component(reporteController, "ReporteController", "<<RestController>> /api/v1/reportes", "Exportacion de movimientos a CSV o PDF")
+        Component(simulacionController, "SimulacionController", "<<RestController>> /api/v1/simulaciones", "Simulacion de credito sin persistencia")
     }
 
     Container_Boundary(svc, "com.example.saveup.service") {
@@ -78,7 +78,7 @@ C4Component
 
     Container_Boundary(cfg, "com.example.saveup.config") {
         Component(securityConfig, "SecurityConfig", "<<configuration>>", "Cadena de filtros stateless, CORS y PasswordEncoder (BCrypt)")
-        Component(webConfig, "WebConfig", "<<configuration>>", "CORS para /api/**")
+        Component(webConfig, "WebConfig", "<<configuration>>", "CORS para /api/v1/**")
     }
 
     Component(dtos, "DTOs", "records y clases", "Contratos de entrada/salida (request/response) y utilidades como PorcentajeTasa")

@@ -68,7 +68,7 @@ class SimulacionControllerTest {
                 .cantidadCuotas(4)
                 .build();
 
-        mockMvc.perform(post("/api/simulaciones/credito")
+        mockMvc.perform(post("/api/v1/simulaciones/credito")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
@@ -83,7 +83,7 @@ class SimulacionControllerTest {
                 .cantidadCuotas(4)
                 .build();
 
-        mockMvc.perform(post("/api/simulaciones/credito")
+        mockMvc.perform(post("/api/v1/simulaciones/credito")
                         .header("Authorization", "Bearer " + validToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -108,7 +108,7 @@ class SimulacionControllerTest {
                 .fechaUltimaCuota(LocalDate.of(2027, 11, 8))
                 .build();
 
-        mockMvc.perform(post("/api/simulaciones/credito")
+        mockMvc.perform(post("/api/v1/simulaciones/credito")
                         .header("Authorization", "Bearer " + validToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -130,7 +130,7 @@ class SimulacionControllerTest {
                 .fechaUltimaCuota(LocalDate.of(2027, 10, 7))
                 .build();
 
-        mockMvc.perform(post("/api/simulaciones/credito")
+        mockMvc.perform(post("/api/v1/simulaciones/credito")
                         .header("Authorization", "Bearer " + validToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -150,7 +150,7 @@ class SimulacionControllerTest {
                 .cantidadCuotas(12)
                 .build();
 
-        mockMvc.perform(post("/api/simulaciones/credito")
+        mockMvc.perform(post("/api/v1/simulaciones/credito")
                         .header("Authorization", "Bearer " + validToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -171,7 +171,7 @@ class SimulacionControllerTest {
                 .ingresoMensual(new BigDecimal("20000")) // cuota superará el 30% del ingreso
                 .build();
 
-        mockMvc.perform(post("/api/simulaciones/credito")
+        mockMvc.perform(post("/api/v1/simulaciones/credito")
                         .header("Authorization", "Bearer " + validToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))

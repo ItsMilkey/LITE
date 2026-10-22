@@ -70,19 +70,19 @@ class T8aContratoDatosTest {
         movimiento(instante(2026, 10, 31, 23, 30), TipoMovimiento.INGRESO_GENERAL, "1000.00");
         movimiento(instante(2026, 11, 1, 0, 30), TipoMovimiento.INGRESO_GENERAL, "500.00");
 
-        mockMvc.perform(get("/api/presupuestos/ejecucion/me")
+        mockMvc.perform(get("/api/v1/presupuestos/ejecucion/me")
                         .param("month", "10").param("year", "2026")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalIngresos").value(1000.00));
 
-        mockMvc.perform(get("/api/presupuestos/ejecucion/me")
+        mockMvc.perform(get("/api/v1/presupuestos/ejecucion/me")
                         .param("month", "11").param("year", "2026")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalIngresos").value(500.00));
 
-        mockMvc.perform(get("/api/presupuestos/historial/me")
+        mockMvc.perform(get("/api/v1/presupuestos/historial/me")
                         .param("desde", "2026-10").param("hasta", "2026-10")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -96,19 +96,19 @@ class T8aContratoDatosTest {
     void filtrosInclusivosEnZonaDelNegocio() throws Exception {
         movimiento(instante(2026, 10, 31, 23, 30), TipoMovimiento.GASTO_GENERAL, "-1000.00");
 
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("desde", "2026-10-31").param("hasta", "2026-10-31")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalItems").value(1));
 
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("desde", "2026-11-01").param("hasta", "2026-11-01")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalItems").value(0));
 
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("desde", "2026-10-31").param("hasta", "2026-11-01")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -120,7 +120,7 @@ class T8aContratoDatosTest {
     void instanteSerializadoEnUtcConZ() throws Exception {
         movimiento(instante(2026, 10, 31, 23, 30), TipoMovimiento.GASTO_GENERAL, "-1000.00");
 
-        mockMvc.perform(get("/api/movimientos/me").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/v1/movimientos/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].fecha").value("2026-11-01T02:30:00.000Z"))
                 .andExpect(jsonPath("$[0].fecha", endsWith("Z")))
@@ -130,7 +130,7 @@ class T8aContratoDatosTest {
     @Test
     @DisplayName("Una fecha de calendario se serializa como yyyy-MM-dd y no lleva zona")
     void fechaDeCalendarioComoYyyyMmDd() throws Exception {
-        mockMvc.perform(post("/api/metas")
+        mockMvc.perform(post("/api/v1/metas")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -139,7 +139,7 @@ class T8aContratoDatosTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.fechaLimite").value("2027-11-07"));
 
-        mockMvc.perform(get("/api/metas/me").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/v1/metas/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].fechaLimite").value("2027-11-07"));
     }
@@ -147,7 +147,7 @@ class T8aContratoDatosTest {
     @Test
     @DisplayName("Monto de 13 enteros + 2 decimales se acepta; 14 enteros → 400")
     void limiteDeEnterosEnMontos() throws Exception {
-        mockMvc.perform(post("/api/movimientos")
+        mockMvc.perform(post("/api/v1/movimientos")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -155,7 +155,7 @@ class T8aContratoDatosTest {
                                 """))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/movimientos")
+        mockMvc.perform(post("/api/v1/movimientos")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

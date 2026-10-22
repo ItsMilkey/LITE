@@ -10,5 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Backend to Prevent Scaling Down
-        # Hacemos una petición HEAD (-I) para despertar el servicio sin descargar el contenido
+        # Hacemos una petición HEAD (-I) a la raíz para despertar el servicio sin descargar contenido.
+        # La raíz sigue siendo pública y no está versionada; por eso no se usa /api/v1 aquí.
         run: curl -I https://lite-backend-1wn9.onrender.com/

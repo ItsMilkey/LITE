@@ -1,0 +1,4477 @@
+{
+  "openapi" : "3.0.1",
+  "info" : {
+    "title" : "SaveUp Lite API",
+    "description" : "API REST de finanzas personales SaveUp Lite.\nTodas las rutas públicas están versionadas bajo /api/v1.\nLos errores usan application/problem+json con un código estable en \"codigo\".\n",
+    "version" : "1.0.0"
+  },
+  "servers" : [ {
+    "url" : "http://localhost",
+    "description" : "Generated server url"
+  } ],
+  "tags" : [ {
+    "name" : "Categorías",
+    "description" : "Catálogo de categorías de movimientos."
+  }, {
+    "name" : "Deudas",
+    "description" : "Deudas, pagos, amortización e historial de pagos."
+  }, {
+    "name" : "Movimientos",
+    "description" : "Registro, historial, filtros, edición y borrado de movimientos."
+  }, {
+    "name" : "Metas de ahorro",
+    "description" : "Metas, abonos, retiros y edición."
+  }, {
+    "name" : "Saldos",
+    "description" : "Saldo actual del usuario autenticado."
+  }, {
+    "name" : "Presupuestos",
+    "description" : "Configuración 50/30/20, límites por categoría, ejecución e historial."
+  }, {
+    "name" : "Simulaciones",
+    "description" : "Simulación de crédito sin persistencia."
+  }, {
+    "name" : "Reportes",
+    "description" : "Exportación de movimientos a CSV o PDF."
+  }, {
+    "name" : "Usuarios",
+    "description" : "Registro, inicio de sesión y perfil del usuario autenticado."
+  } ],
+  "paths" : {
+    "/api/v1/presupuestos/categorias/me" : {
+      "get" : {
+        "tags" : [ "Presupuestos" ],
+        "summary" : "Lista los límites mensuales por categoría",
+        "operationId" : "obtenerCategoriasPresupuesto",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PresupuestoCategoriaDTO"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "put" : {
+        "tags" : [ "Presupuestos" ],
+        "summary" : "Reemplaza los límites mensuales por categoría",
+        "operationId" : "reemplazarCategoriasPresupuesto",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PresupuestoCategoriaRequestDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PresupuestoCategoriaDTO"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/movimientos/{id}" : {
+      "put" : {
+        "tags" : [ "Movimientos" ],
+        "summary" : "Edita un movimiento editable",
+        "operationId" : "editarMovimiento",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MovimientoEdicionDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MovimientoResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "delete" : {
+        "tags" : [ "Movimientos" ],
+        "summary" : "Elimina un movimiento editable",
+        "operationId" : "eliminarMovimiento",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/metas/{metaId}" : {
+      "put" : {
+        "tags" : [ "Metas de ahorro" ],
+        "summary" : "Edita una meta de ahorro",
+        "operationId" : "editarMeta",
+        "parameters" : [ {
+          "name" : "metaId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MetaAhorroCreacionDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MetaAhorroResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "delete" : {
+        "tags" : [ "Metas de ahorro" ],
+        "summary" : "Elimina una meta y reintegra su ahorro",
+        "operationId" : "eliminarMeta",
+        "parameters" : [ {
+          "name" : "metaId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/deudas/{deudaId}" : {
+      "get" : {
+        "tags" : [ "Deudas" ],
+        "summary" : "Obtiene el detalle de una deuda",
+        "operationId" : "obtenerDeuda",
+        "parameters" : [ {
+          "name" : "deudaId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeudaResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "put" : {
+        "tags" : [ "Deudas" ],
+        "summary" : "Edita una deuda existente",
+        "operationId" : "editarDeuda",
+        "parameters" : [ {
+          "name" : "deudaId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DeudaCreacionDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeudaResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/usuarios/register" : {
+      "post" : {
+        "tags" : [ "Usuarios" ],
+        "summary" : "Registra una cuenta nueva",
+        "operationId" : "registerUsuario",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UsuarioRegistroDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MensajeResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/usuarios/login" : {
+      "post" : {
+        "tags" : [ "Usuarios" ],
+        "summary" : "Inicia sesión y entrega un token JWT",
+        "operationId" : "loginUsuario",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UsuarioLoginDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LoginResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/simulaciones/credito" : {
+      "post" : {
+        "tags" : [ "Simulaciones" ],
+        "summary" : "Simula un crédito con el motor financiero",
+        "operationId" : "simularCredito",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SimulacionCreditoRequestDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SimulacionCreditoResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/presupuestos/me" : {
+      "get" : {
+        "tags" : [ "Presupuestos" ],
+        "summary" : "Obtiene la configuración de presupuesto",
+        "operationId" : "obtenerConfiguracionPresupuesto",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConfiguracionPresupuestoResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "Presupuestos" ],
+        "summary" : "Guarda la configuración de presupuesto",
+        "operationId" : "guardarConfiguracionPresupuesto",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConfiguracionPresupuestoRequestDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConfiguracionPresupuestoResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/movimientos" : {
+      "post" : {
+        "tags" : [ "Movimientos" ],
+        "summary" : "Registra un movimiento",
+        "operationId" : "registrarMovimiento",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MovimientoRegistroDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MovimientoResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/metas" : {
+      "post" : {
+        "tags" : [ "Metas de ahorro" ],
+        "summary" : "Crea una meta de ahorro",
+        "operationId" : "crearMeta",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MetaAhorroCreacionDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MetaAhorroResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/metas/{metaId}/retirar" : {
+      "post" : {
+        "tags" : [ "Metas de ahorro" ],
+        "summary" : "Retira dinero de una meta",
+        "operationId" : "retirarDeMeta",
+        "parameters" : [ {
+          "name" : "metaId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AbonoRetiroDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MetaAhorroResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/metas/{metaId}/abonar" : {
+      "post" : {
+        "tags" : [ "Metas de ahorro" ],
+        "summary" : "Abona dinero a una meta",
+        "operationId" : "abonarAMeta",
+        "parameters" : [ {
+          "name" : "metaId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AbonoRetiroDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MetaAhorroResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/deudas" : {
+      "post" : {
+        "tags" : [ "Deudas" ],
+        "summary" : "Registra una deuda del usuario autenticado",
+        "operationId" : "crearDeuda",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DeudaCreacionDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeudaResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/deudas/{deudaId}/pagar" : {
+      "post" : {
+        "tags" : [ "Deudas" ],
+        "summary" : "Registra un pago sobre una deuda",
+        "operationId" : "registrarPagoDeuda",
+        "parameters" : [ {
+          "name" : "deudaId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PagoDeudaDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeudaResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/deudas/{deudaId}/cancelar" : {
+      "patch" : {
+        "tags" : [ "Deudas" ],
+        "summary" : "Cancela una deuda",
+        "operationId" : "cancelarDeuda",
+        "parameters" : [ {
+          "name" : "deudaId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeudaResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/usuarios/me" : {
+      "get" : {
+        "tags" : [ "Usuarios" ],
+        "summary" : "Obtiene el perfil del usuario autenticado",
+        "operationId" : "obtenerPerfilActual",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UsuarioResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/saldos" : {
+      "get" : {
+        "tags" : [ "Saldos" ],
+        "summary" : "Obtiene el saldo actual",
+        "operationId" : "obtenerSaldo",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SaldoResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/saldos/me" : {
+      "get" : {
+        "tags" : [ "Saldos" ],
+        "summary" : "Obtiene el saldo del usuario autenticado",
+        "operationId" : "obtenerSaldoMe",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SaldoResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/reportes/movimientos/exportar" : {
+      "get" : {
+        "tags" : [ "Reportes" ],
+        "summary" : "Exporta los movimientos a CSV o PDF",
+        "operationId" : "exportarMovimientos",
+        "parameters" : [ {
+          "name" : "alcance",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "COMPLETO"
+          }
+        }, {
+          "name" : "formato",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "CSV"
+          }
+        }, {
+          "name" : "mes",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "name" : "anio",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "byte"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/presupuestos/historial/me" : {
+      "get" : {
+        "tags" : [ "Presupuestos" ],
+        "summary" : "Obtiene el historial mensual de ejecución",
+        "operationId" : "obtenerHistorialPresupuesto",
+        "parameters" : [ {
+          "name" : "desde",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "hasta",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/HistorialPresupuestoDTO"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/presupuestos/ejecucion/me" : {
+      "get" : {
+        "tags" : [ "Presupuestos" ],
+        "summary" : "Obtiene la ejecución presupuestaria del mes",
+        "operationId" : "obtenerEjecucionPresupuesto",
+        "parameters" : [ {
+          "name" : "month",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "name" : "year",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EjecucionPresupuestoDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/presupuestos/categorias/ejecucion/me" : {
+      "get" : {
+        "tags" : [ "Presupuestos" ],
+        "summary" : "Obtiene la ejecución por categoría del mes",
+        "operationId" : "obtenerEjecucionCategorias",
+        "parameters" : [ {
+          "name" : "month",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "name" : "year",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/EjecucionCategoriaDTO"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/movimientos/paginados/me" : {
+      "get" : {
+        "tags" : [ "Movimientos" ],
+        "summary" : "Lista y filtra movimientos de forma paginada",
+        "operationId" : "obtenerMovimientosPaginadosMe",
+        "parameters" : [ {
+          "name" : "filtro",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/MovimientoFiltroDTO"
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 50
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseDTOMovimientoResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/movimientos/me" : {
+      "get" : {
+        "tags" : [ "Movimientos" ],
+        "summary" : "Lista los movimientos recientes del usuario autenticado",
+        "operationId" : "obtenerMovimientosMe",
+        "parameters" : [ {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/MovimientoResponseDTO"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/metas/me" : {
+      "get" : {
+        "tags" : [ "Metas de ahorro" ],
+        "summary" : "Lista las metas del usuario autenticado",
+        "operationId" : "obtenerMetasMe",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/MetaAhorroResponseDTO"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/deudas/{deudaId}/pagos" : {
+      "get" : {
+        "tags" : [ "Deudas" ],
+        "summary" : "Lista los pagos de una deuda",
+        "operationId" : "obtenerPagosDeuda",
+        "parameters" : [ {
+          "name" : "deudaId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageResponseDTOPagoDeudaResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/deudas/{deudaId}/amortizacion" : {
+      "get" : {
+        "tags" : [ "Deudas" ],
+        "summary" : "Obtiene la tabla de amortización de una deuda",
+        "operationId" : "obtenerAmortizacionDeuda",
+        "parameters" : [ {
+          "name" : "deudaId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/CuotaSimulacionDTO"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/deudas/me" : {
+      "get" : {
+        "tags" : [ "Deudas" ],
+        "summary" : "Lista las deudas del usuario autenticado",
+        "operationId" : "obtenerDeudasMe",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/DeudaResponseDTO"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/categorias" : {
+      "get" : {
+        "tags" : [ "Categorías" ],
+        "summary" : "Lista todas las categorías",
+        "operationId" : "obtenerCategorias",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/CategoriaDTO"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "PresupuestoCategoriaItemDTO" : {
+        "required" : [ "categoriaId", "limiteMensual" ],
+        "type" : "object",
+        "properties" : {
+          "categoriaId" : {
+            "type" : "integer",
+            "description" : "ID de la categoría.",
+            "format" : "int64"
+          },
+          "limiteMensual" : {
+            "type" : "number",
+            "description" : "Límite mensual positivo, con escala 2."
+          }
+        }
+      },
+      "PresupuestoCategoriaRequestDTO" : {
+        "required" : [ "categorias" ],
+        "type" : "object",
+        "properties" : {
+          "categorias" : {
+            "type" : "array",
+            "description" : "Conjunto completo de límites; reemplaza los existentes.",
+            "items" : {
+              "$ref" : "#/components/schemas/PresupuestoCategoriaItemDTO"
+            }
+          }
+        }
+      },
+      "PresupuestoCategoriaDTO" : {
+        "required" : [ "categoria", "categoriaId", "limiteMensual" ],
+        "type" : "object",
+        "properties" : {
+          "categoriaId" : {
+            "type" : "integer",
+            "description" : "ID de la categoría.",
+            "format" : "int64"
+          },
+          "categoria" : {
+            "type" : "string",
+            "description" : "Nombre de la categoría."
+          },
+          "limiteMensual" : {
+            "type" : "number",
+            "description" : "Límite mensual, con escala 2."
+          }
+        },
+        "description" : "Límite mensual configurado para una categoría."
+      },
+      "MovimientoEdicionDTO" : {
+        "type" : "object",
+        "properties" : {
+          "monto" : {
+            "type" : "number",
+            "description" : "Nuevo monto con escala 2. El signo lo impone el tipo actual."
+          },
+          "descripcion" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string",
+            "description" : "Nueva descripción del movimiento."
+          },
+          "categoriaId" : {
+            "type" : "integer",
+            "description" : "Nueva categoría del movimiento.",
+            "format" : "int64"
+          }
+        },
+        "description" : "Edición parcial de un movimiento; los campos ausentes conservan su valor."
+      },
+      "CategoriaDTO" : {
+        "required" : [ "id", "nombre" ],
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "description" : "Identificador de la categoría.",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nombre visible de la categoría."
+          },
+          "iconId" : {
+            "type" : "string",
+            "description" : "Identificador del icono usado por el cliente."
+          },
+          "colorHex" : {
+            "type" : "string",
+            "description" : "Color de la categoría en formato #RRGGBB."
+          },
+          "tipoPresupuesto" : {
+            "type" : "string",
+            "description" : "Tipo de presupuesto al que pertenece la categoría.",
+            "enum" : [ "NECESIDAD", "DESEO", "AHORRO", "OTROS" ]
+          }
+        },
+        "description" : "Categoría de movimiento."
+      },
+      "MovimientoResponseDTO" : {
+        "required" : [ "descripcion", "fecha", "id", "monto", "tipoMovimiento" ],
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "description" : "Identificador del movimiento.",
+            "format" : "int64"
+          },
+          "monto" : {
+            "type" : "number",
+            "description" : "Monto con signo y escala 2."
+          },
+          "descripcion" : {
+            "type" : "string",
+            "description" : "Descripción del movimiento."
+          },
+          "fecha" : {
+            "type" : "string",
+            "description" : "Fecha del movimiento en ISO-8601 UTC.",
+            "format" : "date-time"
+          },
+          "tipoMovimiento" : {
+            "type" : "string",
+            "description" : "Tipo de movimiento.",
+            "enum" : [ "INGRESO_GENERAL", "GASTO_GENERAL", "PAGO_DEUDA", "ABONO_META", "RETIRO_META" ]
+          },
+          "categoria" : {
+            "$ref" : "#/components/schemas/CategoriaDTO"
+          }
+        },
+        "description" : "Movimiento registrado. El signo del monto refleja si suma o resta al saldo."
+      },
+      "MetaAhorroCreacionDTO" : {
+        "required" : [ "montoObjetivo", "nombre" ],
+        "type" : "object",
+        "properties" : {
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nombre de la meta."
+          },
+          "montoObjetivo" : {
+            "type" : "number",
+            "description" : "Monto objetivo, con escala 2."
+          },
+          "fechaLimite" : {
+            "type" : "string",
+            "description" : "Fecha límite en formato yyyy-MM-dd.",
+            "format" : "date"
+          }
+        },
+        "description" : "Datos para crear o editar una meta de ahorro."
+      },
+      "MetaAhorroResponseDTO" : {
+        "required" : [ "id", "montoActual", "montoObjetivo", "nombre" ],
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "description" : "Identificador de la meta.",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nombre de la meta."
+          },
+          "montoObjetivo" : {
+            "type" : "number",
+            "description" : "Monto objetivo, con escala 2."
+          },
+          "fechaLimite" : {
+            "type" : "string",
+            "description" : "Fecha límite en formato yyyy-MM-dd.",
+            "format" : "date"
+          },
+          "montoActual" : {
+            "type" : "number",
+            "description" : "Monto ahorrado actualmente, con escala 2."
+          }
+        },
+        "description" : "Meta de ahorro del usuario."
+      },
+      "CondicionesCreditoInput" : {
+        "required" : [ "modalidad", "montoCapital" ],
+        "type" : "object",
+        "properties" : {
+          "modalidad" : {
+            "type" : "string",
+            "description" : "Modalidad de cálculo del crédito.",
+            "enum" : [ "SIN_INTERES", "TASA_CONOCIDA", "CUOTA_CONOCIDA" ]
+          },
+          "montoCapital" : {
+            "minimum" : 0.01,
+            "exclusiveMinimum" : false,
+            "type" : "number",
+            "description" : "Capital prestado, con escala 2."
+          },
+          "cantidadCuotas" : {
+            "type" : "integer",
+            "description" : "Cantidad de cuotas para modalidades que la requieren.",
+            "format" : "int32"
+          },
+          "fechaPrimeraCuota" : {
+            "type" : "string",
+            "description" : "Fecha de la primera cuota en formato yyyy-MM-dd.",
+            "format" : "date"
+          },
+          "fechaUltimaCuota" : {
+            "type" : "string",
+            "description" : "Fecha de la última cuota en formato yyyy-MM-dd.",
+            "format" : "date"
+          },
+          "tasaMensual" : {
+            "type" : "number",
+            "description" : "Tasa mensual en porcentaje (1.5 = 1,5 %). No es una fracción."
+          },
+          "tasaAnualEfectiva" : {
+            "type" : "number",
+            "description" : "Tasa anual efectiva en porcentaje (19.56 = 19,56 %). No es una fracción."
+          },
+          "valorCuota" : {
+            "type" : "number",
+            "description" : "Valor de la cuota, con escala 2."
+          },
+          "gastosIniciales" : {
+            "type" : "number",
+            "description" : "Gastos iniciales, con escala 2."
+          },
+          "costoAdicionalPorCuota" : {
+            "type" : "number",
+            "description" : "Costo adicional cobrado en cada cuota, con escala 2."
+          }
+        },
+        "description" : "Condiciones del crédito. Obligatorio en la práctica para calcular la tabla."
+      },
+      "DeudaCreacionDTO" : {
+        "required" : [ "cantidadCuotas", "montoTotal", "nombre" ],
+        "type" : "object",
+        "properties" : {
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nombre de la deuda."
+          },
+          "descripcion" : {
+            "type" : "string",
+            "description" : "Descripción opcional de la deuda."
+          },
+          "tipoDeuda" : {
+            "type" : "string",
+            "description" : "Tipo de deuda. Si se omite, el servicio usa OTRO.",
+            "enum" : [ "PERSONAL", "TIENDA", "CREDITO_CONSUMO", "EDUCACION", "OTRO" ]
+          },
+          "cuotasPagadasPrevias" : {
+            "minimum" : 0,
+            "type" : "integer",
+            "description" : "Cuotas ya pagadas antes de registrar la deuda.",
+            "format" : "int32",
+            "default" : 0
+          },
+          "condiciones" : {
+            "$ref" : "#/components/schemas/CondicionesCreditoInput"
+          },
+          "montoTotal" : {
+            "type" : "number",
+            "description" : "Monto total a pagar, con escala 2."
+          },
+          "cantidadCuotas" : {
+            "type" : "integer",
+            "description" : "Cantidad total de cuotas.",
+            "format" : "int32"
+          }
+        },
+        "description" : "Datos para crear o editar una deuda."
+      },
+      "DeudaResponseDTO" : {
+        "required" : [ "cantidadCuotas", "cargaAnualEquivalente", "costoAdicionalPorCuota", "costoTotalCredito", "cuotasPagadas", "cuotasPagadasPrevias", "estado", "fechaCreacion", "gastosIniciales", "id", "interesesPagados", "modalidadCalculo", "montoCapital", "montoPagado", "montoPagadoPrevio", "montoPagadoReal", "montoRestante", "montoTotal", "nombre", "saldoCapital", "tasaAnualEfectiva", "tasaMensual", "tipoDeuda", "totalPorPagar" ],
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "description" : "Identificador de la deuda.",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nombre de la deuda."
+          },
+          "descripcion" : {
+            "type" : "string",
+            "description" : "Descripción opcional."
+          },
+          "tipoDeuda" : {
+            "type" : "string",
+            "description" : "Tipo de deuda.",
+            "enum" : [ "PERSONAL", "TIENDA", "CREDITO_CONSUMO", "EDUCACION", "OTRO" ]
+          },
+          "modalidadCalculo" : {
+            "type" : "string",
+            "description" : "Modalidad de cálculo aplicada.",
+            "enum" : [ "SIN_INTERES", "TASA_CONOCIDA", "CUOTA_CONOCIDA" ]
+          },
+          "montoCapital" : {
+            "type" : "number",
+            "description" : "Capital prestado, con escala 2."
+          },
+          "tasaMensual" : {
+            "type" : "number",
+            "description" : "Tasa mensual en porcentaje (1.5 = 1,5 %), no una fracción."
+          },
+          "tasaAnualEfectiva" : {
+            "type" : "number",
+            "description" : "Tasa anual efectiva en porcentaje (19.56 = 19,56 %), no una fracción."
+          },
+          "valorCuota" : {
+            "type" : "number",
+            "description" : "Valor de la cuota, con escala 2. Puede ser null si no pudo calcularse."
+          },
+          "gastosIniciales" : {
+            "type" : "number",
+            "description" : "Gastos iniciales, con escala 2."
+          },
+          "costoAdicionalPorCuota" : {
+            "type" : "number",
+            "description" : "Costo adicional por cuota, con escala 2."
+          },
+          "costoTotalCredito" : {
+            "type" : "number",
+            "description" : "Costo total del crédito, con escala 2."
+          },
+          "cargaAnualEquivalente" : {
+            "type" : "number",
+            "description" : "Carga anual equivalente en porcentaje."
+          },
+          "fechaPrimeraCuota" : {
+            "type" : "string",
+            "description" : "Fecha de la primera cuota en formato yyyy-MM-dd.",
+            "format" : "date"
+          },
+          "fechaUltimaCuota" : {
+            "type" : "string",
+            "description" : "Fecha de la última cuota en formato yyyy-MM-dd.",
+            "format" : "date"
+          },
+          "cuotasPagadasPrevias" : {
+            "type" : "integer",
+            "description" : "Cuotas ya pagadas antes de registrar la deuda.",
+            "format" : "int32"
+          },
+          "montoPagadoPrevio" : {
+            "type" : "number",
+            "description" : "Monto pagado correspondiente a las cuotas previas."
+          },
+          "montoTotal" : {
+            "type" : "number",
+            "description" : "Monto total a pagar, con escala 2."
+          },
+          "cantidadCuotas" : {
+            "type" : "integer",
+            "description" : "Cantidad total de cuotas.",
+            "format" : "int32"
+          },
+          "estado" : {
+            "type" : "string",
+            "description" : "Estado actual de la deuda.",
+            "enum" : [ "PENDIENTE", "PAGADA", "CANCELADA" ]
+          },
+          "fechaCreacion" : {
+            "type" : "string",
+            "description" : "Fecha de creación en ISO-8601 UTC.",
+            "format" : "date-time"
+          },
+          "montoPagadoReal" : {
+            "type" : "number",
+            "description" : "Suma de los pagos reales, sin las cuotas previas."
+          },
+          "montoPagado" : {
+            "type" : "number",
+            "description" : "Monto total pagado (previas + pagos reales)."
+          },
+          "montoRestante" : {
+            "type" : "number",
+            "description" : "Monto que falta pagar, con escala 2."
+          },
+          "totalPorPagar" : {
+            "type" : "number",
+            "description" : "Total por pagar incluyendo intereses futuros, con escala 2."
+          },
+          "saldoCapital" : {
+            "type" : "number",
+            "description" : "Capital pendiente de pago (aproximación para liquidar hoy)."
+          },
+          "cuotasPagadas" : {
+            "type" : "integer",
+            "description" : "Cantidad de cuotas pagadas según la imputación.",
+            "format" : "int32"
+          },
+          "proximaCuotaNumero" : {
+            "type" : "integer",
+            "description" : "Número de la próxima cuota impaga; null si no queda ninguna.",
+            "format" : "int32"
+          },
+          "proximaCuotaMontoPendiente" : {
+            "type" : "number",
+            "description" : "Monto pendiente de la próxima cuota impaga, con escala 2."
+          },
+          "proximaFechaVencimiento" : {
+            "type" : "string",
+            "description" : "Vencimiento de la próxima cuota impaga en formato yyyy-MM-dd.",
+            "format" : "date"
+          },
+          "interesesPagados" : {
+            "type" : "number",
+            "description" : "Intereses pagados hasta ahora, con escala 2."
+          }
+        },
+        "description" : "Datos de una deuda. Las tasas se exponen en porcentaje, no como fracción."
+      },
+      "UsuarioRegistroDTO" : {
+        "required" : [ "apellido", "contrasena", "email", "nombre", "rut" ],
+        "type" : "object",
+        "properties" : {
+          "rut" : {
+            "pattern" : "^\\d{7,8}-[\\dkK]{1}$",
+            "type" : "string",
+            "description" : "RUT chileno sin puntos, con guion y dígito verificador (ej: 12345678-9)."
+          },
+          "nombre" : {
+            "maxLength" : 50,
+            "minLength" : 2,
+            "type" : "string",
+            "description" : "Nombre del usuario."
+          },
+          "apellido" : {
+            "maxLength" : 50,
+            "minLength" : 2,
+            "type" : "string",
+            "description" : "Apellido del usuario."
+          },
+          "email" : {
+            "type" : "string",
+            "description" : "Correo electrónico único."
+          },
+          "contrasena" : {
+            "maxLength" : 20,
+            "minLength" : 8,
+            "pattern" : "^(?=.*[A-Za-z])(?=.*\\d).*$",
+            "type" : "string",
+            "description" : "Contraseña de 8 a 20 caracteres, con al menos una letra y un número."
+          }
+        }
+      },
+      "MensajeResponseDTO" : {
+        "required" : [ "message" ],
+        "type" : "object",
+        "properties" : {
+          "message" : {
+            "type" : "string",
+            "description" : "Mensaje de confirmación en español."
+          }
+        },
+        "description" : "Confirmación legible de una operación."
+      },
+      "UsuarioLoginDTO" : {
+        "required" : [ "contrasena", "email" ],
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "description" : "Correo electrónico registrado."
+          },
+          "contrasena" : {
+            "type" : "string",
+            "description" : "Contraseña del usuario."
+          }
+        }
+      },
+      "LoginResponseDTO" : {
+        "required" : [ "token" ],
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string",
+            "description" : "JWT que debe enviarse en Authorization: Bearer <token>."
+          }
+        },
+        "description" : "Token JWT para autenticar las siguientes solicitudes."
+      },
+      "SimulacionCreditoRequestDTO" : {
+        "required" : [ "modalidad", "montoCapital" ],
+        "type" : "object",
+        "properties" : {
+          "modalidad" : {
+            "type" : "string",
+            "description" : "Modalidad de cálculo del crédito.",
+            "enum" : [ "SIN_INTERES", "TASA_CONOCIDA", "CUOTA_CONOCIDA" ]
+          },
+          "montoCapital" : {
+            "minimum" : 0.01,
+            "exclusiveMinimum" : false,
+            "type" : "number",
+            "description" : "Capital solicitado, con escala 2."
+          },
+          "cantidadCuotas" : {
+            "type" : "integer",
+            "description" : "Cantidad de cuotas para modalidades que la requieren.",
+            "format" : "int32"
+          },
+          "fechaPrimeraCuota" : {
+            "type" : "string",
+            "description" : "Fecha de la primera cuota en formato yyyy-MM-dd.",
+            "format" : "date"
+          },
+          "fechaUltimaCuota" : {
+            "type" : "string",
+            "description" : "Fecha de la última cuota en formato yyyy-MM-dd.",
+            "format" : "date"
+          },
+          "tasaMensual" : {
+            "type" : "number",
+            "description" : "Tasa mensual en porcentaje (1.5 = 1,5 %), no una fracción."
+          },
+          "tasaAnualEfectiva" : {
+            "type" : "number",
+            "description" : "Tasa anual efectiva en porcentaje (19.56 = 19,56 %), no una fracción."
+          },
+          "valorCuota" : {
+            "type" : "number",
+            "description" : "Valor de cuota, con escala 2."
+          },
+          "gastosIniciales" : {
+            "type" : "number",
+            "description" : "Gastos iniciales, con escala 2."
+          },
+          "costoAdicionalPorCuota" : {
+            "type" : "number",
+            "description" : "Costo adicional por cuota, con escala 2."
+          },
+          "ingresoMensual" : {
+            "type" : "number",
+            "description" : "Ingreso mensual usado para el resumen educativo, con escala 2."
+          },
+          "cantidadCuotasAlternativas" : {
+            "type" : "array",
+            "description" : "Plazos alternativos que se comparan en la respuesta.",
+            "items" : {
+              "type" : "integer",
+              "description" : "Plazos alternativos que se comparan en la respuesta.",
+              "format" : "int32"
+            }
+          },
+          "incluirTabla" : {
+            "type" : "boolean",
+            "description" : "Si es true, incluye la tabla de amortización.",
+            "default" : true
+          }
+        },
+        "description" : "Condiciones de entrada para simular un crédito."
+      },
+      "ComparacionPlazoDTO" : {
+        "required" : [ "cantidadCuotas", "cargaAnualEquivalente", "costoTotalCredito", "interesesYCostos", "valorCuota" ],
+        "type" : "object",
+        "properties" : {
+          "cantidadCuotas" : {
+            "type" : "integer",
+            "description" : "Cantidad de cuotas del plazo alternativo.",
+            "format" : "int32"
+          },
+          "valorCuota" : {
+            "type" : "number",
+            "description" : "Valor de la cuota, con escala 2."
+          },
+          "costoTotalCredito" : {
+            "type" : "number",
+            "description" : "Costo total del crédito, con escala 2."
+          },
+          "interesesYCostos" : {
+            "type" : "number",
+            "description" : "Intereses y costos, con escala 2."
+          },
+          "cargaAnualEquivalente" : {
+            "type" : "number",
+            "description" : "Carga anual equivalente en porcentaje."
+          }
+        },
+        "description" : "Comparación de costo para un plazo alternativo."
+      },
+      "CondicionesSimulacionDTO" : {
+        "required" : [ "cantidadCuotas", "modalidad", "montoCapital", "tasaAnualEfectiva", "tasaMensual" ],
+        "type" : "object",
+        "properties" : {
+          "modalidad" : {
+            "type" : "string",
+            "description" : "Modalidad aplicada.",
+            "enum" : [ "SIN_INTERES", "TASA_CONOCIDA", "CUOTA_CONOCIDA" ]
+          },
+          "montoCapital" : {
+            "type" : "number",
+            "description" : "Capital simulado, con escala 2."
+          },
+          "cantidadCuotas" : {
+            "type" : "integer",
+            "description" : "Cantidad de cuotas.",
+            "format" : "int32"
+          },
+          "fechaPrimeraCuota" : {
+            "type" : "string",
+            "description" : "Fecha de la primera cuota en formato yyyy-MM-dd.",
+            "format" : "date"
+          },
+          "fechaUltimaCuota" : {
+            "type" : "string",
+            "description" : "Fecha de la última cuota en formato yyyy-MM-dd.",
+            "format" : "date"
+          },
+          "tasaMensual" : {
+            "type" : "number",
+            "description" : "Tasa mensual en porcentaje (no fracción)."
+          },
+          "tasaAnualEfectiva" : {
+            "type" : "number",
+            "description" : "Tasa anual efectiva en porcentaje (no fracción)."
+          }
+        },
+        "description" : "Condiciones normalizadas de la simulación."
+      },
+      "CuotaSimulacionDTO" : {
+        "required" : [ "capital", "costoAdicional", "cuota", "interes", "numero", "saldo" ],
+        "type" : "object",
+        "properties" : {
+          "numero" : {
+            "type" : "integer",
+            "description" : "Número de cuota.",
+            "format" : "int32"
+          },
+          "fechaVencimiento" : {
+            "type" : "string",
+            "description" : "Fecha de vencimiento en formato yyyy-MM-dd.",
+            "format" : "date"
+          },
+          "cuota" : {
+            "type" : "number",
+            "description" : "Valor de la cuota, con escala 2."
+          },
+          "capital" : {
+            "type" : "number",
+            "description" : "Parte de capital, con escala 2."
+          },
+          "interes" : {
+            "type" : "number",
+            "description" : "Parte de interés, con escala 2."
+          },
+          "costoAdicional" : {
+            "type" : "number",
+            "description" : "Costo adicional de la cuota, con escala 2."
+          },
+          "saldo" : {
+            "type" : "number",
+            "description" : "Saldo de capital después de la cuota, con escala 2."
+          },
+          "estado" : {
+            "type" : "string",
+            "description" : "Estado de la cuota en el cronograma de una deuda real.",
+            "enum" : [ "PAGADA", "PARCIAL", "PENDIENTE" ]
+          },
+          "montoPagado" : {
+            "type" : "number",
+            "description" : "Monto pagado de la cuota en una deuda real, con escala 2."
+          },
+          "previa" : {
+            "type" : "boolean",
+            "description" : "Indica si la cuota ya estaba pagada antes de registrar la deuda."
+          }
+        },
+        "description" : "Fila de la tabla de amortización o del cronograma de una deuda."
+      },
+      "ResumenEducativoDTO" : {
+        "required" : [ "costoPorCada100", "porcentajeInteresesYCostos", "porcentajeSobreCapital" ],
+        "type" : "object",
+        "properties" : {
+          "costoPorCada100" : {
+            "type" : "number",
+            "description" : "Costo en pesos por cada 100 pesos de capital, con escala 2."
+          },
+          "porcentajeSobreCapital" : {
+            "type" : "number",
+            "description" : "Porcentaje de intereses y costos sobre el capital (0–100)."
+          },
+          "porcentajeInteresesYCostos" : {
+            "type" : "number",
+            "description" : "Porcentaje de intereses y costos sobre el total (0–100)."
+          },
+          "porcentajeIngresoComprometido" : {
+            "type" : "number",
+            "description" : "Porcentaje del ingreso mensual comprometido (0–100)."
+          }
+        },
+        "description" : "Resumen educativo de la simulación en porcentajes y montos."
+      },
+      "SimulacionCreditoResponseDTO" : {
+        "required" : [ "cargaAnualEquivalente", "condiciones", "costoTotalCredito", "gastosIniciales", "interesesYCostos", "montoTotal", "valorCuota" ],
+        "type" : "object",
+        "properties" : {
+          "condiciones" : {
+            "$ref" : "#/components/schemas/CondicionesSimulacionDTO"
+          },
+          "valorCuota" : {
+            "type" : "number",
+            "description" : "Valor de la cuota, con escala 2."
+          },
+          "montoTotal" : {
+            "type" : "number",
+            "description" : "Monto total del crédito, con escala 2."
+          },
+          "gastosIniciales" : {
+            "type" : "number",
+            "description" : "Gastos iniciales, con escala 2."
+          },
+          "costoTotalCredito" : {
+            "type" : "number",
+            "description" : "Costo total del crédito, con escala 2."
+          },
+          "interesesYCostos" : {
+            "type" : "number",
+            "description" : "Intereses y costos totales, con escala 2."
+          },
+          "cargaAnualEquivalente" : {
+            "type" : "number",
+            "description" : "Carga anual equivalente en porcentaje."
+          },
+          "resumenEducativo" : {
+            "$ref" : "#/components/schemas/ResumenEducativoDTO"
+          },
+          "tablaAmortizacion" : {
+            "type" : "array",
+            "description" : "Tabla de amortización; solo si incluirTabla es true.",
+            "items" : {
+              "$ref" : "#/components/schemas/CuotaSimulacionDTO"
+            }
+          },
+          "comparacionPlazos" : {
+            "type" : "array",
+            "description" : "Comparación con plazos alternativos, si se solicitaron.",
+            "items" : {
+              "$ref" : "#/components/schemas/ComparacionPlazoDTO"
+            }
+          },
+          "advertencias" : {
+            "type" : "array",
+            "description" : "Advertencias o supuestos relevantes de la simulación.",
+            "items" : {
+              "type" : "string",
+              "description" : "Advertencias o supuestos relevantes de la simulación."
+            }
+          }
+        },
+        "description" : "Resultado de una simulación de crédito."
+      },
+      "AsignacionPresupuestoDTO" : {
+        "required" : [ "metaId", "porcentaje" ],
+        "type" : "object",
+        "properties" : {
+          "metaId" : {
+            "type" : "integer",
+            "description" : "ID de la meta que recibe la asignación.",
+            "format" : "int64"
+          },
+          "porcentaje" : {
+            "maximum" : 100.0,
+            "exclusiveMaximum" : false,
+            "minimum" : 0.0,
+            "exclusiveMinimum" : false,
+            "type" : "number",
+            "description" : "Porcentaje del ahorro destinado a la meta (0–100), no una fracción."
+          }
+        },
+        "description" : "Distribución opcional del ahorro entre metas."
+      },
+      "ConfiguracionPresupuestoRequestDTO" : {
+        "required" : [ "porcentajeAhorro", "porcentajeDeseos", "porcentajeNecesidades" ],
+        "type" : "object",
+        "properties" : {
+          "porcentajeNecesidades" : {
+            "maximum" : 100.0,
+            "exclusiveMaximum" : false,
+            "minimum" : 0.0,
+            "exclusiveMinimum" : false,
+            "type" : "number",
+            "description" : "Porcentaje para necesidades (0–100), no una fracción."
+          },
+          "porcentajeDeseos" : {
+            "maximum" : 100.0,
+            "exclusiveMaximum" : false,
+            "minimum" : 0.0,
+            "exclusiveMinimum" : false,
+            "type" : "number",
+            "description" : "Porcentaje para deseos (0–100), no una fracción."
+          },
+          "porcentajeAhorro" : {
+            "maximum" : 100.0,
+            "exclusiveMaximum" : false,
+            "minimum" : 0.0,
+            "exclusiveMinimum" : false,
+            "type" : "number",
+            "description" : "Porcentaje para ahorro (0–100), no una fracción."
+          },
+          "activo" : {
+            "type" : "boolean",
+            "description" : "Indica si la configuración está activa.",
+            "default" : true
+          },
+          "automatizarAhorroEnMetas" : {
+            "type" : "boolean",
+            "description" : "Si es true, el ahorro se ejecuta automáticamente como abonos a metas.",
+            "default" : false
+          },
+          "asignaciones" : {
+            "type" : "array",
+            "description" : "Distribución opcional del ahorro entre metas.",
+            "items" : {
+              "$ref" : "#/components/schemas/AsignacionPresupuestoDTO"
+            }
+          }
+        },
+        "description" : "Configuración 50/30/20 del usuario. Los tres porcentajes deben sumar 100.00."
+      },
+      "ConfiguracionPresupuestoResponseDTO" : {
+        "required" : [ "activo", "automatizarAhorroEnMetas", "id", "porcentajeAhorro", "porcentajeDeseos", "porcentajeNecesidades", "usuarioRut" ],
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "description" : "Identificador de la configuración.",
+            "format" : "int64"
+          },
+          "usuarioRut" : {
+            "type" : "string",
+            "description" : "RUT del usuario dueño de la configuración."
+          },
+          "porcentajeNecesidades" : {
+            "type" : "number",
+            "description" : "Porcentaje para necesidades (0–100)."
+          },
+          "porcentajeDeseos" : {
+            "type" : "number",
+            "description" : "Porcentaje para deseos (0–100)."
+          },
+          "porcentajeAhorro" : {
+            "type" : "number",
+            "description" : "Porcentaje para ahorro (0–100)."
+          },
+          "activo" : {
+            "type" : "boolean",
+            "description" : "Indica si la configuración está activa."
+          },
+          "automatizarAhorroEnMetas" : {
+            "type" : "boolean",
+            "description" : "Indica si el ahorro se ejecuta automáticamente en metas."
+          }
+        },
+        "description" : "Configuración 50/30/20 guardada por el usuario."
+      },
+      "MovimientoRegistroDTO" : {
+        "required" : [ "descripcion", "monto", "tipoMovimiento" ],
+        "type" : "object",
+        "properties" : {
+          "monto" : {
+            "type" : "number",
+            "description" : "Monto con escala 2. El signo final lo impone el tipo de movimiento."
+          },
+          "descripcion" : {
+            "type" : "string",
+            "description" : "Descripción del movimiento."
+          },
+          "tipoMovimiento" : {
+            "type" : "string",
+            "description" : "Tipo de movimiento. Define el signo del monto.",
+            "enum" : [ "INGRESO_GENERAL", "GASTO_GENERAL", "PAGO_DEUDA", "ABONO_META", "RETIRO_META" ]
+          },
+          "deudaId" : {
+            "type" : "integer",
+            "description" : "ID de la deuda cuando el tipo es PAGO_DEUDA.",
+            "format" : "int64"
+          },
+          "metaId" : {
+            "type" : "integer",
+            "description" : "ID de la meta vinculada, si corresponde.",
+            "format" : "int64"
+          },
+          "categoriaId" : {
+            "type" : "integer",
+            "description" : "ID de la categoría seleccionada.",
+            "format" : "int64"
+          },
+          "aplicarPresupuesto" : {
+            "type" : "boolean",
+            "description" : "Si es true, aplica Smart-Split al ingreso.",
+            "default" : false
+          }
+        },
+        "description" : "Datos para registrar un movimiento."
+      },
+      "AbonoRetiroDTO" : {
+        "required" : [ "descripcion", "monto" ],
+        "type" : "object",
+        "properties" : {
+          "monto" : {
+            "type" : "number",
+            "description" : "Monto positivo, con escala 2."
+          },
+          "descripcion" : {
+            "type" : "string",
+            "description" : "Descripción de la operación."
+          }
+        },
+        "description" : "Monto y descripción de un abono o retiro de meta."
+      },
+      "PagoDeudaDTO" : {
+        "required" : [ "descripcion" ],
+        "type" : "object",
+        "properties" : {
+          "monto" : {
+            "type" : "number",
+            "description" : "Monto a pagar, con escala 2. Obligatorio en MONTO_PERSONALIZADO."
+          },
+          "descripcion" : {
+            "type" : "string",
+            "description" : "Descripción del pago."
+          },
+          "modoPago" : {
+            "type" : "string",
+            "description" : "Modo de pago. Por defecto MONTO_PERSONALIZADO.",
+            "default" : "MONTO_PERSONALIZADO",
+            "enum" : [ "CUOTA_CALCULADA", "MONTO_PERSONALIZADO" ]
+          }
+        },
+        "description" : "Pago a registrar sobre una deuda."
+      },
+      "UsuarioResponseDTO" : {
+        "required" : [ "apellido", "email", "fechaRegistro", "nombre", "rut" ],
+        "type" : "object",
+        "properties" : {
+          "rut" : {
+            "type" : "string",
+            "description" : "RUT del usuario."
+          },
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nombre del usuario."
+          },
+          "apellido" : {
+            "type" : "string",
+            "description" : "Apellido del usuario."
+          },
+          "email" : {
+            "type" : "string",
+            "description" : "Correo electrónico."
+          },
+          "fechaRegistro" : {
+            "type" : "string",
+            "description" : "Fecha de registro en ISO-8601 UTC.",
+            "format" : "date-time"
+          }
+        },
+        "description" : "Perfil del usuario autenticado (nunca incluye la contraseña)."
+      },
+      "SaldoResponseDTO" : {
+        "required" : [ "saldo" ],
+        "type" : "object",
+        "properties" : {
+          "saldo" : {
+            "type" : "number",
+            "description" : "Saldo en pesos chilenos, con escala 2. Puede ser negativo."
+          }
+        },
+        "description" : "Saldo actual calculado como la suma de los movimientos del usuario."
+      },
+      "EjecucionPresupuestoDTO" : {
+        "required" : [ "ahorroRealizado", "automatizarAhorroEnMetas", "gastoDeseos", "gastoNecesidades", "porcentajeAhorroConfigurado", "porcentajeDeseosConfigurado", "porcentajeNecesidadesConfigurado", "presupuestoAhorro", "presupuestoDeseos", "presupuestoNecesidades", "totalIngresos" ],
+        "type" : "object",
+        "properties" : {
+          "presupuestoNecesidades" : {
+            "type" : "number",
+            "description" : "Presupuesto calculado para necesidades, con escala 2."
+          },
+          "gastoNecesidades" : {
+            "type" : "number",
+            "description" : "Gasto real en necesidades, con escala 2."
+          },
+          "presupuestoDeseos" : {
+            "type" : "number",
+            "description" : "Presupuesto calculado para deseos, con escala 2."
+          },
+          "gastoDeseos" : {
+            "type" : "number",
+            "description" : "Gasto real en deseos, con escala 2."
+          },
+          "presupuestoAhorro" : {
+            "type" : "number",
+            "description" : "Presupuesto calculado para ahorro, con escala 2."
+          },
+          "ahorroRealizado" : {
+            "type" : "number",
+            "description" : "Ahorro ejecutado como abonos a metas, con escala 2."
+          },
+          "totalIngresos" : {
+            "type" : "number",
+            "description" : "Ingresos del mes, con escala 2."
+          },
+          "porcentajeNecesidadesConfigurado" : {
+            "type" : "number",
+            "description" : "Porcentaje de necesidades configurado (0–100)."
+          },
+          "porcentajeDeseosConfigurado" : {
+            "type" : "number",
+            "description" : "Porcentaje de deseos configurado (0–100)."
+          },
+          "porcentajeAhorroConfigurado" : {
+            "type" : "number",
+            "description" : "Porcentaje de ahorro configurado (0–100)."
+          },
+          "automatizarAhorroEnMetas" : {
+            "type" : "boolean",
+            "description" : "Indica si el ahorro se automatiza en metas."
+          }
+        },
+        "description" : "Ejecución presupuestaria 50/30/20 de un mes."
+      },
+      "HistorialPresupuestoDTO" : {
+        "required" : [ "anio", "ejecucion", "mes" ],
+        "type" : "object",
+        "properties" : {
+          "anio" : {
+            "type" : "integer",
+            "description" : "Año del mes.",
+            "format" : "int32"
+          },
+          "mes" : {
+            "type" : "integer",
+            "description" : "Mes numérico (1–12).",
+            "format" : "int32"
+          },
+          "ejecucion" : {
+            "$ref" : "#/components/schemas/EjecucionPresupuestoDTO"
+          }
+        },
+        "description" : "Entrada mensual del historial de presupuesto."
+      },
+      "EjecucionCategoriaDTO" : {
+        "required" : [ "categoria", "categoriaId", "estado", "gastado", "limite", "porcentajeUsado" ],
+        "type" : "object",
+        "properties" : {
+          "categoriaId" : {
+            "type" : "integer",
+            "description" : "ID de la categoría.",
+            "format" : "int64"
+          },
+          "categoria" : {
+            "type" : "string",
+            "description" : "Nombre de la categoría."
+          },
+          "limite" : {
+            "type" : "number",
+            "description" : "Límite mensual configurado, con escala 2."
+          },
+          "gastado" : {
+            "type" : "number",
+            "description" : "Gasto del mes en valor absoluto, con escala 2."
+          },
+          "porcentajeUsado" : {
+            "type" : "number",
+            "description" : "Porcentaje usado del límite (0–100 o más si se excede)."
+          },
+          "estado" : {
+            "type" : "string",
+            "description" : "Estado derivado del porcentaje usado.",
+            "enum" : [ "OK", "ALERTA", "EXCEDIDO" ]
+          }
+        },
+        "description" : "Ejecución del límite de una categoría en un mes."
+      },
+      "MovimientoFiltroDTO" : {
+        "type" : "object",
+        "properties" : {
+          "desde" : {
+            "type" : "string",
+            "description" : "Fecha inicial inclusiva en formato yyyy-MM-dd.",
+            "format" : "date"
+          },
+          "hasta" : {
+            "type" : "string",
+            "description" : "Fecha final inclusiva en formato yyyy-MM-dd.",
+            "format" : "date"
+          },
+          "tipoMovimiento" : {
+            "type" : "string",
+            "description" : "Tipo de movimiento a filtrar.",
+            "enum" : [ "INGRESO_GENERAL", "GASTO_GENERAL", "PAGO_DEUDA", "ABONO_META", "RETIRO_META" ]
+          },
+          "categoriaId" : {
+            "type" : "integer",
+            "description" : "ID de categoría a filtrar.",
+            "format" : "int64"
+          },
+          "montoMin" : {
+            "type" : "number",
+            "description" : "Monto mínimo comparado contra el valor absoluto."
+          },
+          "montoMax" : {
+            "type" : "number",
+            "description" : "Monto máximo comparado contra el valor absoluto."
+          },
+          "q" : {
+            "type" : "string",
+            "description" : "Texto a buscar en la descripción, sin distinguir mayúsculas."
+          }
+        }
+      },
+      "PageResponseDTOMovimientoResponseDTO" : {
+        "required" : [ "content", "currentPage", "totalItems", "totalPages" ],
+        "type" : "object",
+        "properties" : {
+          "content" : {
+            "type" : "array",
+            "description" : "Elementos de la página.",
+            "items" : {
+              "$ref" : "#/components/schemas/MovimientoResponseDTO"
+            }
+          },
+          "currentPage" : {
+            "type" : "integer",
+            "description" : "Número de página, empezando en 0.",
+            "format" : "int32"
+          },
+          "totalItems" : {
+            "type" : "integer",
+            "description" : "Cantidad total de elementos.",
+            "format" : "int64"
+          },
+          "totalPages" : {
+            "type" : "integer",
+            "description" : "Cantidad total de páginas.",
+            "format" : "int32"
+          }
+        },
+        "description" : "Página de resultados."
+      },
+      "PageResponseDTOPagoDeudaResponseDTO" : {
+        "required" : [ "content", "currentPage", "totalItems", "totalPages" ],
+        "type" : "object",
+        "properties" : {
+          "content" : {
+            "type" : "array",
+            "description" : "Elementos de la página.",
+            "items" : {
+              "$ref" : "#/components/schemas/PagoDeudaResponseDTO"
+            }
+          },
+          "currentPage" : {
+            "type" : "integer",
+            "description" : "Número de página, empezando en 0.",
+            "format" : "int32"
+          },
+          "totalItems" : {
+            "type" : "integer",
+            "description" : "Cantidad total de elementos.",
+            "format" : "int64"
+          },
+          "totalPages" : {
+            "type" : "integer",
+            "description" : "Cantidad total de páginas.",
+            "format" : "int32"
+          }
+        },
+        "description" : "Página de resultados."
+      },
+      "PagoDeudaResponseDTO" : {
+        "required" : [ "capital", "costos", "descripcion", "fecha", "id", "interes", "monto" ],
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "description" : "Identificador del pago.",
+            "format" : "int64"
+          },
+          "fecha" : {
+            "type" : "string",
+            "description" : "Fecha del pago en ISO-8601 UTC.",
+            "format" : "date-time"
+          },
+          "monto" : {
+            "type" : "number",
+            "description" : "Monto del pago en positivo, con escala 2."
+          },
+          "capital" : {
+            "type" : "number",
+            "description" : "Parte imputada a capital, con escala 2."
+          },
+          "interes" : {
+            "type" : "number",
+            "description" : "Parte imputada a intereses, con escala 2."
+          },
+          "costos" : {
+            "type" : "number",
+            "description" : "Parte imputada a costos, con escala 2."
+          },
+          "descripcion" : {
+            "type" : "string",
+            "description" : "Descripción del pago."
+          }
+        },
+        "description" : "Pago de deuda con su desglose de capital, interés y costos."
+      },
+      "ProblemaHttp" : {
+        "required" : [ "codigo", "detail", "instance", "status", "title", "type" ],
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "URI que identifica el tipo de problema. Normalmente about:blank."
+          },
+          "title" : {
+            "type" : "string",
+            "description" : "Título breve del error, en español."
+          },
+          "status" : {
+            "type" : "integer",
+            "description" : "Código HTTP de la respuesta.",
+            "format" : "int32"
+          },
+          "detail" : {
+            "type" : "string",
+            "description" : "Mensaje legible de respaldo. El cliente debe decidir el texto final por codigo."
+          },
+          "instance" : {
+            "type" : "string",
+            "description" : "Ruta de la solicitud que originó el error."
+          },
+          "codigo" : {
+            "type" : "string",
+            "description" : "Código estable de negocio (por ejemplo VALIDACION_FALLIDA o DEUDA_SOBREPAGO)."
+          },
+          "errores" : {
+            "type" : "array",
+            "description" : "Errores de validación por campo. Solo aparece cuando corresponde.",
+            "items" : {
+              "$ref" : "#/components/schemas/ErrorCampo"
+            }
+          },
+          "idError" : {
+            "type" : "string",
+            "description" : "UUID de correlación para errores 500. Solo aparece en ERROR_INTERNO."
+          }
+        },
+        "description" : "Error uniforme de la API (RFC 7807 / application/problem+json)."
+      }
+    },
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "type" : "http",
+        "description" : "Token JWT obtenido en POST /api/v1/usuarios/login.",
+        "name" : "bearerAuth",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    }
+  }
+}

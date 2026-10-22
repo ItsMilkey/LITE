@@ -1,6 +1,8 @@
 # T8c — OpenAPI, contrato versionado y guía para el cliente Flutter
 Depende de: T8b (necesita tipos de respuesta concretos). Modelo sugerido: Gemini Pro para el plan; Flash para anotar los controladores.
 
+**Estado: implementado.** Prefijo `/api/v1`, springdoc 2.6.0, contrato en `docs/openapi.json` y guía en `docs/CLIENTE_FLUTTER.md`.
+
 ## Objetivo
 Un contrato OpenAPI fiable y versionado en el repositorio, del que se pueda generar el cliente Dart, y una guía corta para consumirlo desde Flutter.
 

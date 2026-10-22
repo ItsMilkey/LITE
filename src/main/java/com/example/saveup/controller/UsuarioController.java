@@ -9,13 +9,17 @@ import com.example.saveup.model.Usuario;
 import com.example.saveup.security.JwtService;
 import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.UsuarioService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/usuarios")
+@RequestMapping("/api/v1/usuarios")
+@Tag(name = "Usuarios", description = "Registro, inicio de sesión y perfil del usuario autenticado.")
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
@@ -30,6 +34,7 @@ public class UsuarioController {
     }
 
     @PostMapping("/register")
+    @Operation(summary = "Registra una cuenta nueva", operationId = "registerUsuario")
     public ResponseEntity<MensajeResponseDTO> registerUsuario(
             @Valid @RequestBody UsuarioRegistroDTO usuarioDTO) {
         usuarioService.registrarUsuario(usuarioDTO);
@@ -38,6 +43,7 @@ public class UsuarioController {
     }
 
     @PostMapping("/login")
+    @Operation(summary = "Inicia sesión y entrega un token JWT", operationId = "loginUsuario")
     public ResponseEntity<LoginResponseDTO> loginUsuario(
             @Valid @RequestBody UsuarioLoginDTO loginDTO) {
         Usuario usuario = usuarioService.autenticarUsuario(loginDTO);
@@ -46,6 +52,8 @@ public class UsuarioController {
     }
 
     @GetMapping("/me")
+    @Operation(summary = "Obtiene el perfil del usuario autenticado", operationId = "obtenerPerfilActual")
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<UsuarioResponseDTO> obtenerPerfilActual() {
         String rutAutenticado = securityUtils.getAuthenticatedRut();
         return ResponseEntity.ok(usuarioService.obtenerPerfil(rutAutenticado));

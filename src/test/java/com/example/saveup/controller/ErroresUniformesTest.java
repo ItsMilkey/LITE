@@ -79,12 +79,12 @@ class ErroresUniformesTest {
     @Test
     @DisplayName("401 sin token → NO_AUTENTICADO en problem+json")
     void sinToken_noAutenticado() throws Exception {
-        mockMvc.perform(get("/api/categorias"))
+        mockMvc.perform(get("/api/v1/categorias"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(problemJson())
                 .andExpect(jsonPath("$.codigo").value("NO_AUTENTICADO"))
                 .andExpect(jsonPath("$.detail").value("No se pudo autenticar la solicitud."))
-                .andExpect(jsonPath("$.instance").value("/api/categorias"));
+                .andExpect(jsonPath("$.instance").value("/api/v1/categorias"));
     }
 
     @Test
@@ -99,7 +99,7 @@ class ErroresUniformesTest {
             ReflectionTestUtils.setField(jwtService, "expirationInMs", original);
         }
 
-        mockMvc.perform(get("/api/categorias")
+        mockMvc.perform(get("/api/v1/categorias")
                         .header("Authorization", "Bearer " + expirado))
                 .andExpect(status().isUnauthorized())
                 .andExpect(problemJson())
@@ -112,7 +112,7 @@ class ErroresUniformesTest {
     void credencialesInvalidas() throws Exception {
         when(usuarioRepository.findByEmail(anyString())).thenReturn(Optional.empty());
 
-        mockMvc.perform(post("/api/usuarios/login")
+        mockMvc.perform(post("/api/v1/usuarios/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"nadie@example.com","contrasena":"Password123"}
@@ -126,7 +126,7 @@ class ErroresUniformesTest {
     @Test
     @DisplayName("Validación con dos campos inválidos → errores[] con ambos y nombres JSON")
     void validacionDosCampos() throws Exception {
-        mockMvc.perform(post("/api/deudas")
+        mockMvc.perform(post("/api/v1/deudas")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -142,7 +142,7 @@ class ErroresUniformesTest {
     @Test
     @DisplayName("JSON malformado → 400 SOLICITUD_INVALIDA")
     void jsonMalformado_solicitudInvalida() throws Exception {
-        mockMvc.perform(post("/api/deudas")
+        mockMvc.perform(post("/api/v1/deudas")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{"))
@@ -154,7 +154,7 @@ class ErroresUniformesTest {
     @Test
     @DisplayName("Parámetro con tipo incorrecto → 400 PARAMETRO_INVALIDO")
     void parametroInvalido() throws Exception {
-        mockMvc.perform(get("/api/presupuestos/ejecucion/me")
+        mockMvc.perform(get("/api/v1/presupuestos/ejecucion/me")
                         .param("month", "abc")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
@@ -165,7 +165,7 @@ class ErroresUniformesTest {
     @Test
     @DisplayName("Regla del motor financiero → 400 DATOS_INVALIDOS con mensaje legible")
     void datosInvalidos() throws Exception {
-        mockMvc.perform(post("/api/simulaciones/credito")
+        mockMvc.perform(post("/api/v1/simulaciones/credito")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -183,7 +183,7 @@ class ErroresUniformesTest {
     void noEncontrado() throws Exception {
         when(deudaRepository.findById(77L)).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/deudas/77")
+        mockMvc.perform(get("/api/v1/deudas/77")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNotFound())
                 .andExpect(problemJson())
@@ -202,7 +202,7 @@ class ErroresUniformesTest {
         ajena.setUsuario(otro);
         when(deudaRepository.findById(78L)).thenReturn(Optional.of(ajena));
 
-        mockMvc.perform(get("/api/deudas/78")
+        mockMvc.perform(get("/api/v1/deudas/78")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden())
                 .andExpect(problemJson())
@@ -223,7 +223,7 @@ class ErroresUniformesTest {
         abono.setTipoMovimiento(TipoMovimiento.ABONO_META);
         when(movimientoRepository.findById(1L)).thenReturn(Optional.of(abono));
 
-        mockMvc.perform(put("/api/movimientos/1")
+        mockMvc.perform(put("/api/v1/movimientos/1")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"descripcion\":\"Editado\"}"))
@@ -238,7 +238,7 @@ class ErroresUniformesTest {
     void usuarioYaRegistradoPorRut() throws Exception {
         when(usuarioRepository.existsById(RUT)).thenReturn(true);
 
-        mockMvc.perform(post("/api/usuarios/register")
+        mockMvc.perform(post("/api/v1/usuarios/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"rut":"12345678-5","nombre":"Ana","apellido":"Pérez",
@@ -256,7 +256,7 @@ class ErroresUniformesTest {
         when(usuarioRepository.existsById(RUT)).thenReturn(false);
         when(usuarioRepository.existsByEmail("ana@example.com")).thenReturn(true);
 
-        mockMvc.perform(post("/api/usuarios/register")
+        mockMvc.perform(post("/api/v1/usuarios/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"rut":"12345678-5","nombre":"Ana","apellido":"Pérez",
@@ -269,9 +269,9 @@ class ErroresUniformesTest {
     }
 
     @Test
-    @DisplayName("GET /api/presupuestos/me sin configuración → 404 NO_ENCONTRADO")
+    @DisplayName("GET /api/v1/presupuestos/me sin configuración → 404 NO_ENCONTRADO")
     void presupuestoSinConfiguracion() throws Exception {
-        mockMvc.perform(get("/api/presupuestos/me")
+        mockMvc.perform(get("/api/v1/presupuestos/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.codigo").value("NO_ENCONTRADO"))
@@ -283,7 +283,7 @@ class ErroresUniformesTest {
     void errorInterno() throws Exception {
         when(categoriaService.obtenerTodas()).thenThrow(new RuntimeException("secreto interno"));
 
-        mockMvc.perform(get("/api/categorias")
+        mockMvc.perform(get("/api/v1/categorias")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isInternalServerError())
                 .andExpect(problemJson())
@@ -296,7 +296,7 @@ class ErroresUniformesTest {
     @Test
     @DisplayName("Ruta inexistente → 404 NO_ENCONTRADO en problem+json")
     void rutaInexistente() throws Exception {
-        mockMvc.perform(get("/api/ruta-que-no-existe")
+        mockMvc.perform(get("/api/v1/ruta-que-no-existe")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNotFound())
                 .andExpect(problemJson())
@@ -306,7 +306,7 @@ class ErroresUniformesTest {
     @Test
     @DisplayName("Método no permitido → 405 con SOLICITUD_INVALIDA")
     void metodoNoPermitido() throws Exception {
-        mockMvc.perform(delete("/api/categorias")
+        mockMvc.perform(delete("/api/v1/categorias")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(problemJson())
@@ -316,7 +316,7 @@ class ErroresUniformesTest {
     @Test
     @DisplayName("Content-Type no soportado → 415 con SOLICITUD_INVALIDA")
     void tipoContenidoNoSoportado() throws Exception {
-        mockMvc.perform(post("/api/deudas")
+        mockMvc.perform(post("/api/v1/deudas")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.TEXT_PLAIN)
                         .content("texto"))
@@ -333,7 +333,7 @@ class ErroresUniformesTest {
         usuario.setContrasena(new BCryptPasswordEncoder().encode("Correcta123"));
         when(usuarioRepository.findByEmail("test@example.com")).thenReturn(Optional.of(usuario));
 
-        mockMvc.perform(post("/api/usuarios/login")
+        mockMvc.perform(post("/api/v1/usuarios/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"test@example.com","contrasena":"Incorrecta123"}
@@ -350,7 +350,7 @@ class ErroresUniformesTest {
         when(categoriaService.obtenerTodas())
                 .thenThrow(new DataIntegrityViolationException("detalle interno SQL"));
 
-        mockMvc.perform(get("/api/categorias")
+        mockMvc.perform(get("/api/v1/categorias")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isConflict())
                 .andExpect(problemJson())
@@ -365,7 +365,7 @@ class ErroresUniformesTest {
         when(categoriaService.obtenerTodas())
                 .thenThrow(new IllegalStateException("invariante interna"));
 
-        MvcResult result = mockMvc.perform(get("/api/categorias")
+        MvcResult result = mockMvc.perform(get("/api/v1/categorias")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isInternalServerError())
                 .andExpect(problemJson())
@@ -383,7 +383,7 @@ class ErroresUniformesTest {
     @Test
     @DisplayName("Enum desconocido en el cuerpo JSON → 400 SOLICITUD_INVALIDA")
     void enumDesconocidoEnBody_solicitudInvalida() throws Exception {
-        mockMvc.perform(post("/api/movimientos")
+        mockMvc.perform(post("/api/v1/movimientos")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -398,7 +398,7 @@ class ErroresUniformesTest {
     @Test
     @DisplayName("Parámetro obligatorio ausente → 400 PARAMETRO_INVALIDO")
     void parametroFaltante_parametroInvalido() throws Exception {
-        mockMvc.perform(get("/api/presupuestos/historial/me")
+        mockMvc.perform(get("/api/v1/presupuestos/historial/me")
                         .param("hasta", "2026-01")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
@@ -409,7 +409,7 @@ class ErroresUniformesTest {
     @Test
     @DisplayName("Fecha o enum inválido en @ModelAttribute → PARAMETRO_INVALIDO sin mensajes de Spring")
     void bindingInvalidoEnFiltros_parametroInvalido() throws Exception {
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("desde", "abc")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
@@ -418,7 +418,7 @@ class ErroresUniformesTest {
                 .andExpect(jsonPath("$.errores[0].campo").value("desde"))
                 .andExpect(jsonPath("$.errores[0].mensaje").value("El valor no tiene el formato esperado"));
 
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("tipoMovimiento", "FOO")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
@@ -434,7 +434,7 @@ class ErroresUniformesTest {
         String detalle = "Los parámetros de paginación no son válidos: page debe ser 0 o mayor "
                 + "y size debe estar entre 1 y 100.";
 
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("page", "-1")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
@@ -442,7 +442,7 @@ class ErroresUniformesTest {
                 .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
                 .andExpect(jsonPath("$.detail").value(detalle));
 
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("size", "0")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
@@ -450,7 +450,7 @@ class ErroresUniformesTest {
                 .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
                 .andExpect(jsonPath("$.detail").value(detalle));
 
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("size", "101")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
@@ -462,7 +462,7 @@ class ErroresUniformesTest {
     @Test
     @DisplayName("Pagos de deuda usan la misma validación de paginación")
     void paginacionInvalidaEnPagosDeuda_datosInvalidos() throws Exception {
-        mockMvc.perform(get("/api/deudas/1/pagos")
+        mockMvc.perform(get("/api/v1/deudas/1/pagos")
                         .param("size", "0")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
@@ -476,7 +476,7 @@ class ErroresUniformesTest {
     @Test
     @DisplayName("Reporte mensual con mes inválido → 400 DATOS_INVALIDOS")
     void reporteMesInvalido_datosInvalidos() throws Exception {
-        mockMvc.perform(get("/api/reportes/movimientos/exportar")
+        mockMvc.perform(get("/api/v1/reportes/movimientos/exportar")
                         .param("alcance", "MENSUAL")
                         .param("mes", "13")
                         .param("anio", "2026")
@@ -490,7 +490,7 @@ class ErroresUniformesTest {
     @Test
     @DisplayName("Reporte mensual con año fuera de rango → 400 DATOS_INVALIDOS")
     void reporteAnioInvalido_datosInvalidos() throws Exception {
-        mockMvc.perform(get("/api/reportes/movimientos/exportar")
+        mockMvc.perform(get("/api/v1/reportes/movimientos/exportar")
                         .param("alcance", "MENSUAL")
                         .param("mes", "1")
                         .param("anio", "1999")
@@ -506,7 +506,7 @@ class ErroresUniformesTest {
     void acceptJson_devuelveProblemJson() throws Exception {
         when(deudaRepository.findById(77L)).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/deudas/77")
+        mockMvc.perform(get("/api/v1/deudas/77")
                         .header("Authorization", "Bearer " + token)
                         .header("Accept", MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isNotFound())
@@ -519,7 +519,7 @@ class ErroresUniformesTest {
     void acceptWildcard_devuelveProblemJson() throws Exception {
         when(deudaRepository.findById(77L)).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/deudas/77")
+        mockMvc.perform(get("/api/v1/deudas/77")
                         .header("Authorization", "Bearer " + token)
                         .header("Accept", MediaType.ALL_VALUE))
                 .andExpect(status().isNotFound())
@@ -532,7 +532,7 @@ class ErroresUniformesTest {
     void error4xxRegistraInfoSinQuery(CapturedOutput output) throws Exception {
         when(deudaRepository.findById(77L)).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/deudas/77")
+        mockMvc.perform(get("/api/v1/deudas/77")
                         .param("secreto", "no")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNotFound())
@@ -540,9 +540,9 @@ class ErroresUniformesTest {
                 .andExpect(jsonPath("$.codigo").value("NO_ENCONTRADO"));
 
         assertTrue(output.getAll().contains(
-                        "Error 4xx status=404 codigo=NO_ENCONTRADO metodo=GET path=/api/deudas/77"),
+                        "Error 4xx status=404 codigo=NO_ENCONTRADO metodo=GET path=/api/v1/deudas/77"),
                 "El log 4xx debe incluir status, código, método y path");
-        assertFalse(output.getAll().contains("/api/deudas/77?secreto=no"),
+        assertFalse(output.getAll().contains("/api/v1/deudas/77?secreto=no"),
                 "El log no debe incluir el query string");
     }
 }

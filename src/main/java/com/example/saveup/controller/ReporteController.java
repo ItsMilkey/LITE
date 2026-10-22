@@ -2,6 +2,9 @@ package com.example.saveup.controller;
 
 import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.report.ReporteService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +14,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/reportes")
+@RequestMapping("/api/v1/reportes")
+@Tag(name = "Reportes", description = "Exportación de movimientos a CSV o PDF.")
+@SecurityRequirement(name = "bearerAuth")
 public class ReporteController {
 
     private final ReporteService reporteService;
@@ -23,6 +28,7 @@ public class ReporteController {
     }
 
     @GetMapping("/movimientos/exportar")
+    @Operation(summary = "Exporta los movimientos a CSV o PDF", operationId = "exportarMovimientos")
     public ResponseEntity<byte[]> exportarMovimientos(
             @RequestParam(value = "alcance", defaultValue = "COMPLETO") String alcance,
             @RequestParam(value = "formato", defaultValue = "CSV") String formato,

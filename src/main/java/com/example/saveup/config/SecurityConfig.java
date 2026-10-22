@@ -67,7 +67,9 @@ public class SecurityConfig {
                 // Peticiones Preflight de CORS siempre permitidas
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Endpoints públicos de registro y login
-                .requestMatchers(HttpMethod.POST, "/api/usuarios/register", "/api/usuarios/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/usuarios/register", "/api/v1/usuarios/login").permitAll()
+                // Documentación interactiva solo disponible en dev; en prod springdoc está deshabilitado.
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 // Endpoints públicos para health check y keep_alive de Render
                 .requestMatchers(HttpMethod.GET, "/", "/actuator/health").permitAll()
                 .requestMatchers(HttpMethod.HEAD, "/", "/actuator/health").permitAll()

@@ -182,7 +182,7 @@ class PagoDeudaIntegracionTest {
     }
 
     private Long crearDeuda(String json) throws Exception {
-        MvcResult result = mockMvc.perform(post("/api/deudas")
+        MvcResult result = mockMvc.perform(post("/api/v1/deudas")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
@@ -192,7 +192,7 @@ class PagoDeudaIntegracionTest {
     }
 
     private DeudaResponseDTO deudaDe(Long id) throws Exception {
-        MvcResult result = mockMvc.perform(get("/api/deudas/me")
+        MvcResult result = mockMvc.perform(get("/api/v1/deudas/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -202,7 +202,7 @@ class PagoDeudaIntegracionTest {
     }
 
     private BigDecimal saldo() throws Exception {
-        MvcResult result = mockMvc.perform(get("/api/saldos/me")
+        MvcResult result = mockMvc.perform(get("/api/v1/saldos/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -212,7 +212,7 @@ class PagoDeudaIntegracionTest {
     // ──────────────────────── tests ────────────────────────
 
     @Test
-    @DisplayName("Ambas rutas de entrada (POST /api/deudas/{id}/pagar y POST /api/movimientos) producen el mismo pago")
+    @DisplayName("Ambas rutas de entrada (POST /api/v1/deudas/{id}/pagar y POST /api/v1/movimientos) producen el mismo pago")
     void ambasRutasProducenElMismoPago() throws Exception {
         Long deudaA = crearDeuda("""
                 {"nombre":"Deuda A","condiciones":{"modalidad":"SIN_INTERES","montoCapital":100000,"cantidadCuotas":10}}
@@ -222,7 +222,7 @@ class PagoDeudaIntegracionTest {
                 """);
 
         // Ruta 1: endpoint de pagos de la deuda
-        mockMvc.perform(post("/api/deudas/" + deudaA + "/pagar")
+        mockMvc.perform(post("/api/v1/deudas/" + deudaA + "/pagar")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -233,8 +233,8 @@ class PagoDeudaIntegracionTest {
                 .andExpect(jsonPath("$.totalPorPagar").value(90000.00))
                 .andExpect(jsonPath("$.montoPagado").value(10000.00));
 
-        // Ruta 2: POST /api/movimientos con tipo PAGO_DEUDA
-        mockMvc.perform(post("/api/movimientos")
+        // Ruta 2: POST /api/v1/movimientos con tipo PAGO_DEUDA
+        mockMvc.perform(post("/api/v1/movimientos")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -260,13 +260,13 @@ class PagoDeudaIntegracionTest {
     }
 
     @Test
-    @DisplayName("Un monto negativo desde /api/movimientos equivale a enviarlo positivo")
+    @DisplayName("Un monto negativo desde /api/v1/movimientos equivale a enviarlo positivo")
     void pagoConMontoNegativoPorMovimientos() throws Exception {
         Long deuda = crearDeuda("""
                 {"nombre":"Deuda","condiciones":{"modalidad":"SIN_INTERES","montoCapital":100000,"cantidadCuotas":10}}
                 """);
 
-        mockMvc.perform(post("/api/movimientos")
+        mockMvc.perform(post("/api/v1/movimientos")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -286,7 +286,7 @@ class PagoDeudaIntegracionTest {
                 {"nombre":"Deuda","condiciones":{"modalidad":"SIN_INTERES","montoCapital":100000,"cantidadCuotas":10}}
                 """);
 
-        mockMvc.perform(post("/api/deudas/" + deuda + "/pagar")
+        mockMvc.perform(post("/api/v1/deudas/" + deuda + "/pagar")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -317,7 +317,7 @@ class PagoDeudaIntegracionTest {
                 {"nombre":"Deuda","condiciones":{"modalidad":"SIN_INTERES","montoCapital":100000,"cantidadCuotas":10}}
                 """);
 
-        mockMvc.perform(post("/api/deudas/" + deuda + "/pagar")
+        mockMvc.perform(post("/api/v1/deudas/" + deuda + "/pagar")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -338,7 +338,7 @@ class PagoDeudaIntegracionTest {
                 {"nombre":"Deuda","condiciones":{"modalidad":"SIN_INTERES","montoCapital":100000,"cantidadCuotas":10}}
                 """);
 
-        mockMvc.perform(post("/api/deudas/" + deuda + "/pagar")
+        mockMvc.perform(post("/api/v1/deudas/" + deuda + "/pagar")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -356,7 +356,7 @@ class PagoDeudaIntegracionTest {
                 {"nombre":"Deuda","condiciones":{"modalidad":"SIN_INTERES","montoCapital":100000,"cantidadCuotas":10}}
                 """);
 
-        mockMvc.perform(post("/api/deudas/" + deuda + "/pagar")
+        mockMvc.perform(post("/api/v1/deudas/" + deuda + "/pagar")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -365,7 +365,7 @@ class PagoDeudaIntegracionTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estado").value("PAGADA"));
 
-        mockMvc.perform(post("/api/deudas/" + deuda + "/pagar")
+        mockMvc.perform(post("/api/v1/deudas/" + deuda + "/pagar")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -400,7 +400,7 @@ class PagoDeudaIntegracionTest {
         deudas.add(ajena);
 
         try {
-            mockMvc.perform(post("/api/deudas/500/pagar")
+            mockMvc.perform(post("/api/v1/deudas/500/pagar")
                             .header("Authorization", "Bearer " + token)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
@@ -419,7 +419,7 @@ class PagoDeudaIntegracionTest {
                 {"nombre":"Deuda CC","condiciones":{"modalidad":"CUOTA_CONOCIDA","montoCapital":100000,"cantidadCuotas":10,"valorCuota":10000}}
                 """);
 
-        mockMvc.perform(get("/api/deudas/me")
+        mockMvc.perform(get("/api/v1/deudas/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].totalPorPagar").value(100000.00))

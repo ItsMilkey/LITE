@@ -27,7 +27,7 @@ sequenceDiagram
     participant EE as EstadoEjecucion
 
     Note over U,P: Configuracion 50/30/20
-    U->>C: POST /api/presupuestos/me
+    U->>C: POST /api/v1/presupuestos/me
     C->>P: guardarConfiguracion(rut, request)
     P->>P: validarSumaPorcentajes (suma 100.00, sin negativos)
     P->>CR: save(config)
@@ -36,7 +36,7 @@ sequenceDiagram
     C-->>U: 200 (o 400)
 
     Note over U,P: Ejecucion por tipo
-    U->>C: GET /api/presupuestos/ejecucion/me
+    U->>C: GET /api/v1/presupuestos/ejecucion/me
     C->>P: calcularEjecucionGeneral(rut, month, year)
     P->>MR: findByUsuarioRutAndFechaGreaterThanEqualAndFechasLessThan
     P->>P: ingresos, gasto NECESIDAD/DESEO por tipoPresupuesto, ahorroRealizado
@@ -44,7 +44,7 @@ sequenceDiagram
     C-->>U: 200 (mes sin ingresos devuelve ceros)
 
     Note over U,P: Limites por categoria
-    U->>C: PUT /api/presupuestos/categorias/me
+    U->>C: PUT /api/v1/presupuestos/categorias/me
     C->>P: reemplazarCategorias(rut, items)
     P->>P: validarYConstruir (limite mayor a 0, categoria existe, sin repetidas)
     P->>PCR: deleteByUsuarioRut(rut)
@@ -53,7 +53,7 @@ sequenceDiagram
     C-->>U: 200 (o 400)
 
     Note over U,P: Ejecucion por categoria
-    U->>C: GET /api/presupuestos/categorias/ejecucion/me
+    U->>C: GET /api/v1/presupuestos/categorias/ejecucion/me
     C->>P: obtenerEjecucionCategorias(rut, month, year)
     P->>PCR: findByUsuarioRut(rut)
     P->>MR: movimientos del mes (ventana semiabierta)
@@ -64,7 +64,7 @@ sequenceDiagram
     C-->>U: 200
 
     Note over U,P: Historial mensual
-    U->>C: GET /api/presupuestos/historial/me?desde&hasta
+    U->>C: GET /api/v1/presupuestos/historial/me?desde&hasta
     C->>P: obtenerHistorial(rut, desde, hasta)
     P->>P: parsearMes YYYY-MM, maximo 24 meses
     loop mes a mes inclusivo

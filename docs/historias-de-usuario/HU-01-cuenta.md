@@ -1,35 +1,35 @@
 # HU-01 — Cuenta y seguridad
 
-Casos de uso: **UC1–UC3** · Endpoints: `/api/usuarios` · Diagrama de flujo:
+Casos de uso: **UC1–UC3** · Endpoints: `/api/v1/usuarios` · Diagrama de flujo:
 [`09-flujo-auth.md`](../diagramas/09-flujo-auth.md).
 
 ### HU-01-01 — Registrarse
 **Como** visitante, **quiero** crear una cuenta con mi RUT, nombre, apellido, email y contraseña, **para** empezar a registrar mis finanzas.
 - Criterios de aceptación:
-  - `POST /api/usuarios/register` crea el usuario y es **público** (no exige token).
+  - `POST /api/v1/usuarios/register` crea el usuario y es **público** (no exige token).
   - La contraseña se guarda con hash **BCrypt**; nunca en claro ni en la respuesta.
   - Al registrarse se crea la meta **"Ahorros"** por defecto (marcada como protegida).
   - Email duplicado o datos inválidos → **400**.
-- Trazabilidad: UC1 · `POST /api/usuarios/register` · base
+- Trazabilidad: UC1 · `POST /api/v1/usuarios/register` · base
 - Acción en la app (Flutter): pantalla de registro.
 - Estado: **implementada**
 
 ### HU-01-02 — Iniciar sesión
 **Como** visitante registrado, **quiero** iniciar sesión con mi email y contraseña, **para** obtener un token que me identifique.
 - Criterios de aceptación:
-  - `POST /api/usuarios/login` autentica por **email** y contraseña; es **público**.
+  - `POST /api/v1/usuarios/login` autentica por **email** y contraseña; es **público**.
   - Devuelve un **JWT HMAC-SHA256** con `subject = RUT` y expiración de **24 h** (`jwt.expirationInMs=86400000`).
   - Credenciales inválidas → **401**.
-- Trazabilidad: UC2 · `POST /api/usuarios/login` · base
+- Trazabilidad: UC2 · `POST /api/v1/usuarios/login` · base
 - Acción en la app (Flutter): pantalla de login; guarda el token y lo envía como `Bearer`.
 - Estado: **implementada**
 
 ### HU-01-03 — Ver mi perfil
 **Como** usuario autenticado, **quiero** ver mis datos de perfil, **para** confirmar quién soy en la app.
 - Criterios de aceptación:
-  - `GET /api/usuarios/me` responde el perfil del usuario **del token** (no acepta RUT por parámetro).
+  - `GET /api/v1/usuarios/me` responde el perfil del usuario **del token** (no acepta RUT por parámetro).
   - Sin token válido → **401**.
-- Trazabilidad: UC3 · `GET /api/usuarios/me` · base
+- Trazabilidad: UC3 · `GET /api/v1/usuarios/me` · base
 - Acción en la app (Flutter): sección "Perfil".
 - Estado: **implementada**
 
@@ -46,7 +46,7 @@ Casos de uso: **UC1–UC3** · Endpoints: `/api/usuarios` · Diagrama de flujo:
 **Como** visitante, **quiero** que un registro inválido se rechace, **para** no crear cuentas duplicadas o incompletas.
 - Criterios de aceptación:
   - Email ya registrado, campos faltantes o formato inválido → **400** y no se crea el usuario.
-- Trazabilidad: UC1 · `POST /api/usuarios/register` · base
+- Trazabilidad: UC1 · `POST /api/v1/usuarios/register` · base
 - Acción en la app (Flutter): mensaje de error bajo el campo correspondiente.
 - Estado: **implementada**
 
@@ -54,7 +54,7 @@ Casos de uso: **UC1–UC3** · Endpoints: `/api/usuarios` · Diagrama de flujo:
 **Como** visitante, **quiero** recibir un 401 cuando mis credenciales no sirven, **para** no quedar en un estado ambiguo.
 - Criterios de aceptación:
   - Email inexistente o contraseña incorrecta → **401**, sin revelar cuál de los dos falló.
-- Trazabilidad: UC2 · `POST /api/usuarios/login` · base
+- Trazabilidad: UC2 · `POST /api/v1/usuarios/login` · base
 - Acción en la app (Flutter): mensaje genérico "credenciales inválidas".
 - Estado: **implementada**
 

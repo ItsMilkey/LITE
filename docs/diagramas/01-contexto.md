@@ -20,7 +20,7 @@ C4Context
 
     Person(usuario, "Usuario", "Persona que gestiona sus finanzas personales: movimientos, metas de ahorro, deudas y presupuesto.")
 
-    System(saveup, "SaveUp Lite", "Backend REST de finanzas personales. Spring Boot 3.3.0 / Java 21. API stateless con JWT. Expone /api/usuarios, /api/movimientos, /api/saldos, /api/metas, /api/deudas, /api/presupuestos, /api/reportes y /api/simulaciones.")
+    System(saveup, "SaveUp Lite", "Backend REST de finanzas personales. Spring Boot 3.3.0 / Java 21. API stateless con JWT. Expone /api/v1/usuarios, /api/v1/movimientos, /api/v1/saldos, /api/v1/metas, /api/v1/deudas, /api/v1/presupuestos, /api/v1/reportes y /api/v1/simulaciones.")
 
     System_Ext(cliente, "App movil / Frontend", "Cliente HTTP (app movil en Flutter). Origenes declarados hoy en CORS: localhost:8100, localhost:4200, capacitor://localhost y localhost (pendientes de actualizar para el cliente Flutter).")
 
@@ -37,6 +37,6 @@ C4Context
 ## Notas y "por confirmar"
 - La API es **stateless**: `SecurityConfig` fija `SessionCreationPolicy.STATELESS`, `csrf` deshabilitado y todo endpoint salvo `register`, `login`, `OPTIONS` y `GET/HEAD /` exige JWT válido.
 - Los **reportes** (PDF/CSV) se generan dentro de la misma aplicación (`service.report`), sobre `byte[]` en memoria; no hay sistema externo de reporting.
-- Las **simulaciones** (`POST /api/simulaciones/credito`) no tocan la base de datos: `SimulacionService` solo ejecuta el motor financiero y devuelve un DTO.
+- Las **simulaciones** (`POST /api/v1/simulaciones/credito`) no tocan la base de datos: `SimulacionService` solo ejecuta el motor financiero y devuelve un DTO.
 - El **cliente frontend no vive en este repositorio**; solo se conocen sus orígenes por `app.cors.allowed-origins`.
 - Discrepancia documentada: `docs/diagramas/README.md` recoge que el plan C4 previo (`saveup-lite-c4.md`) describía **Oracle** como motor de desarrollo, lo que el código actual ya no refleja (dev y prod usan PostgreSQL/Supabase).

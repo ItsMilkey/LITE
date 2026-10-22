@@ -6,7 +6,7 @@ Nota: no requiere BD, así que el frontend puede empezar a consumirlo en cuanto 
 Que el usuario vea cuánto le costaría endeudarse ANTES de hacerlo, sin crear nada en la base de datos. Debe servir para decidir y para aprender.
 
 ## Endpoint
-POST /api/simulaciones/credito (protegido por JWT como el resto; no lee ni escribe en BD).
+POST /api/v1/simulaciones/credito (protegido por JWT como el resto; no lee ni escribe en BD).
 
 Request (CondicionesCreditoDTO + opcionales):
 - modalidad, montoCapital

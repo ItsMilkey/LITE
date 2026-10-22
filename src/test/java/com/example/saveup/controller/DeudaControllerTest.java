@@ -101,7 +101,7 @@ class DeudaControllerTest {
     }
 
     private DeudaResponseDTO crearYObtenerDTO(String json) throws Exception {
-        MvcResult result = mockMvc.perform(post("/api/deudas")
+        MvcResult result = mockMvc.perform(post("/api/v1/deudas")
                         .header("Authorization", "Bearer " + validToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
@@ -112,13 +112,13 @@ class DeudaControllerTest {
     // ──────────────────────── 1. Payload antiguo ────────────────────────
 
     @Test
-    @DisplayName("POST /api/deudas con payload antiguo → 201 SIN_INTERES, valorCuota = montoTotal/cuotas")
+    @DisplayName("POST /api/v1/deudas con payload antiguo → 201 SIN_INTERES, valorCuota = montoTotal/cuotas")
     void crearDeuda_payloadAntiguo_retorna201SinInteres() throws Exception {
         String json = """
                 {"nombre":"Crédito Viejo","descripcion":"compatibilidad","montoTotal":100000,"cantidadCuotas":10}
                 """;
 
-        mockMvc.perform(post("/api/deudas")
+        mockMvc.perform(post("/api/v1/deudas")
                         .header("Authorization", "Bearer " + validToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
@@ -211,7 +211,7 @@ class DeudaControllerTest {
                 {"nombre":"Deuda Fechas","condiciones":{"modalidad":"SIN_INTERES","montoCapital":140000,"fechaPrimeraCuota":"2026-10-07","fechaUltimaCuota":"2027-11-08"}}
                 """;
 
-        mockMvc.perform(post("/api/deudas")
+        mockMvc.perform(post("/api/v1/deudas")
                         .header("Authorization", "Bearer " + validToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
@@ -249,7 +249,7 @@ class DeudaControllerTest {
                 {"nombre":"Deuda Inválida","cuotasPagadasPrevias":10,"condiciones":{"modalidad":"SIN_INTERES","montoCapital":100000,"cantidadCuotas":10}}
                 """;
 
-        mockMvc.perform(post("/api/deudas")
+        mockMvc.perform(post("/api/v1/deudas")
                         .header("Authorization", "Bearer " + validToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
@@ -272,7 +272,7 @@ class DeudaControllerTest {
                 {"nombre":"Deuda Edit","condiciones":{"modalidad":"SIN_INTERES","montoCapital":50000,"cantidadCuotas":5}}
                 """;
 
-        mockMvc.perform(put("/api/deudas/1")
+        mockMvc.perform(put("/api/v1/deudas/1")
                         .header("Authorization", "Bearer " + validToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
@@ -294,7 +294,7 @@ class DeudaControllerTest {
         ajena.setUsuario(otro);
         when(deudaRepository.findById(1L)).thenReturn(Optional.of(ajena));
 
-        mockMvc.perform(get("/api/deudas/1/amortizacion")
+        mockMvc.perform(get("/api/v1/deudas/1/amortizacion")
                         .header("Authorization", "Bearer " + validToken))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.codigo").value("PROHIBIDO"))
@@ -318,7 +318,7 @@ class DeudaControllerTest {
         cc.setTasaMensual(BigDecimal.ZERO);
         when(deudaRepository.findById(1L)).thenReturn(Optional.of(cc));
 
-        mockMvc.perform(get("/api/deudas/1/amortizacion")
+        mockMvc.perform(get("/api/v1/deudas/1/amortizacion")
                         .header("Authorization", "Bearer " + validToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(10))
@@ -329,14 +329,14 @@ class DeudaControllerTest {
     // ──────────────────────── 9. Detalle propio → 200 ────────────────────────
 
     @Test
-    @DisplayName("GET /api/deudas/{id} propio → 200 con la próxima cuota")
+    @DisplayName("GET /api/v1/deudas/{id} propio → 200 con la próxima cuota")
     void obtenerDeuda_propia_retorna200() throws Exception {
         crearYObtenerDTO("""
                 {"nombre":"Deuda Detalle","condiciones":{"modalidad":"SIN_INTERES","montoCapital":100000,"cantidadCuotas":10}}
                 """);
         when(deudaRepository.findById(1L)).thenReturn(Optional.of(savedDeudaRef.get()));
 
-        mockMvc.perform(get("/api/deudas/1")
+        mockMvc.perform(get("/api/v1/deudas/1")
                         .header("Authorization", "Bearer " + validToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
@@ -348,7 +348,7 @@ class DeudaControllerTest {
     // ──────────────────────── 10. Detalle ajeno → 403 (anti-IDOR) ────────────────────────
 
     @Test
-    @DisplayName("GET /api/deudas/{id} de otro usuario → 403 Forbidden")
+    @DisplayName("GET /api/v1/deudas/{id} de otro usuario → 403 Forbidden")
     void obtenerDeuda_ajena_retorna403() throws Exception {
         Usuario otro = new Usuario();
         otro.setRut("99999999-9");
@@ -359,7 +359,7 @@ class DeudaControllerTest {
         ajena.setUsuario(otro);
         when(deudaRepository.findById(1L)).thenReturn(Optional.of(ajena));
 
-        mockMvc.perform(get("/api/deudas/1")
+        mockMvc.perform(get("/api/v1/deudas/1")
                         .header("Authorization", "Bearer " + validToken))
                 .andExpect(status().isForbidden());
     }
@@ -367,7 +367,7 @@ class DeudaControllerTest {
     // ──────────────────────── 11. Historial de pagos ────────────────────────
 
     @Test
-    @DisplayName("GET /api/deudas/{id}/pagos devuelve el historial con desglose, lo más reciente primero")
+    @DisplayName("GET /api/v1/deudas/{id}/pagos devuelve el historial con desglose, lo más reciente primero")
     void obtenerPagos_retornaHistorial() throws Exception {
         Deuda deudaPagos = new Deuda();
         deudaPagos.setId(1L);
@@ -400,7 +400,7 @@ class DeudaControllerTest {
         when(movimientoRepository.findByDeudaIdAndTipoMovimientoOrderByFechaAscIdAsc(1L, TipoMovimiento.PAGO_DEUDA))
                 .thenReturn(List.of(p1, p2));
 
-        mockMvc.perform(get("/api/deudas/1/pagos")
+        mockMvc.perform(get("/api/v1/deudas/1/pagos")
                         .header("Authorization", "Bearer " + validToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalItems").value(2))
@@ -411,7 +411,7 @@ class DeudaControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/deudas/{id}/pagos de otro usuario → 403 Forbidden (anti-IDOR)")
+    @DisplayName("GET /api/v1/deudas/{id}/pagos de otro usuario → 403 Forbidden (anti-IDOR)")
     void obtenerPagos_ajena_retorna403() throws Exception {
         Usuario otro = new Usuario();
         otro.setRut("99999999-9");
@@ -422,7 +422,7 @@ class DeudaControllerTest {
         ajena.setUsuario(otro);
         when(deudaRepository.findById(1L)).thenReturn(Optional.of(ajena));
 
-        mockMvc.perform(get("/api/deudas/1/pagos")
+        mockMvc.perform(get("/api/v1/deudas/1/pagos")
                         .header("Authorization", "Bearer " + validToken))
                 .andExpect(status().isForbidden());
     }

@@ -44,14 +44,14 @@ class MetaAhorroControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/metas → 201 Created")
+    @DisplayName("POST /api/v1/metas → 201 Created")
     void crearMeta_retorna201() throws Exception {
         MetaAhorroResponseDTO creada = new MetaAhorroResponseDTO();
         creada.setId(1L);
         creada.setNombre("Viaje");
         when(metaAhorroService.crearMeta(any())).thenReturn(creada);
 
-        mockMvc.perform(post("/api/metas")
+        mockMvc.perform(post("/api/v1/metas")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -63,11 +63,11 @@ class MetaAhorroControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE /api/metas/{id} → 204 No Content")
+    @DisplayName("DELETE /api/v1/metas/{id} → 204 No Content")
     void eliminarMeta_retorna204() throws Exception {
         doNothing().when(metaAhorroService).eliminarMeta(1L);
 
-        mockMvc.perform(delete("/api/metas/1")
+        mockMvc.perform(delete("/api/v1/metas/1")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
     }

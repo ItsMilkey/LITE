@@ -25,7 +25,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**") // Aplica CORS a todos los endpoints bajo /api/
+        registry.addMapping("/api/v1/**") // CORS solo para la API pública versionada
                 .allowedOrigins(allowedOrigins)
                 .allowedMethods(allowedMethods)
                 .allowedHeaders(allowedHeaders)

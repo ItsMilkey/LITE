@@ -1,5 +1,11 @@
 package com.example.saveup.dto;
 
-/** Respuesta de POST /api/usuarios/login. */
-public record LoginResponseDTO(String token) {
+import io.swagger.v3.oas.annotations.media.Schema;
+
+/** Respuesta de POST /api/v1/usuarios/login. */
+@Schema(description = "Token JWT para autenticar las siguientes solicitudes.")
+public record LoginResponseDTO(
+        @Schema(description = "JWT que debe enviarse en Authorization: Bearer <token>.",
+                requiredMode = Schema.RequiredMode.REQUIRED)
+        String token) {
 }

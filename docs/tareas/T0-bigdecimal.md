@@ -5,7 +5,7 @@ Depende de: nada. Modelo sugerido: Gemini Flash (cambio mecánico).
 Reemplazar Double/double por BigDecimal en DTOs, servicios, repositorios y SmartSplitProcessor, sin cambiar el contrato JSON.
 
 ## Alcance
-- DTOs con montos o porcentajes: MovimientoRegistroDTO, MovimientoResponseDTO, MetaAhorroCreacionDTO, MetaAhorroResponseDTO, AbonoRetiroDTO, DeudaCreacionDTO, DeudaResponseDTO, PagoDeudaDTO, ConfiguracionPresupuestoRequestDTO, AsignacionPresupuestoDTO, EjecucionPresupuestoDTO y la respuesta de /api/saldos/me.
+- DTOs con montos o porcentajes: MovimientoRegistroDTO, MovimientoResponseDTO, MetaAhorroCreacionDTO, MetaAhorroResponseDTO, AbonoRetiroDTO, DeudaCreacionDTO, DeudaResponseDTO, PagoDeudaDTO, ConfiguracionPresupuestoRequestDTO, AsignacionPresupuestoDTO, EjecucionPresupuestoDTO y la respuesta de /api/v1/saldos/me.
 - Repositorios: consultas SUM/COALESCE que hoy devuelven Double → BigDecimal.
 - SmartSplitProcessor.procesarDistribucion(Usuario, double) → BigDecimal.
 - Las proyecciones JPQL con constructor DTO (DeudaRepository) deben seguir funcionando.

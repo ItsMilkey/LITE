@@ -3,7 +3,7 @@
 **Tipo mermaid:** `sequenceDiagram` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
 
 ## Qué responde
-Cómo se procesa `POST /api/simulaciones/credito`: resolución de condiciones, cálculo en el motor financiero puro y armado del DTO de respuesta, sin persistir nada.
+Cómo se procesa `POST /api/v1/simulaciones/credito`: resolución de condiciones, cálculo en el motor financiero puro y armado del DTO de respuesta, sin persistir nada.
 
 ## Fuentes
 - `src/main/java/com/example/saveup/controller/SimulacionController.java`
@@ -24,7 +24,7 @@ sequenceDiagram
     participant CC as CalendarioCuotas
     participant CF as CalculoFinancieroService
 
-    U->>C: POST /api/simulaciones/credito (SimulacionCreditoRequestDTO)
+    U->>C: POST /api/v1/simulaciones/credito (SimulacionCreditoRequestDTO)
     C->>S: simularCredito(request)
     S->>S: validarParametrosBasicos(request)
 

@@ -90,7 +90,7 @@ class UsuarioControllerTest {
         dto.setEmail(EMAIL);
         dto.setContrasena(PASSWORD);
 
-        mockMvc.perform(post("/api/usuarios/register")
+        mockMvc.perform(post("/api/v1/usuarios/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
@@ -122,7 +122,7 @@ class UsuarioControllerTest {
         dto.setEmail(EMAIL);
         dto.setContrasena(PASSWORD);
 
-        mockMvc.perform(post("/api/usuarios/login")
+        mockMvc.perform(post("/api/v1/usuarios/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
@@ -140,7 +140,7 @@ class UsuarioControllerTest {
     void me_noExponeHash() throws Exception {
         when(usuarioRepository.findById(RUT)).thenReturn(Optional.of(usuarioConHash));
 
-        mockMvc.perform(get("/api/usuarios/me")
+        mockMvc.perform(get("/api/v1/usuarios/me")
                         .header("Authorization", "Bearer " + validToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rut").value(RUT))

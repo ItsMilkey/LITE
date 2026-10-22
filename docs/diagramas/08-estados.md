@@ -18,7 +18,7 @@ stateDiagram-v2
     direction LR
     [*] --> PENDIENTE : se crea la deuda
     PENDIENTE --> PAGADA : pago acumulado alcanza montoTotal
-    PENDIENTE --> CANCELADA : PATCH /api/deudas/{id}/cancelar
+    PENDIENTE --> CANCELADA : PATCH /api/v1/deudas/{id}/cancelar
     PAGADA --> [*]
     CANCELADA --> [*]
 

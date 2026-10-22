@@ -28,7 +28,7 @@ sequenceDiagram
     participant SM as SignoMovimiento
     participant SU as SecurityUtils
 
-    U->>C: POST /api/deudas/{id}/pagar (PagoDeudaDTO)
+    U->>C: POST /api/v1/deudas/{id}/pagar (PagoDeudaDTO)
     C->>DS: registrarPago(id, pagoDTO)
     DS->>DR: findById(id)
     DS->>SU: validarPropietario(rut de la deuda)
@@ -66,7 +66,7 @@ sequenceDiagram
 ```
 
 ## Notas y "por confirmar"
-- `DeudaService.registrarPago` es el **único productor** de `PAGO_DEUDA`: tanto `POST /api/deudas/{id}/pagar` como `POST /api/movimientos` con ese tipo terminan aquí.
+- `DeudaService.registrarPago` es el **único productor** de `PAGO_DEUDA`: tanto `POST /api/v1/deudas/{id}/pagar` como `POST /api/v1/movimientos` con ese tipo terminan aquí.
 - `modoPago`: `CUOTA_CALCULADA` cobra lo que falta de la próxima cuota impaga (cuota + costo adicional); `MONTO_PERSONALIZADO` (por defecto) exige `monto > 0`.
 - Sobrepago, deuda no `PENDIENTE` o `cuotasPagadasPrevias >= cantidadCuotas` → **409**; deuda ajena → **403**; validación → **400**.
 - `saldoCapital` aproxima lo que costaría liquidar hoy y **no** incluye el interés devengado del mes en curso. `totalPorPagar` incluye intereses futuros.

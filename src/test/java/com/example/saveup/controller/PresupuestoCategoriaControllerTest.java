@@ -72,7 +72,7 @@ class PresupuestoCategoriaControllerTest {
     @Test
     @DisplayName("PUT guarda los límites y GET los devuelve")
     void putYGetLimites() throws Exception {
-        mockMvc.perform(put("/api/presupuestos/categorias/me")
+        mockMvc.perform(put("/api/v1/presupuestos/categorias/me")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"categorias\":[{\"categoriaId\":" + comida.getId() + ",\"limiteMensual\":150000.00}]}"))
@@ -80,7 +80,7 @@ class PresupuestoCategoriaControllerTest {
                 .andExpect(jsonPath("$[0].categoriaId").value(comida.getId()))
                 .andExpect(jsonPath("$[0].limiteMensual").value(150000.00));
 
-        mockMvc.perform(get("/api/presupuestos/categorias/me").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/v1/presupuestos/categorias/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].categoria").value("Comida T5"));
     }
@@ -88,7 +88,7 @@ class PresupuestoCategoriaControllerTest {
     @Test
     @DisplayName("PUT con límite ≤ 0 → 400 Bad Request (Bean Validation)")
     void putLimiteNoPositivo_400() throws Exception {
-        mockMvc.perform(put("/api/presupuestos/categorias/me")
+        mockMvc.perform(put("/api/v1/presupuestos/categorias/me")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"categorias\":[{\"categoriaId\":" + comida.getId() + ",\"limiteMensual\":0}]}"))
@@ -98,7 +98,7 @@ class PresupuestoCategoriaControllerTest {
     @Test
     @DisplayName("PUT con límite negativo → 400 Bad Request")
     void putLimiteNegativo_400() throws Exception {
-        mockMvc.perform(put("/api/presupuestos/categorias/me")
+        mockMvc.perform(put("/api/v1/presupuestos/categorias/me")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"categorias\":[{\"categoriaId\":" + comida.getId() + ",\"limiteMensual\":-5}]}"))
@@ -108,7 +108,7 @@ class PresupuestoCategoriaControllerTest {
     @Test
     @DisplayName("PUT con categoriaId nulo → 400 Bad Request (Bean Validation)")
     void putCategoriaIdNulo_400() throws Exception {
-        mockMvc.perform(put("/api/presupuestos/categorias/me")
+        mockMvc.perform(put("/api/v1/presupuestos/categorias/me")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"categorias\":[{\"limiteMensual\":1000}]}"))
@@ -118,7 +118,7 @@ class PresupuestoCategoriaControllerTest {
     @Test
     @DisplayName("PUT con categoría inexistente → 400 Bad Request")
     void putCategoriaInexistente_400() throws Exception {
-        mockMvc.perform(put("/api/presupuestos/categorias/me")
+        mockMvc.perform(put("/api/v1/presupuestos/categorias/me")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"categorias\":[{\"categoriaId\":999999,\"limiteMensual\":1000}]}"))
@@ -128,7 +128,7 @@ class PresupuestoCategoriaControllerTest {
     @Test
     @DisplayName("Ejecución por categoría: 80% del límite → estado ALERTA")
     void ejecucionCategoria_alerta() throws Exception {
-        mockMvc.perform(put("/api/presupuestos/categorias/me")
+        mockMvc.perform(put("/api/v1/presupuestos/categorias/me")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"categorias\":[{\"categoriaId\":" + comida.getId() + ",\"limiteMensual\":100.00}]}"))
@@ -138,7 +138,7 @@ class PresupuestoCategoriaControllerTest {
         movimiento(TipoMovimiento.PAGO_DEUDA, "-30.00", comida, fecha(2026, 5, 20));
         movimiento(TipoMovimiento.GASTO_GENERAL, "-10.00", comida, fecha(2026, 6, 1));
 
-        mockMvc.perform(get("/api/presupuestos/categorias/ejecucion/me")
+        mockMvc.perform(get("/api/v1/presupuestos/categorias/ejecucion/me")
                         .param("month", "5").param("year", "2026")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -150,7 +150,7 @@ class PresupuestoCategoriaControllerTest {
     @Test
     @DisplayName("Historial con rango mayor a 24 meses → 400 Bad Request")
     void historial_masDe24Meses_400() throws Exception {
-        mockMvc.perform(get("/api/presupuestos/historial/me")
+        mockMvc.perform(get("/api/v1/presupuestos/historial/me")
                         .param("desde", "2024-01").param("hasta", "2026-02")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
@@ -160,7 +160,7 @@ class PresupuestoCategoriaControllerTest {
     @Test
     @DisplayName("Historial de un mes sin ingresos → 200 con ceros")
     void historial_mesSinIngresos_ceros() throws Exception {
-        mockMvc.perform(get("/api/presupuestos/historial/me")
+        mockMvc.perform(get("/api/v1/presupuestos/historial/me")
                         .param("desde", "2026-03").param("hasta", "2026-03")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -172,7 +172,7 @@ class PresupuestoCategoriaControllerTest {
     @Test
     @DisplayName("POST /me con suma de porcentajes ≠ 100 → 400 Bad Request")
     void postConfiguracion_sumaNo100_400() throws Exception {
-        mockMvc.perform(post("/api/presupuestos/me")
+        mockMvc.perform(post("/api/v1/presupuestos/me")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"porcentajeNecesidades\":50.00,\"porcentajeDeseos\":30.00,\"porcentajeAhorro\":21.00}"))
@@ -183,7 +183,7 @@ class PresupuestoCategoriaControllerTest {
     @Test
     @DisplayName("POST /me con suma de porcentajes = 100 → 200 y devuelve el DTO")
     void postConfiguracion_suma100_ok() throws Exception {
-        mockMvc.perform(post("/api/presupuestos/me")
+        mockMvc.perform(post("/api/v1/presupuestos/me")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"porcentajeNecesidades\":50.00,\"porcentajeDeseos\":30.00,\"porcentajeAhorro\":20.00}"))
@@ -195,7 +195,7 @@ class PresupuestoCategoriaControllerTest {
     @Test
     @DisplayName("POST /me con un porcentaje negativo → 400 Bad Request")
     void postConfiguracion_negativo_400() throws Exception {
-        mockMvc.perform(post("/api/presupuestos/me")
+        mockMvc.perform(post("/api/v1/presupuestos/me")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"porcentajeNecesidades\":120.00,\"porcentajeDeseos\":10.00,\"porcentajeAhorro\":-30.00}"))

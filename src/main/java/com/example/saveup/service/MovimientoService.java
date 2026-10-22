@@ -40,7 +40,7 @@ public class MovimientoService {
     /**
      * Tipos que se pueden registrar directamente por este endpoint. Los movimientos
      * hacia y desde metas (ABONO_META, RETIRO_META) solo se crean desde
-     * /api/metas/{id}/abonar y /api/metas/{id}/retirar, para que siempre exista la
+     * /api/v1/metas/{id}/abonar y /api/v1/metas/{id}/retirar, para que siempre exista la
      * meta que los respalda.
      */
     private static final Set<TipoMovimiento> TIPOS_PERMITIDOS = Set.of(
@@ -310,7 +310,7 @@ public class MovimientoService {
 
     /**
      * Rechaza los tipos que no corresponden a este endpoint. Los movimientos hacia y
-     * desde metas se crean solo desde /api/metas, donde existe la meta que los respalda.
+     * desde metas se crean solo desde /api/v1/metas, donde existe la meta que los respalda.
      */
     private void validarTipoRegistrable(TipoMovimiento tipo) {
         if (tipo == null) {

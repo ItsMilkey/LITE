@@ -17,7 +17,7 @@ y de `docs/CONTEXT.md` §Reglas vigentes.
 - Criterios de aceptación:
   - Todo recurso accedido por ID valida propiedad (`SecurityUtils.validarPropietario`).
   - Recurso **ajeno** → **403** (`AccessDeniedException`), **nunca** `SecurityException`.
-  - Aplica a `/api/movimientos/{id}`, `/api/metas/{id}`, `/api/deudas/{id}` y sus subrutas.
+  - Aplica a `/api/v1/movimientos/{id}`, `/api/v1/metas/{id}`, `/api/v1/deudas/{id}` y sus subrutas.
 - Trazabilidad: (todos los módulos) · `security/**` · base
 - Estado: **implementada**
 

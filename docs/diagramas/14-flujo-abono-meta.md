@@ -27,7 +27,7 @@ sequenceDiagram
     participant SU as SecurityUtils
 
     Note over U,S: Abonar
-    U->>C: POST /api/metas/{id}/abonar (AbonoRetiroDTO)
+    U->>C: POST /api/v1/metas/{id}/abonar (AbonoRetiroDTO)
     C->>S: realizarAbono(id, dto)
     S->>META: findById(id)
     S->>SU: validarPropietario(rut de la meta)
@@ -45,7 +45,7 @@ sequenceDiagram
     end
 
     Note over U,S: Retirar
-    U->>C: POST /api/metas/{id}/retirar (AbonoRetiroDTO)
+    U->>C: POST /api/v1/metas/{id}/retirar (AbonoRetiroDTO)
     C->>S: realizarRetiro(id, dto)
     S->>META: findById(id)
     S->>SU: validarPropietario(rut)
@@ -63,7 +63,7 @@ sequenceDiagram
     end
 
     Note over U,S: Eliminar meta con reintegro
-    U->>C: DELETE /api/metas/{id}
+    U->>C: DELETE /api/v1/metas/{id}
     C->>S: eliminarMeta(id)
     S->>META: findById(id)
     S->>SU: validarPropietario(rut)
@@ -83,7 +83,7 @@ sequenceDiagram
 ```
 
 ## Notas y "por confirmar"
-- Los movimientos de meta (`ABONO_META`, `RETIRO_META`) **solo** se crean desde `/api/metas`; `POST /api/movimientos` los rechaza con 400 para que siempre exista la meta que los respalda.
+- Los movimientos de meta (`ABONO_META`, `RETIRO_META`) **solo** se crean desde `/api/v1/metas`; `POST /api/v1/movimientos` los rechaza con 400 para que siempre exista la meta que los respalda.
 - El signo lo impone `SignoMovimiento`: `ABONO_META` negativo (el dinero sale del saldo principal), `RETIRO_META` positivo (vuelve al saldo).
 - El control de retiro se hace sobre el **valor canónico absoluto**, no sobre lo que envía el cliente.
 - Al eliminar con ahorro acumulado se crea un `RETIRO_META` **sin vincular** a la meta, y luego se desvinculan los movimientos existentes antes de borrarla.

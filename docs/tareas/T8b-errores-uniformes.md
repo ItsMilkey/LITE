@@ -39,10 +39,10 @@ Un único formato de error, estable y documentado, que el cliente Flutter pueda 
 - Los conflictos de negocio sin código propio (deuda ya pagada, condiciones congeladas, movimiento no editable,
   meta protegida, retiro excesivo) se lanzan con `ErrorNegocio(CONFLICTO_REGLA_NEGOCIO, mensaje)` y detail específico.
 - `IllegalStateException` ya NO se traduce a 409: es un fallo interno o una invariante y termina en 500 ERROR_INTERNO.
-- `GET /api/presupuestos/me` sin configuración responde 404 NO_ENCONTRADO.
-- `GET /api/usuarios/me` devuelve `UsuarioResponseDTO` (`rut`, `nombre`, `apellido`, `email`, `fechaRegistro`), nunca la entidad ni el hash.
+- `GET /api/v1/presupuestos/me` sin configuración responde 404 NO_ENCONTRADO.
+- `GET /api/v1/usuarios/me` devuelve `UsuarioResponseDTO` (`rut`, `nombre`, `apellido`, `email`, `fechaRegistro`), nunca la entidad ni el hash.
 - Todos los endpoints paginados usan `Paginacion.crear(page, size)`: `page >= 0` y `1 <= size <= 100`; fuera de rango →
-  400 DATOS_INVALIDOS con detail en español. Incluye movimientos paginados, pagos de deuda y el `limit` de `/api/movimientos/me`.
+  400 DATOS_INVALIDOS con detail en español. Incluye movimientos paginados, pagos de deuda y el `limit` de `/api/v1/movimientos/me`.
 - Los reportes mensuales validan `mes` (1–12) y `anio` (2000–2100) antes de construir `YearMonth`; una entrada inválida → 400 DATOS_INVALIDOS.
 - Los errores de conversión de Spring (`typeMismatch`, fechas, enums en `@ModelAttribute`) se responden como PARAMETRO_INVALIDO con
   `"El valor no tiene el formato esperado"`; nunca se copian mensajes internos de Spring.
@@ -68,4 +68,4 @@ Un único formato de error, estable y documentado, que el cliente Flutter pueda 
 - Cobertura adicional: paginación inválida (`page=-1`, `size=0`, `size=101`), reporte con `mes=13` o año fuera de rango,
   `desde=abc`/`tipoMovimiento=FOO` → PARAMETRO_INVALIDO, enum inválido en body, parámetro faltante, DataIntegrity 409 sin
   mensaje interno, contraseña incorrecta con el mismo mensaje que email inexistente, 500 por `IllegalStateException` con el
-  mismo `idError` en el log, `Accept: application/json`/`*/*` y `/api/usuarios/me` como DTO.
+  mismo `idError` en el log, `Accept: application/json`/`*/*` y `/api/v1/usuarios/me` como DTO.

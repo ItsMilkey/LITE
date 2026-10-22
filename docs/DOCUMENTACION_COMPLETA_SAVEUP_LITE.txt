@@ -52,7 +52,7 @@ Aspectos destacados:
 - Motor financiero propio (paquete service/finanzas): cuotas francesas, tabla de
   amortizacion, CAE y conversion de tasas, ademas de una imputacion de pagos pura
   (interes -> costo adicional -> capital) que no se persiste.
-- Simulador de credito sin persistencia (POST /api/simulaciones/credito): cuota,
+- Simulador de credito sin persistencia (POST /api/v1/simulaciones/credito): cuota,
   costos, CAE, resumen educativo, tabla de amortizacion y comparacion de plazos.
 - Deudas con condiciones de credito (modalidades SIN_INTERES, TASA_CONOCIDA y
   CUOTA_CONOCIDA), ficha enriquecida, cronograma con estado por cuota e historial
@@ -681,7 +681,7 @@ son iguales); un porcentaje nulo se trata como OK (sin gasto).
   interes, costos, descripcion (String).
 
 5.20. MovimientoFiltroDTO  [NUEVO - T4]
-- Proposito: Filtros opcionales de GET /api/movimientos/paginados/me.
+- Proposito: Filtros opcionales de GET /api/v1/movimientos/paginados/me.
 - Campos (todos opcionales):
   * desde / hasta (LocalDate, ISO inclusivos; no puede haber desde > hasta)
   * tipoMovimiento (TipoMovimiento)
@@ -691,7 +691,7 @@ son iguales); un porcentaje nulo se trata como OK (sin gasto).
   * q (String): busqueda case-insensitive en descripcion
 
 5.21. MovimientoEdicionDTO  [NUEVO - T4]
-- Proposito: Edicion parcial de un movimiento (PUT /api/movimientos/{id}). La
+- Proposito: Edicion parcial de un movimiento (PUT /api/v1/movimientos/{id}). La
   fecha NO es editable; el tipo tampoco se cambia aqui. Se aplican solo los
   campos no nulos.
 - Campos: monto (BigDecimal, @Digits(17,2)), descripcion (String, @Size(max=100)),
@@ -705,7 +705,7 @@ son iguales); un porcentaje nulo se trata como OK (sin gasto).
   (Boolean).
 
 5.23. PresupuestoCategoriaRequestDTO / PresupuestoCategoriaItemDTO  [NUEVO - T5]
-- Proposito: Cuerpo e items del PUT /api/presupuestos/categorias/me (reemplaza el
+- Proposito: Cuerpo e items del PUT /api/v1/presupuestos/categorias/me (reemplaza el
   conjunto completo de limites). Se envuelve la lista en un DTO para que @Valid
   valide cada item.
 - PresupuestoCategoriaItemDTO: categoriaId (Long, @NotNull), limiteMensual
@@ -737,9 +737,9 @@ son iguales); un porcentaje nulo se trata como OK (sin gasto).
 ================================================================================
 
 --------------------------------------------------------------------------------
-MODULO: USUARIOS (/api/usuarios)
+MODULO: USUARIOS (/api/v1/usuarios)
 --------------------------------------------------------------------------------
-1. POST /api/usuarios/register (PÚBLICO)
+1. POST /api/v1/usuarios/register (PÚBLICO)
    - Descripcion: Registra un usuario y le crea su meta por defecto "Ahorros".
    - Body: UsuarioRegistroDTO (JSON)
    - Respuestas:
@@ -747,14 +747,14 @@ MODULO: USUARIOS (/api/usuarios)
      * 409 Conflict: {"error": "El RUT ingresado ya está registrado."} o Correo
      * 500 Internal Server Error: {"error": "..."}
 
-2. POST /api/usuarios/login (PÚBLICO)
+2. POST /api/v1/usuarios/login (PÚBLICO)
    - Descripcion: Autentica credenciales mediante BCrypt y retorna el token JWT firmado.
    - Body: UsuarioLoginDTO (JSON)
    - Respuestas:
      * 200 OK: {"token": "eyJhbGci..."}
      * 401 Unauthorized: {"error": "Credenciales inválidas."}
 
-3. GET /api/usuarios/me (PROTEGIDO)
+3. GET /api/v1/usuarios/me (PROTEGIDO)
    - Descripcion: Obtiene el perfil completo del usuario autenticado (sin contraseña).
    - Cabecera: Authorization: Bearer <token>
    - Respuestas:
@@ -762,21 +762,21 @@ MODULO: USUARIOS (/api/usuarios)
      * 401 Unauthorized / 403 Forbidden
 
 --------------------------------------------------------------------------------
-MODULO: SALDOS (/api/saldos)
+MODULO: SALDOS (/api/v1/saldos)
 --------------------------------------------------------------------------------
-4. GET /api/saldos/me (PROTEGIDO - Implicit Context)
+4. GET /api/v1/saldos/me (PROTEGIDO - Implicit Context)
    - Descripcion: Retorna el saldo neto acumulado del usuario autenticado.
    - Cabecera: Authorization: Bearer <token>
    - Respuestas:
      * 200 OK: {"saldo": 150000.0}
 
 --------------------------------------------------------------------------------
-MODULO: MOVIMIENTOS (/api/movimientos)
+MODULO: MOVIMIENTOS (/api/v1/movimientos)
 --------------------------------------------------------------------------------
-5. POST /api/movimientos (PROTEGIDO)
+5. POST /api/v1/movimientos (PROTEGIDO)
    - Descripcion: Registra un movimiento. usuarioRut es opcional (se infiere del token).
      Acepta solo INGRESO_GENERAL, GASTO_GENERAL y PAGO_DEUDA; ABONO_META y
-     RETIRO_META se rechazan con 400 (se crean desde /api/metas). El signo lo
+     RETIRO_META se rechazan con 400 (se crean desde /api/v1/metas). El signo lo
      impone el tipo (SignoMovimiento). Soporta Smart-Split automático si es
      INGRESO_GENERAL y aplicarPresupuesto=true.
    - Body: MovimientoRegistroDTO (JSON)
@@ -785,12 +785,12 @@ MODULO: MOVIMIENTOS (/api/movimientos)
      * 400 Bad Request: tipo no registrable o monto nulo/cero
      * 409 Conflict: sobrepago o deuda no PENDIENTE (pagos delegados a DeudaService)
 
-6. GET /api/movimientos/me (PROTEGIDO - Implicit Context)
+6. GET /api/v1/movimientos/me (PROTEGIDO - Implicit Context)
    - Descripcion: Obtiene movimientos del usuario autenticado. Permite ?limit=N.
    - Respuestas:
      * 200 OK: List<MovimientoResponseDTO>
 
-7. GET /api/movimientos/paginados/me (PROTEGIDO - Implicit Context)
+7. GET /api/v1/movimientos/paginados/me (PROTEGIDO - Implicit Context)
    - Descripcion: Historial paginado del usuario autenticado. Filtros opcionales
      (T4): ?page=0&size=50&desde&hasta&tipoMovimiento&categoriaId&montoMin&montoMax&q.
      desde/hasta son ISO inclusivos; montoMin/montoMax comparan contra el valor
@@ -800,7 +800,7 @@ MODULO: MOVIMIENTOS (/api/movimientos)
      * 200 OK: PageResponseDTO<MovimientoResponseDTO>
      * 400 Bad Request: desde>hasta, montos negativos o montoMin>montoMax
 
-8. PUT /api/movimientos/{id} (PROTEGIDO - Edicion T4)
+8. PUT /api/v1/movimientos/{id} (PROTEGIDO - Edicion T4)
    - Descripcion: Edicion parcial (descripcion, monto y/o categoriaId; la fecha y
      el tipo no cambian). El monto se reescribe con SignoMovimiento. Solo aplica a
      INGRESO_GENERAL y GASTO_GENERAL sin deuda ni meta; el resto se modifica desde
@@ -811,7 +811,7 @@ MODULO: MOVIMIENTOS (/api/movimientos)
      * 403 Forbidden: movimiento de otro usuario
      * 404 / 409 segun corresponda
 
-9. DELETE /api/movimientos/{id} (PROTEGIDO - T4)
+9. DELETE /api/v1/movimientos/{id} (PROTEGIDO - T4)
     - Descripcion: Elimina un movimiento propio con las mismas reglas que la
       edicion (tipos permitidos y sin movimientos derivados).
     - Respuestas:
@@ -819,36 +819,36 @@ MODULO: MOVIMIENTOS (/api/movimientos)
       * 403 / 404 / 409 segun corresponda
 
 --------------------------------------------------------------------------------
-MODULO: CATEGORIAS (/api/categorias)
+MODULO: CATEGORIAS (/api/v1/categorias)
 --------------------------------------------------------------------------------
-10. GET /api/categorias (PROTEGIDO)
+10. GET /api/v1/categorias (PROTEGIDO)
     - Descripcion: Obtiene el catálogo de categorías con colores, iconos y tipo.
     - Respuestas:
       * 200 OK: List<CategoriaDTO>
 
 --------------------------------------------------------------------------------
-MODULO: METAS DE AHORRO (/api/metas)
+MODULO: METAS DE AHORRO (/api/v1/metas)
 --------------------------------------------------------------------------------
-11. POST /api/metas (PROTEGIDO)
+11. POST /api/v1/metas (PROTEGIDO)
     - Descripcion: Crea una meta para el usuario autenticado (usuarioRut opcional).
     - Body: MetaAhorroCreacionDTO (JSON)
     - Respuestas:
       * 201 Created: MetaAhorroResponseDTO
 
-12. GET /api/metas/me (PROTEGIDO - Implicit Context)
+12. GET /api/v1/metas/me (PROTEGIDO - Implicit Context)
     - Descripcion: Lista las metas del usuario autenticado.
     - Respuestas:
       * 200 OK: List<MetaAhorroResponseDTO>
 
-13. POST /api/metas/{metaId}/abonar (PROTEGIDO - Valida propiedad de la meta)
-14. POST /api/metas/{metaId}/retirar (PROTEGIDO - Valida propiedad de la meta)
-15. PUT /api/metas/{metaId} (PROTEGIDO - Valida propiedad de la meta)
-16. DELETE /api/metas/{metaId} (PROTEGIDO - Valida propiedad, reembolso a saldo)
+13. POST /api/v1/metas/{metaId}/abonar (PROTEGIDO - Valida propiedad de la meta)
+14. POST /api/v1/metas/{metaId}/retirar (PROTEGIDO - Valida propiedad de la meta)
+15. PUT /api/v1/metas/{metaId} (PROTEGIDO - Valida propiedad de la meta)
+16. DELETE /api/v1/metas/{metaId} (PROTEGIDO - Valida propiedad, reembolso a saldo)
 
 --------------------------------------------------------------------------------
-MODULO: DEUDAS (/api/deudas)
+MODULO: DEUDAS (/api/v1/deudas)
 --------------------------------------------------------------------------------
-17. POST /api/deudas (PROTEGIDO)
+17. POST /api/v1/deudas (PROTEGIDO)
     - Descripcion: Registra deuda para el usuario autenticado (identidad obtenida del token).
       Acepta el bloque "condiciones" (motor financiero) o, por compatibilidad,
       montoTotal + cantidadCuotas.
@@ -857,87 +857,87 @@ MODULO: DEUDAS (/api/deudas)
       * 201 Created: DeudaResponseDTO
       * 400 Bad Request: condiciones invalidas (CalculoFinancieroException)
 
-18. GET /api/deudas/me (PROTEGIDO - Implicit Context)
+18. GET /api/v1/deudas/me (PROTEGIDO - Implicit Context)
     - Descripcion: Lista deudas con cálculo en tiempo real optimizado mediante proyección JPQL (evita N+1).
     - Respuestas:
       * 200 OK: List<DeudaResponseDTO>
 
-19. GET /api/deudas/{deudaId} (PROTEGIDO - T3)
+19. GET /api/v1/deudas/{deudaId} (PROTEGIDO - T3)
     - Descripcion: Devuelve la ficha enriquecida de una deuda. Valida propiedad
       (ajena -> 403).
     - Respuestas: 200 OK: DeudaResponseDTO; 404 / 403
 
-20. GET /api/deudas/{deudaId}/amortizacion (PROTEGIDO - T3)
+20. GET /api/v1/deudas/{deudaId}/amortizacion (PROTEGIDO - T3)
     - Descripcion: Cronograma reconstruido sin persistir. Cada cuota lleva estado
       (PAGADA | PARCIAL | PENDIENTE), montoPagado y previa segun la imputacion.
     - Respuestas: 200 OK: List<CuotaSimulacionDTO>
 
-21. GET /api/deudas/{deudaId}/pagos (PROTEGIDO - T3)
+21. GET /api/v1/deudas/{deudaId}/pagos (PROTEGIDO - T3)
     - Descripcion: Historial de pagos reales, paginado (?page&size) y en orden
       fecha desc, con desglose capital/interes/costos calculado en memoria.
     - Respuestas:
       * 200 OK: PageResponseDTO<PagoDeudaResponseDTO>
       * 400 Bad Request: page < 0 o size < 1
 
-22. POST /api/deudas/{deudaId}/pagar (PROTEGIDO - Valida propiedad de la deuda)
+22. POST /api/v1/deudas/{deudaId}/pagar (PROTEGIDO - Valida propiedad de la deuda)
     - Descripcion: Unico productor de PAGO_DEUDA. modoPago CUOTA_CALCULADA cobra lo
       que falta de la proxima cuota impaga; MONTO_PERSONALIZADO exige monto > 0.
       Sobrepago o deuda no PENDIENTE -> 409.
     - Body: PagoDeudaDTO
     - Respuestas: 200 OK: DeudaResponseDTO; 409 / 400 / 403
 
-23. PUT /api/deudas/{deudaId} (PROTEGIDO - Valida propiedad de la deuda)
+23. PUT /api/v1/deudas/{deudaId} (PROTEGIDO - Valida propiedad de la deuda)
     - Descripcion: Sin pagos recalcula todas las condiciones; con pagos solo permite
       nombre, descripcion, tipoDeuda y cuotasPagadasPrevias (enviar condiciones,
       montoTotal o cantidadCuotas -> 409).
     - Respuestas: 200 OK; 409 / 400
 
-24. PATCH /api/deudas/{deudaId}/cancelar (PROTEGIDO - Valida propiedad)
+24. PATCH /api/v1/deudas/{deudaId}/cancelar (PROTEGIDO - Valida propiedad)
     - Descripcion: Pasa estado a CANCELADA (soft delete); no se cancela una PAGADA.
     - Respuestas: 200 OK; 409
 
 --------------------------------------------------------------------------------
-MODULO: PRESUPUESTOS (/api/presupuestos)
+MODULO: PRESUPUESTOS (/api/v1/presupuestos)
 --------------------------------------------------------------------------------
-25. GET /api/presupuestos/me (PROTEGIDO - Implicit Context)
+25. GET /api/v1/presupuestos/me (PROTEGIDO - Implicit Context)
     - Descripcion: Configuracion 50/30/20 del usuario. Responde 404 si no existe.
     - Respuestas: 200 OK: ConfiguracionPresupuestoResponseDTO
 
-26. POST /api/presupuestos/me (PROTEGIDO - Implicit Context)
+26. POST /api/v1/presupuestos/me (PROTEGIDO - Implicit Context)
     - Descripcion: Guarda/actualiza la configuracion. Los porcentajes deben sumar
       exactamente 100.00 y ninguno ser negativo; si no -> 400.
     - Body: ConfiguracionPresupuestoRequestDTO
     - Respuestas: 200 OK: ConfiguracionPresupuestoResponseDTO; 400
 
-27. GET /api/presupuestos/ejecucion/me (PROTEGIDO - Implicit Context)
+27. GET /api/v1/presupuestos/ejecucion/me (PROTEGIDO - Implicit Context)
     - Descripcion: Ejecucion general del mes (?month&year; por defecto el actual).
     - Respuestas: 200 OK: EjecucionPresupuestoDTO; 400 (mes fuera de 1-12)
 
-28. GET /api/presupuestos/categorias/me (PROTEGIDO - T5)
+28. GET /api/v1/presupuestos/categorias/me (PROTEGIDO - T5)
     - Descripcion: Limites mensuales por categoria del usuario.
     - Respuestas: 200 OK: List<PresupuestoCategoriaDTO>
 
-29. PUT /api/presupuestos/categorias/me (PROTEGIDO - T5)
+29. PUT /api/v1/presupuestos/categorias/me (PROTEGIDO - T5)
     - Descripcion: Reemplaza el conjunto completo de limites. Valida categoria
       existente, limite > 0 y sin categorias repetidas; si no -> 400.
     - Body: PresupuestoCategoriaRequestDTO
     - Respuestas: 200 OK: List<PresupuestoCategoriaDTO>; 400
 
-30. GET /api/presupuestos/categorias/ejecucion/me (PROTEGIDO - T5)
+30. GET /api/v1/presupuestos/categorias/ejecucion/me (PROTEGIDO - T5)
     - Descripcion: Gastado vs. limite por categoria en un mes (?month&year). El
       estado se deriva del porcentaje usado (OK / ALERTA / EXCEDIDO).
     - Respuestas: 200 OK: List<EjecucionCategoriaDTO>; 400
 
-31. GET /api/presupuestos/historial/me (PROTEGIDO - T5)
+31. GET /api/v1/presupuestos/historial/me (PROTEGIDO - T5)
     - Descripcion: Historial de la ejecucion general mes a mes (?desde&hasta en
       formato YYYY-MM, inclusivos). Maximo 24 meses.
     - Respuestas: 200 OK: List<HistorialPresupuestoDTO>; 400 (formato, rango
       invertido o mas de 24 meses)
 
 --------------------------------------------------------------------------------
-MODULO: SIMULACIONES (/api/simulaciones)  [NUEVO - T1b]
+MODULO: SIMULACIONES (/api/v1/simulaciones)  [NUEVO - T1b]
 --------------------------------------------------------------------------------
-32. POST /api/simulaciones/credito (PROTEGIDO)
+32. POST /api/v1/simulaciones/credito (PROTEGIDO)
     - Descripcion: Simulador de credito sin persistencia. Resuelve condiciones,
       calcula cuota, costos, CAE, resumen educativo, tabla y comparacion de plazos.
     - Body: SimulacionCreditoRequestDTO
@@ -946,9 +946,9 @@ MODULO: SIMULACIONES (/api/simulaciones)  [NUEVO - T1b]
       * 400 Bad Request: condiciones invalidas (CalculoFinancieroException)
 
 --------------------------------------------------------------------------------
-MODULO: REPORTES (/api/reportes)
+MODULO: REPORTES (/api/v1/reportes)
 --------------------------------------------------------------------------------
-33. GET /api/reportes/movimientos/exportar (PROTEGIDO - Implicit Context)
+33. GET /api/v1/reportes/movimientos/exportar (PROTEGIDO - Implicit Context)
     - Descripcion: Descarga PDF o CSV del usuario autenticado en sesión.
     - Parametros Query:
       * alcance (String, "COMPLETO" o "MENSUAL", default "COMPLETO")
@@ -1213,11 +1213,11 @@ R3. IMPUTACION DE PAGOS (T2/T3)
   capital. Las cuotasPagadasPrevias cuentan como completas ya pagadas y los pagos
   reales empiezan en la siguiente. Nada de la imputacion se persiste.
 - DeudaService.registrarPago es el UNICO productor de PAGO_DEUDA; POST
-  /api/movimientos con ese tipo delega en el. modoPago CUOTA_CALCULADA cobra lo
+  /api/v1/movimientos con ese tipo delega en el. modoPago CUOTA_CALCULADA cobra lo
   que falta de la proxima cuota impaga (cuota + costo adicional);
   MONTO_PERSONALIZADO (por defecto) exige monto > 0. Sobrepago o deuda no
   PENDIENTE -> 409; deuda ajena -> 403.
-- Detalle e historial (T3): GET /api/deudas/{id} (ficha con derivados),
+- Detalle e historial (T3): GET /api/v1/deudas/{id} (ficha con derivados),
   /amortizacion (estado PAGADA|PARCIAL|PENDIENTE, montoPagado, previa) y /pagos
   (paginado fecha desc; desglose = imputacion acumulada tras ese pago menos la
   anterior, en memoria y con una sola consulta). CuotaSimulacionDTO.from(tabla,
@@ -1229,12 +1229,12 @@ R3. IMPUTACION DE PAGOS (T2/T3)
   null y el listado sigue.
 
 R4. HISTORIAL FILTRADO Y EDICION DE MOVIMIENTOS (T4)
-- GET /api/movimientos/paginados/me acepta filtros opcionales (desde/hasta ISO
+- GET /api/v1/movimientos/paginados/me acepta filtros opcionales (desde/hasta ISO
   inclusivos, tipoMovimiento, categoriaId, montoMin/montoMax contra la magnitud
   (valor absoluto) del monto, q case-insensitive con % y _ escapados) via JPA
   Specifications, siempre filtrando por el RUT del token. 400 si desde>hasta,
   montoMin/montoMax negativos o montoMin>montoMax.
-- PUT/DELETE /api/movimientos/{id} solo aplican a INGRESO_GENERAL y GASTO_GENERAL
+- PUT/DELETE /api/v1/movimientos/{id} solo aplican a INGRESO_GENERAL y GASTO_GENERAL
   sin deuda ni meta (el resto -> 409 "se modifica desde su modulo"), exigen
   propiedad (ajeno -> 403) y rechazan con 409 un ingreso con movimientos derivados
   (movimiento_origen_id). La fecha no se edita; el monto se reescribe con
@@ -1305,9 +1305,9 @@ FLUJO 2: REGISTRO DE MOVIMIENTOS Y ALGORITMO SMART-SPLIT
 
 Nota: el signo del movimiento lo impone SignoMovimiento segun el tipo; el monto
 llega en positivo. Los tipos ABONO_META y RETIRO_META no se registran por este
-endpoint (400): se crean desde /api/metas. PAGO_DEUDA delega en DeudaService.
+endpoint (400): se crean desde /api/v1/metas. PAGO_DEUDA delega en DeudaService.
 
-[POST /api/movimientos (MovimientoRegistroDTO)]
+[POST /api/v1/movimientos (MovimientoRegistroDTO)]
                       |
                       v
      [Validar tipo registrable + fijar signo]
@@ -1375,16 +1375,16 @@ FLUJO 3: CICLO DE VIDA Y AMORTIZACION DE DEUDAS
 Estado Inicial:
 [Crear Deuda via condiciones -> MotorFinanciero] -> PENDIENTE
      |
-     +--- (PUT /api/deudas/{id}): sin pagos recalcula todo; con pagos solo
+     +--- (PUT /api/v1/deudas/{id}): sin pagos recalcula todo; con pagos solo
      |      etiqueta y cuotasPagadasPrevias (condiciones -> 409)
      |
-     +--- (PATCH /api/deudas/{id}/cancelar) -> [Pasa a Estado: CANCELADA]
+     +--- (PATCH /api/v1/deudas/{id}/cancelar) -> [Pasa a Estado: CANCELADA]
      |
-     +--- (GET /api/deudas/{id})            -> ficha enriquecida
-     +--- (GET /api/deudas/{id}/amortizacion) -> cronograma con estado por cuota
-     +--- (GET /api/deudas/{id}/pagos)      -> historial paginado con desglose
+     +--- (GET /api/v1/deudas/{id})            -> ficha enriquecida
+     +--- (GET /api/v1/deudas/{id}/amortizacion) -> cronograma con estado por cuota
+     +--- (GET /api/v1/deudas/{id}/pagos)      -> historial paginado con desglose
      |
-     +--- (POST /api/deudas/{id}/pagar):
+     +--- (POST /api/v1/deudas/{id}/pagar):
                |
                v
           [Validar propiedad y estado PENDIENTE]
@@ -1422,20 +1422,20 @@ FLUJO 4: METAS DE AHORRO Y ELIMINACION CON REEMBOLSO
 --------------------------------------------------------------------------------
 
 Escenario A: Abono a Meta
-  [POST /api/metas/{id}/abonar (monto)]
+  [POST /api/v1/metas/{id}/abonar (monto)]
   -> Crea movimiento ABONO_META con monto negativo (-monto) que resta del saldo.
   -> Incrementa meta.montoActual += monto.
   -> Retorna la meta con saldo actualizado.
 
 Escenario B: Retiro de Meta
-  [POST /api/metas/{id}/retirar (monto)]
+  [POST /api/v1/metas/{id}/retirar (monto)]
   -> Verifica si monto > totalAhorrado. Si es mayor, rechaza con 409 Conflict.
   -> Crea movimiento RETIRO_META con monto positivo (+monto) que suma al saldo.
   -> Decrementa meta.montoActual -= monto.
   -> Retorna la meta actualizada.
 
 Escenario C: Eliminacion de Meta
-  [DELETE /api/metas/{id}]
+  [DELETE /api/v1/metas/{id}]
   -> ¿Es la meta 'Ahorros' por defecto? -> Rechazar con 409 Conflict (Protegida).
   -> ¿Tiene ahorros acumulados (> 0)?
        SI -> Crear movimiento RETIRO_META con descripcion "Devolucion de fondos..."
@@ -1452,7 +1452,7 @@ Nota de diseno: El presupuesto es una guia de control y visualizacion independie
 del movimiento fisico de dinero. La ejecucion de abonos automaticos a metas es
 optativa (controlada por automatizarAhorroEnMetas en la configuracion del usuario).
 
-[GET /api/presupuestos/ejecucion/me?month=M&year=Y]
+[GET /api/v1/presupuestos/ejecucion/me?month=M&year=Y]
                           |
                           v
         [Obtener movimientos del usuario en el mes/ano]
@@ -1495,7 +1495,7 @@ optativa (controlada por automatizarAhorroEnMetas en la configuracion del usuari
 FLUJO 6: GENERACION Y EXPORTACION DE REPORTES (PATRON STRATEGY)
 --------------------------------------------------------------------------------
 
-[Peticion GET /api/reportes/movimientos/exportar?alcance=...&formato=...]
+[Peticion GET /api/v1/reportes/movimientos/exportar?alcance=...&formato=...]
                                 |
                                 v
                [Determinar movimientos a consultar]
@@ -1539,7 +1539,7 @@ FLUJO 6: GENERACION Y EXPORTACION DE REPORTES (PATRON STRATEGY)
 FLUJO 7: PRESUPUESTO POR CATEGORIA E HISTORIAL (T5)
 --------------------------------------------------------------------------------
 
-[PUT /api/presupuestos/categorias/me (lista de limites)]
+[PUT /api/v1/presupuestos/categorias/me (lista de limites)]
                      |
                      v
    [Validar: categoria existe, limite > 0, sin repetidas] --(error)--> 400
@@ -1547,7 +1547,7 @@ FLUJO 7: PRESUPUESTO POR CATEGORIA E HISTORIAL (T5)
                      v
    [deleteByUsuarioRut + saveAll (reemplazo total del conjunto)]
 
-[GET /api/presupuestos/categorias/ejecucion/me?month=M&year=Y]
+[GET /api/v1/presupuestos/categorias/ejecucion/me?month=M&year=Y]
                      |
                      v
    [Ventana del mes: [inicioDeMes, inicioDeMesSiguiente)]
@@ -1562,7 +1562,7 @@ FLUJO 7: PRESUPUESTO POR CATEGORIA E HISTORIAL (T5)
    [estado = EstadoEjecucion.desdePorcentaje:
     < 80 OK | >= 80 ALERTA | >= 100 EXCEDIDO]
 
-[GET /api/presupuestos/historial/me?desde=YYYY-MM&hasta=YYYY-MM]
+[GET /api/v1/presupuestos/historial/me?desde=YYYY-MM&hasta=YYYY-MM]
                      |
                      v
    [Validar formato, desde <= hasta y rango <= 24 meses] --(error)--> 400
@@ -1580,8 +1580,10 @@ FLUJO 7: PRESUPUESTO POR CATEGORIA E HISTORIAL (T5)
 9.1. SEGURIDAD Y CORS
 - Clase: com.example.saveup.config.SecurityConfig
   * CSRF deshabilitado para arquitectura REST sin estado.
-  * Rutas abiertas: POST /api/usuarios/register y endpoints de API para consumo 
-    movil/web.
+  * Rutas abiertas: POST /api/v1/usuarios/register, POST /api/v1/usuarios/login,
+    /actuator/health y / (keep_alive de Render).
+  * Documentación interactiva: /v3/api-docs y /swagger-ui solo en dev; en prod
+    springdoc está deshabilitado y el contrato vive en docs/openapi.json.
   * BCryptPasswordEncoder disponible globalmente como bean inyectable.
 - Clase: com.example.saveup.config.WebConfig
   * Permite solicitudes de origenes configurados en application.properties:

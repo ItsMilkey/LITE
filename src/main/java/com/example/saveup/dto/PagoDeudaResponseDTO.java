@@ -1,5 +1,6 @@
 package com.example.saveup.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -16,13 +17,27 @@ import java.util.Date;
  */
 @Data
 @NoArgsConstructor
+@Schema(description = "Pago de deuda con su desglose de capital, interés y costos.")
 public class PagoDeudaResponseDTO {
+    @Schema(description = "Identificador del pago.", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long id;
+
+    @Schema(description = "Fecha del pago en ISO-8601 UTC.", requiredMode = Schema.RequiredMode.REQUIRED)
     private Date fecha;
+
+    @Schema(description = "Monto del pago en positivo, con escala 2.", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal monto;
+
+    @Schema(description = "Parte imputada a capital, con escala 2.", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal capital;
+
+    @Schema(description = "Parte imputada a intereses, con escala 2.", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal interes;
+
+    @Schema(description = "Parte imputada a costos, con escala 2.", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal costos;
+
+    @Schema(description = "Descripción del pago.", requiredMode = Schema.RequiredMode.REQUIRED)
     private String descripcion;
 
     public PagoDeudaResponseDTO(Long id, Date fecha, BigDecimal monto, BigDecimal capital, BigDecimal interes,

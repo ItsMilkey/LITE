@@ -26,7 +26,7 @@ sequenceDiagram
     participant F as JwtAuthenticationFilter
 
     Note over U,F: Registro
-    U->>C: POST /api/usuarios/register
+    U->>C: POST /api/v1/usuarios/register
     C->>S: registrarUsuario(dto)
     S->>R: existsById(rut)
     S->>R: existsByEmail(email)
@@ -42,7 +42,7 @@ sequenceDiagram
     end
 
     Note over U,J: Login
-    U->>C: POST /api/usuarios/login
+    U->>C: POST /api/v1/usuarios/login
     C->>S: autenticarUsuario(dto)
     S->>R: findByEmail(email)
     S->>PE: matches(contrasena, hash)
@@ -74,4 +74,4 @@ sequenceDiagram
 - El token es **HS256**; el `subject` es el RUT y lleva el `email` como claim. La clave se toma de `jwt.secret` y se rellena a 32 bytes si es más corta.
 - `register` y `login` son los únicos endpoints públicos junto con `OPTIONS /**` y `GET/HEAD /`.
 - La identidad de cada recurso se resuelve siempre con `SecurityUtils.getAuthenticatedRut()`; nunca se acepta el RUT desde el cuerpo.
-- `POST /api/movimientos` con tipo `PAGO_DEUDA` no aplica aquí: se resuelve en el flujo de pago de deuda ([`11-flujo-pago-deuda.md`](11-flujo-pago-deuda.md)).
+- `POST /api/v1/movimientos` con tipo `PAGO_DEUDA` no aplica aquí: se resuelve en el flujo de pago de deuda ([`11-flujo-pago-deuda.md`](11-flujo-pago-deuda.md)).

@@ -39,8 +39,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * T4 — Contrato HTTP de filtros (GET /api/movimientos/paginados/me) y de
- * edición/borrado (PUT/DELETE /api/movimientos/{id}).
+ * T4 — Contrato HTTP de filtros (GET /api/v1/movimientos/paginados/me) y de
+ * edición/borrado (PUT/DELETE /api/v1/movimientos/{id}).
  *
  * <p>Integración real: repositorios y H2 (perfil test), sin repositorios
  * simulados, para que los filtros de la Specification se ejecuten de verdad.
@@ -99,7 +99,7 @@ class MovimientoFiltrosEdicionTest {
         movimiento(usuario, fecha(2026, 1, 10), TipoMovimiento.INGRESO_GENERAL, "2000.00", "Medio", null, null);
         movimiento(usuario, fecha(2026, 1, 20), TipoMovimiento.INGRESO_GENERAL, "3000.00", "Reciente", null, null);
 
-        mockMvc.perform(get("/api/movimientos/paginados/me").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalItems").value(3))
                 .andExpect(jsonPath("$.content[0].descripcion").value("Reciente"))
@@ -113,7 +113,7 @@ class MovimientoFiltrosEdicionTest {
         movimiento(usuario, fecha(2026, 2, 2), TipoMovimiento.GASTO_GENERAL, "-2000.00", "Gasto", null, null);
         movimiento(usuario, fecha(2026, 2, 3), TipoMovimiento.GASTO_GENERAL, "-3000.00", "Gasto 2", null, null);
 
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("tipoMovimiento", "GASTO_GENERAL")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -127,7 +127,7 @@ class MovimientoFiltrosEdicionTest {
         movimiento(usuario, fecha(2026, 3, 1), TipoMovimiento.GASTO_GENERAL, "-1000.00", "Con categoria", categoria, null);
         movimiento(usuario, fecha(2026, 3, 2), TipoMovimiento.GASTO_GENERAL, "-2000.00", "Sin categoria", null, null);
 
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("categoriaId", categoria.getId().toString())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -142,7 +142,7 @@ class MovimientoFiltrosEdicionTest {
         movimiento(usuario, fecha(2026, 4, 2), TipoMovimiento.INGRESO_GENERAL, "5000.00", "Medio", null, null);
         movimiento(usuario, fecha(2026, 4, 3), TipoMovimiento.INGRESO_GENERAL, "9000.00", "Grande", null, null);
 
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("montoMin", "2000")
                         .param("montoMax", "6000")
                         .header("Authorization", "Bearer " + token))
@@ -157,7 +157,7 @@ class MovimientoFiltrosEdicionTest {
         movimiento(usuario, fecha(2026, 4, 10), TipoMovimiento.INGRESO_GENERAL, "5000.00", "Ingreso 5k", null, null);
         movimiento(usuario, fecha(2026, 4, 11), TipoMovimiento.GASTO_GENERAL, "-5000.00", "Gasto 5k", null, null);
 
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("montoMin", "1000")
                         .param("montoMax", "10000")
                         .header("Authorization", "Bearer " + token))
@@ -172,7 +172,7 @@ class MovimientoFiltrosEdicionTest {
         movimiento(usuario, fecha(2026, 1, 10), TipoMovimiento.INGRESO_GENERAL, "2000.00", "D2", null, null);
         movimiento(usuario, fecha(2026, 1, 20), TipoMovimiento.INGRESO_GENERAL, "3000.00", "D3", null, null);
 
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("desde", "2026-01-05")
                         .param("hasta", "2026-01-10")
                         .header("Authorization", "Bearer " + token))
@@ -186,14 +186,14 @@ class MovimientoFiltrosEdicionTest {
         movimiento(usuario, fecha(2026, 5, 1), TipoMovimiento.GASTO_GENERAL, "-1000.00", "Supermercado Lider", null, null);
         movimiento(usuario, fecha(2026, 5, 2), TipoMovimiento.GASTO_GENERAL, "-2000.00", "Arriendo", null, null);
 
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("q", "SUPER")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalItems").value(1))
                 .andExpect(jsonPath("$.content[0].descripcion").value("Supermercado Lider"));
 
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("q", "super")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -207,7 +207,7 @@ class MovimientoFiltrosEdicionTest {
         movimiento(usuario, fecha(2026, 5, 11), TipoMovimiento.GASTO_GENERAL, "-2000.00", "Descuento 1000 real", null, null);
 
         // Sin escape, '100%' casaría también '1000 real'; escapado, solo el literal '100%'.
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("q", "100%")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -223,7 +223,7 @@ class MovimientoFiltrosEdicionTest {
         movimiento(usuario, fecha(2026, 6, 3), TipoMovimiento.INGRESO_GENERAL, "3000.00", "Cafe ingreso", null, null);
         movimiento(usuario, fecha(2026, 6, 20), TipoMovimiento.GASTO_GENERAL, "-1500.00", "Cafe fuera de rango", null, null);
 
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("tipoMovimiento", "GASTO_GENERAL")
                         .param("q", "cafe")
                         .param("montoMin", "1000")
@@ -242,7 +242,7 @@ class MovimientoFiltrosEdicionTest {
         movimiento(usuario, fecha(2026, 7, 1), TipoMovimiento.INGRESO_GENERAL, "1000.00", "Mio", null, null);
         movimiento(ajeno, fecha(2026, 7, 2), TipoMovimiento.INGRESO_GENERAL, "9999.00", "Ajeno", null, null);
 
-        mockMvc.perform(get("/api/movimientos/paginados/me").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalItems").value(1))
                 .andExpect(jsonPath("$.content[0].descripcion").value("Mio"));
@@ -253,7 +253,7 @@ class MovimientoFiltrosEdicionTest {
     @Test
     @DisplayName("desde > hasta → 400 Bad Request")
     void desdeMayorQueHasta_400() throws Exception {
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("desde", "2026-02-01")
                         .param("hasta", "2026-01-01")
                         .header("Authorization", "Bearer " + token))
@@ -264,7 +264,7 @@ class MovimientoFiltrosEdicionTest {
     @Test
     @DisplayName("montoMin > montoMax → 400 Bad Request")
     void montoMinMayorQueMontoMax_400() throws Exception {
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("montoMin", "5000")
                         .param("montoMax", "1000")
                         .header("Authorization", "Bearer " + token))
@@ -275,13 +275,13 @@ class MovimientoFiltrosEdicionTest {
     @Test
     @DisplayName("montoMin o montoMax negativos → 400 Bad Request")
     void montoNegativo_400() throws Exception {
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("montoMin", "-1")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
 
-        mockMvc.perform(get("/api/movimientos/paginados/me")
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me")
                         .param("montoMax", "-1")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
@@ -298,7 +298,7 @@ class MovimientoFiltrosEdicionTest {
         Movimiento gasto = movimiento(usuario, fecha(2026, 8, 1), TipoMovimiento.GASTO_GENERAL,
                 "-1000.00", "Vieja", categoria, null);
 
-        mockMvc.perform(put("/api/movimientos/" + gasto.getId())
+        mockMvc.perform(put("/api/v1/movimientos/" + gasto.getId())
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"monto\":2500,\"descripcion\":\"Nueva\",\"categoriaId\":" + otra.getId() + "}"))
@@ -314,7 +314,7 @@ class MovimientoFiltrosEdicionTest {
         Movimiento gasto = movimiento(usuario, fecha(2026, 8, 1), TipoMovimiento.GASTO_GENERAL,
                 "-1000.00", "Vieja", categoria, null);
 
-        mockMvc.perform(put("/api/movimientos/" + gasto.getId())
+        mockMvc.perform(put("/api/v1/movimientos/" + gasto.getId())
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"descripcion\":\"Solo texto\"}"))
@@ -330,7 +330,7 @@ class MovimientoFiltrosEdicionTest {
         Movimiento deOtro = movimiento(ajeno, fecha(2026, 8, 2), TipoMovimiento.GASTO_GENERAL,
                 "-1000.00", "Ajeno", null, null);
 
-        mockMvc.perform(put("/api/movimientos/" + deOtro.getId())
+        mockMvc.perform(put("/api/v1/movimientos/" + deOtro.getId())
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"monto\":50,\"descripcion\":\"Hack\"}"))
@@ -345,7 +345,7 @@ class MovimientoFiltrosEdicionTest {
         Movimiento abono = movimiento(usuario, fecha(2026, 8, 3), TipoMovimiento.ABONO_META,
                 "-500.00", "Abono", null, null);
 
-        mockMvc.perform(put("/api/movimientos/" + abono.getId())
+        mockMvc.perform(put("/api/v1/movimientos/" + abono.getId())
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"monto\":500,\"descripcion\":\"Editado\"}"))
@@ -361,7 +361,7 @@ class MovimientoFiltrosEdicionTest {
                 "100000.00", "Sueldo", null, null);
         movimiento(usuario, fecha(2026, 8, 4), TipoMovimiento.ABONO_META, "-20000.00", "Abono Auto", null, ingreso);
 
-        mockMvc.perform(put("/api/movimientos/" + ingreso.getId())
+        mockMvc.perform(put("/api/v1/movimientos/" + ingreso.getId())
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"monto\":90000,\"descripcion\":\"Corregido\"}"))
@@ -376,7 +376,7 @@ class MovimientoFiltrosEdicionTest {
         Movimiento ingreso = movimiento(usuario, fecha(2026, 8, 5), TipoMovimiento.INGRESO_GENERAL,
                 "1000.00", "Simple", null, null);
 
-        mockMvc.perform(put("/api/movimientos/" + ingreso.getId())
+        mockMvc.perform(put("/api/v1/movimientos/" + ingreso.getId())
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"monto\":2000,\"descripcion\":\"Actualizado\"}"))
@@ -388,7 +388,7 @@ class MovimientoFiltrosEdicionTest {
     @Test
     @DisplayName("Editar un movimiento inexistente → 404")
     void editarInexistente_404() throws Exception {
-        mockMvc.perform(put("/api/movimientos/999999")
+        mockMvc.perform(put("/api/v1/movimientos/999999")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"monto\":50,\"descripcion\":\"Nada\"}"))
@@ -403,11 +403,11 @@ class MovimientoFiltrosEdicionTest {
         Movimiento gasto = movimiento(usuario, fecha(2026, 9, 1), TipoMovimiento.GASTO_GENERAL,
                 "-1000.00", "Borrar", null, null);
 
-        mockMvc.perform(delete("/api/movimientos/" + gasto.getId())
+        mockMvc.perform(delete("/api/v1/movimientos/" + gasto.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/api/movimientos/paginados/me").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/v1/movimientos/paginados/me").header("Authorization", "Bearer " + token))
                 .andExpect(jsonPath("$.totalItems").value(0));
     }
 
@@ -417,7 +417,7 @@ class MovimientoFiltrosEdicionTest {
         Movimiento deOtro = movimiento(ajeno, fecha(2026, 9, 2), TipoMovimiento.GASTO_GENERAL,
                 "-1000.00", "Ajeno", null, null);
 
-        mockMvc.perform(delete("/api/movimientos/" + deOtro.getId())
+        mockMvc.perform(delete("/api/v1/movimientos/" + deOtro.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
     }
@@ -428,7 +428,7 @@ class MovimientoFiltrosEdicionTest {
         Movimiento pago = movimiento(usuario, fecha(2026, 9, 3), TipoMovimiento.PAGO_DEUDA,
                 "-1000.00", "Cuota", null, null);
 
-        mockMvc.perform(delete("/api/movimientos/" + pago.getId())
+        mockMvc.perform(delete("/api/v1/movimientos/" + pago.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isConflict());
     }
@@ -440,7 +440,7 @@ class MovimientoFiltrosEdicionTest {
                 "100000.00", "Sueldo", null, null);
         movimiento(usuario, fecha(2026, 9, 4), TipoMovimiento.ABONO_META, "-20000.00", "Abono Auto", null, ingreso);
 
-        mockMvc.perform(delete("/api/movimientos/" + ingreso.getId())
+        mockMvc.perform(delete("/api/v1/movimientos/" + ingreso.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isConflict());
     }
@@ -454,14 +454,14 @@ class MovimientoFiltrosEdicionTest {
         gasto.setDeuda(deuda);
         movimientoRepository.save(gasto);
 
-        mockMvc.perform(put("/api/movimientos/" + gasto.getId())
+        mockMvc.perform(put("/api/v1/movimientos/" + gasto.getId())
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"monto\":50,\"descripcion\":\"Editado\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.codigo").value("CONFLICTO_REGLA_NEGOCIO"));
 
-        mockMvc.perform(delete("/api/movimientos/" + gasto.getId())
+        mockMvc.perform(delete("/api/v1/movimientos/" + gasto.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isConflict());
     }
@@ -475,14 +475,14 @@ class MovimientoFiltrosEdicionTest {
         ingreso.setMetaAhorro(meta);
         movimientoRepository.save(ingreso);
 
-        mockMvc.perform(put("/api/movimientos/" + ingreso.getId())
+        mockMvc.perform(put("/api/v1/movimientos/" + ingreso.getId())
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"monto\":2000,\"descripcion\":\"Editado\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.codigo").value("CONFLICTO_REGLA_NEGOCIO"));
 
-        mockMvc.perform(delete("/api/movimientos/" + ingreso.getId())
+        mockMvc.perform(delete("/api/v1/movimientos/" + ingreso.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isConflict());
     }

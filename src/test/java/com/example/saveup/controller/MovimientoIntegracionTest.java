@@ -39,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Contrato HTTP de POST /api/movimientos (sin BD, repositorios simulados):
+ * Contrato HTTP de POST /api/v1/movimientos (sin BD, repositorios simulados):
  * qué tipos se aceptan y qué responde cada violación.
  */
 @SpringBootTest
@@ -122,7 +122,7 @@ class MovimientoIntegracionTest {
     }
 
     private org.springframework.test.web.servlet.ResultActions postMovimiento(String json) throws Exception {
-        return mockMvc.perform(post("/api/movimientos")
+        return mockMvc.perform(post("/api/v1/movimientos")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json));
@@ -138,7 +138,7 @@ class MovimientoIntegracionTest {
                 .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
                 .andExpect(jsonPath("$.detail", org.hamcrest.Matchers.containsString("sección de metas")))
                 .andExpect(jsonPath("$.detail", org.hamcrest.Matchers.not(
-                        org.hamcrest.Matchers.containsString("/api/metas"))));
+                        org.hamcrest.Matchers.containsString("/api/v1/metas"))));
 
         postMovimiento("""
                 {"monto":50000,"descripcion":"Retiro directo","tipoMovimiento":"RETIRO_META"}
@@ -169,7 +169,7 @@ class MovimientoIntegracionTest {
     }
 
     @Test
-    @DisplayName("PAGO_DEUDA sin monto → 400: /api/movimientos exige monto explícito (el modo CUOTA_CALCULADA es de /api/deudas/{id}/pagar)")
+    @DisplayName("PAGO_DEUDA sin monto → 400: /api/v1/movimientos exige monto explícito (el modo CUOTA_CALCULADA es de /api/v1/deudas/{id}/pagar)")
     void cuotaCalculadaSinMonto_400() throws Exception {
         postMovimiento("""
                 {"descripcion":"Cuota calculada","tipoMovimiento":"PAGO_DEUDA","deudaId":1,"modoPago":"CUOTA_CALCULADA"}
@@ -187,7 +187,7 @@ class MovimientoIntegracionTest {
     }
 
     @Test
-    @DisplayName("Sobrepago por /api/movimientos → 409 (mismo código que /api/deudas/{id}/pagar)")
+    @DisplayName("Sobrepago por /api/v1/movimientos → 409 (mismo código que /api/v1/deudas/{id}/pagar)")
     void sobrepago_409() throws Exception {
         postMovimiento("""
                 {"monto":150000,"descripcion":"Pago excesivo","tipoMovimiento":"PAGO_DEUDA","deudaId":1}
@@ -197,7 +197,7 @@ class MovimientoIntegracionTest {
     }
 
     @Test
-    @DisplayName("Pago válido por /api/movimientos → 201 con el movimiento negativo")
+    @DisplayName("Pago válido por /api/v1/movimientos → 201 con el movimiento negativo")
     void pagoValido_201() throws Exception {
         postMovimiento("""
                 {"monto":10000,"descripcion":"Cuota 1","tipoMovimiento":"PAGO_DEUDA","deudaId":1}

@@ -27,7 +27,7 @@ sequenceDiagram
     participant AR as AsignacionMetaPresupuestoRepository
     participant META as MetaAhorroRepository
 
-    U->>C: POST /api/movimientos (INGRESO_GENERAL, aplicarPresupuesto=true)
+    U->>C: POST /api/v1/movimientos (INGRESO_GENERAL, aplicarPresupuesto=true)
     C->>MS: registrarMovimiento(dto)
     MS->>MS: getAuthenticatedRut()
     MS->>MS: validarTipoRegistrable(tipo)
@@ -61,5 +61,5 @@ sequenceDiagram
 - El ingreso se guarda **antes** de repartir, para dejar en cada abono el vínculo `movimiento_origen_id` (T4). Un ingreso con movimientos derivados no se puede editar ni borrar (409).
 - La última asignación recibe el **residuo de redondeo** para que la suma de abonos sea exactamente `montoAhorro`.
 - **Invariante de metas**: `montoActual` = −(suma de `ABONO_META` vinculados a la meta).
-- `POST /api/movimientos` solo acepta `INGRESO_GENERAL`, `GASTO_GENERAL` y `PAGO_DEUDA`; `ABONO_META`/`RETIRO_META` se rechazan con 400 en este endpoint.
+- `POST /api/v1/movimientos` solo acepta `INGRESO_GENERAL`, `GASTO_GENERAL` y `PAGO_DEUDA`; `ABONO_META`/`RETIRO_META` se rechazan con 400 en este endpoint.
 - Si el tipo es `PAGO_DEUDA`, `MovimientoService` delega en `DeudaService.registrarPago` (ver [`11-flujo-pago-deuda.md`](11-flujo-pago-deuda.md)).

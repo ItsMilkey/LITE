@@ -111,7 +111,7 @@ public class DeudaService {
 
     /**
      * Registra un pago contra una deuda. Es el único camino para crear
-     * movimientos PAGO_DEUDA: POST /api/movimientos con ese tipo delega aquí.
+     * movimientos PAGO_DEUDA: POST /api/v1/movimientos con ese tipo delega aquí.
      *
      * @return la deuda resultante y el movimiento creado (negativo, por SignoMovimiento)
      * @throws IllegalArgumentException si el monto pedido no es válido (400)

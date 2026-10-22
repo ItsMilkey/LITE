@@ -2,17 +2,30 @@ package com.example.saveup.dto;
 
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.enums.TipoMovimiento;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.util.Date;
 
 @Data
+@Schema(description = "Movimiento registrado. El signo del monto refleja si suma o resta al saldo.")
 public class MovimientoResponseDTO {
+    @Schema(description = "Identificador del movimiento.", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long id;
+
+    @Schema(description = "Monto con signo y escala 2.", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal monto;
+
+    @Schema(description = "Descripción del movimiento.", requiredMode = Schema.RequiredMode.REQUIRED)
     private String descripcion;
+
+    @Schema(description = "Fecha del movimiento en ISO-8601 UTC.", requiredMode = Schema.RequiredMode.REQUIRED)
     private Date fecha;
+
+    @Schema(description = "Tipo de movimiento.", requiredMode = Schema.RequiredMode.REQUIRED)
     private TipoMovimiento tipoMovimiento;
+
+    @Schema(description = "Categoría asociada; puede ser null en movimientos históricos.")
     private CategoriaDTO categoria;
 
     /** Construye el DTO a partir de la entidad guardada (compartido por todos los productores de movimientos). */

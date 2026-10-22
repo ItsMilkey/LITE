@@ -13,7 +13,7 @@ Depende de: T1c. Modelo sugerido: Claude Sonnet 4.6 Thinking (lógica delicada).
    - CUOTA_CALCULADA: el monto se ignora; se cobra lo que falta de la próxima cuota impaga (completa, o el restante si estaba parcial).
    - MONTO_PERSONALIZADO: monto obligatorio y > 0.
 3. 409 si el monto supera el total por pagar o si la deuda no está PENDIENTE.
-4. DeudaService.registrarPago es el ÚNICO camino para crear PAGO_DEUDA: POST /api/movimientos con tipo PAGO_DEUDA debe delegar en él.
+4. DeudaService.registrarPago es el ÚNICO camino para crear PAGO_DEUDA: POST /api/v1/movimientos con tipo PAGO_DEUDA debe delegar en él.
 5. cuotasPagadas = cantidad de cuotas en estado PAGADA (incluye las previas). Estado de la deuda PAGADA al cubrir montoTotal.
 6. DeudaResponseDTO agrega los dos "cuánto me falta":
    - totalPorPagar = montoTotal − (monto_pagado_previo + Σ pagos); incluye intereses futuros.

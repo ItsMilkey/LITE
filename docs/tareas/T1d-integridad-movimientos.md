@@ -2,7 +2,7 @@
 Depende de: T0. Debe hacerse ANTES de T2 y T4 (ambas crean o editan movimientos). Modelo sugerido: Opus o Gemini Pro para el plan; Sonnet 4.6 Thinking para implementar (toca varios servicios).
 
 ## Problema
-El saldo es SUM(MOVIMIENTO.monto). El signo lo decide cada productor y, en los gastos, lo envía el cliente. Nada lo valida. Ejemplo real: POST /api/movimientos con tipo PAGO_DEUDA guarda el monto tal cual; si el cliente envía un valor positivo, el pago SUBE el saldo en vez de bajarlo.
+El saldo es SUM(MOVIMIENTO.monto). El signo lo decide cada productor y, en los gastos, lo envía el cliente. Nada lo valida. Ejemplo real: POST /api/v1/movimientos con tipo PAGO_DEUDA guarda el monto tal cual; si el cliente envía un valor positivo, el pago SUBE el saldo en vez de bajarlo.
 
 ## Decisiones (supuestos; cámbialos antes de empezar si no aplican)
 - NO se crea tabla de saldos, ni libro mayor, ni caché: el saldo sigue siendo la suma de movimientos.
@@ -16,7 +16,7 @@ El saldo es SUM(MOVIMIENTO.monto). El signo lo decide cada productor y, en los g
 3. Migración nueva (postgresql; calcula el número mirando la última existente; V3 sigue sin aplicarse): constraint CHK_MOVIMIENTO_SIGNO sobre MOVIMIENTO:
    CHECK ((tipo_movimiento IN ('INGRESO_GENERAL','RETIRO_META') AND monto > 0) OR (tipo_movimiento IN ('GASTO_GENERAL','PAGO_DEUDA','ABONO_META') AND monto < 0))
    Para no fallar con filas antiguas: agrega el CHECK con NOT VALID y valídalo después. Comprueba los nombres de columna reales en V1. Validar el histórico queda para después de revisar los datos (VALIDATE CONSTRAINT).
-4. La unificación de la ruta de pago de deuda (POST /api/movimientos con PAGO_DEUDA → DeudaService.registrarPago) NO va aquí: es T2, punto 4. No la dupliques.
+4. La unificación de la ruta de pago de deuda (POST /api/v1/movimientos con PAGO_DEUDA → DeudaService.registrarPago) NO va aquí: es T2, punto 4. No la dupliques.
 5. Actualiza docs/CONTEXT.md (regla de signo, CHECK, SignoMovimiento).
 
 ## Criterios de aceptación (tests)
