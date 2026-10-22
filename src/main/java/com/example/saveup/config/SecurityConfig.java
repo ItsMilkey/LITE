@@ -75,7 +75,16 @@ public class SecurityConfig {
                 auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // Endpoints públicos de registro y login
                         .requestMatchers(HttpMethod.POST, "/api/v1/usuarios/register", "/api/v1/usuarios/login")
-                        .permitAll();
+                        .permitAll()
+                        // Ciclo de vida de la sesión móvil (T9.1): el refresh token es la credencial
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh", "/api/v1/auth/logout")
+                        .permitAll()
+                        // Recuperación de contraseña (T9.3): usuarios sin sesión válida deben poder entrar
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/auth/recuperar-contrasena", "/api/v1/auth/restablecer-contrasena")
+                        .permitAll()
+                        // Versión mínima (T9.4): la app lo consulta al arrancar, antes de tener sesión
+                        .requestMatchers(HttpMethod.GET, "/api/v1/app/version").permitAll();
 
                 // Documentación interactiva pública solo en dev: en prod springdoc está
                 // deshabilitado y, sin este matcher, las rutas exigen autenticación.

@@ -41,6 +41,18 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
+        <!-- === CORREO (T9.3): recuperación de contraseña === -->
+        <!-- Sin spring.mail.host configurado, Spring Boot no crea el bean JavaMailSender;
+             con app.mail.log-only=true el servicio lo loguea en consola y no lo necesita. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        <!-- === FUERZA BRUTA (T9.5): contador de intentos fallidos de login === -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

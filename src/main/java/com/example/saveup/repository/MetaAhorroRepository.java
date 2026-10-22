@@ -12,6 +12,9 @@ public interface MetaAhorroRepository extends JpaRepository<MetaAhorro, Long> {
 
     List<MetaAhorro> findByUsuarioRut(String rut);
 
+    // T9.2: las metas del usuario se borran junto con su cuenta.
+    void deleteByUsuarioRut(String rut);
+
     @Query("SELECT COALESCE(SUM(m.monto), 0) FROM Movimiento m WHERE m.metaAhorro.id = :metaId")
     java.math.BigDecimal findTotalAhorradoByMetaId(@Param("metaId") Long metaId);
 }

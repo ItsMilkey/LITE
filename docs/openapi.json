@@ -16,6 +16,9 @@
     "name" : "Deudas",
     "description" : "Deudas, pagos, amortización e historial de pagos."
   }, {
+    "name" : "Autenticación",
+    "description" : "Renovación y cierre de sesión por refresh token, y recuperación de contraseña."
+  }, {
     "name" : "Movimientos",
     "description" : "Registro, historial, filtros, edición y borrado de movimientos."
   }, {
@@ -24,6 +27,9 @@
   }, {
     "name" : "Saldos",
     "description" : "Saldo actual del usuario autenticado."
+  }, {
+    "name" : "App",
+    "description" : "Política de versiones soportadas de la app móvil (endpoint público)."
   }, {
     "name" : "Presupuestos",
     "description" : "Configuración 50/30/20, límites por categoría, ejecución e historial."
@@ -38,6 +44,99 @@
     "description" : "Registro, inicio de sesión y perfil del usuario autenticado."
   } ],
   "paths" : {
+    "/api/v1/usuarios/me/contrasena" : {
+      "put" : {
+        "tags" : [ "Usuarios" ],
+        "summary" : "Cambia la contraseña del usuario autenticado",
+        "description" : "Exige la contraseña actual, guarda la nueva con BCrypt y revoca\nTODAS las sesiones activas del usuario (otros dispositivos quedan\nfuera). El JWT de acceso actual sigue siendo válido hasta expirar\n(máximo 15 min); el cliente inicia sesión de nuevo.",
+        "operationId" : "cambiarContrasena",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CambioContrasenaDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MensajeResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/presupuestos/categorias/me" : {
       "get" : {
         "tags" : [ "Presupuestos" ],
@@ -864,7 +963,8 @@
     "/api/v1/usuarios/login" : {
       "post" : {
         "tags" : [ "Usuarios" ],
-        "summary" : "Inicia sesión y entrega un token JWT",
+        "summary" : "Inicia sesión y entrega el par de tokens de la sesión",
+        "description" : "Con acierto entrega {token, refreshToken, expiraEn} y limpia el contador\nde intentos fallidos. Cinco intentos fallidos con el mismo correo e IP\nbloquean esa combinación 15 minutos: mientras esté bloqueada responde\n429 INTENTOS_LOGIN_EXCEDIDOS antes de consultar credenciales.",
         "operationId" : "loginUsuario",
         "requestBody" : {
           "content" : {
@@ -939,6 +1039,16 @@
           },
           "500" : {
             "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "429" : {
+            "description" : "Demasiados intentos fallidos de login; espera unos minutos.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -1793,6 +1903,366 @@
         } ]
       }
     },
+    "/api/v1/auth/restablecer-contrasena" : {
+      "post" : {
+        "tags" : [ "Autenticación" ],
+        "summary" : "Restablece la contraseña con el token de un solo uso",
+        "description" : "Consume el token (1 uso, 1 hora), guarda la nueva contraseña con\nBCrypt y revoca todas las sesiones activas del usuario. Token\ninválido, reusado o expirado → 400 TOKEN_VERIFICACION_INVALIDO.",
+        "operationId" : "restablecerContrasena",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RestablecerContrasenaDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MensajeResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh" : {
+      "post" : {
+        "tags" : [ "Autenticación" ],
+        "summary" : "Renueva la sesión rotando el refresh token",
+        "description" : "Consume el refresh token actual y entrega un par nuevo\n{token, refreshToken, expiraEn}. El access token expira pronto y el\ncliente, al recibir 401 TOKEN_EXPIRADO en una solicitud protegida,\ndebe llamar aquí una única vez. Si el refresh recibido ya fue\nusado o revocado la respuesta es 401 REFRESH_INVALIDO: el usuario\ndebe volver a iniciar sesión.",
+        "operationId" : "refrescarSesion",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RefreshTokenRequestDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LoginResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/recuperar-contrasena" : {
+      "post" : {
+        "tags" : [ "Autenticación" ],
+        "summary" : "Solicita el restablecimiento de la contraseña",
+        "description" : "Envía (o loguea, con app.mail.log-only=true) un token de un solo uso\nválido 1 hora al correo registrado. Responde 200 con un mensaje\ngenérico SIEMPRE, exista o no el correo, para no permitir enumerar\ncuentas.",
+        "operationId" : "solicitarRecuperacionContrasena",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SolicitudRecuperacionDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MensajeResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout" : {
+      "post" : {
+        "tags" : [ "Autenticación" ],
+        "summary" : "Cierra la sesión revocando el refresh token",
+        "description" : "Marca el refresh token como revocado. Una vez revocado, /auth/refresh\nlo rechaza. Idempotente: si el token ya está revocado o no existe la\nrespuesta es igual (no filtra información).",
+        "operationId" : "cerrarSesion",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RefreshTokenRequestDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MensajeResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/deudas/{deudaId}/cancelar" : {
       "patch" : {
         "tags" : [ "Deudas" ],
@@ -1899,6 +2369,90 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "delete" : {
+        "tags" : [ "Usuarios" ],
+        "summary" : "Elimina de forma permanente la cuenta del usuario autenticado",
+        "description" : "Borra en cascada todos los datos del usuario (movimientos, deudas,\nmetas, presupuestos y sesiones) y la cuenta misma. Es irreversible:\nexige confirmar la contraseña actual. Requerido por las políticas de\nApple y Google para apps con cuentas.",
+        "operationId" : "eliminarCuentaActual",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UsuarioEliminacionDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Cuenta eliminada de forma permanente"
           },
           "400" : {
             "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
@@ -3206,10 +3760,138 @@
           "bearerAuth" : [ ]
         } ]
       }
+    },
+    "/api/v1/app/version" : {
+      "get" : {
+        "tags" : [ "App" ],
+        "summary" : "Informa la política de actualización de la app",
+        "description" : "Endpoint público que consulta la app al arrancar: compara la versión\nreportada (SemVer MAJOR.MINOR.PATCH) contra el mínimo soportado y la\nmás reciente de la plataforma. Por debajo del mínimo responde\nactualizacionObligatoria=true (app bloqueada); si existe una versión\nmás reciente, actualizacionSugerida=true. Plataforma o parámetros\nfaltantes → 400 PARAMETRO_INVALIDO; versión mal formada →\n400 DATOS_INVALIDOS.",
+        "operationId" : "obtenerVersionApp",
+        "parameters" : [ {
+          "name" : "plataforma",
+          "in" : "query",
+          "description" : "Plataforma que consulta.",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "description" : "Plataforma que consulta."
+          }
+        }, {
+          "name" : "version",
+          "in" : "query",
+          "description" : "Versión de la app que reporta el cliente, MAJOR.MINOR.PATCH.",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "description" : "Versión de la app que reporta el cliente, MAJOR.MINOR.PATCH."
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AppVersionResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components" : {
     "schemas" : {
+      "CambioContrasenaDTO" : {
+        "required" : [ "contrasenaActual", "nuevaContrasena" ],
+        "type" : "object",
+        "properties" : {
+          "contrasenaActual" : {
+            "type" : "string",
+            "description" : "Contraseña actual; el cambio se rechaza si no coincide."
+          },
+          "nuevaContrasena" : {
+            "maxLength" : 20,
+            "minLength" : 8,
+            "pattern" : "^(?=.*[A-Za-z])(?=.*\\d).*$",
+            "type" : "string",
+            "description" : "Nueva contraseña: 8 a 20 caracteres, con al menos una letra y un número."
+          }
+        },
+        "description" : "Cambio de contraseña con sesión activa."
+      },
+      "MensajeResponseDTO" : {
+        "required" : [ "message" ],
+        "type" : "object",
+        "properties" : {
+          "message" : {
+            "type" : "string",
+            "description" : "Mensaje de confirmación en español."
+          }
+        },
+        "description" : "Confirmación legible de una operación."
+      },
       "PresupuestoCategoriaItemDTO" : {
         "required" : [ "categoriaId", "limiteMensual" ],
         "type" : "object",
@@ -3659,17 +4341,6 @@
           }
         }
       },
-      "MensajeResponseDTO" : {
-        "required" : [ "message" ],
-        "type" : "object",
-        "properties" : {
-          "message" : {
-            "type" : "string",
-            "description" : "Mensaje de confirmación en español."
-          }
-        },
-        "description" : "Confirmación legible de una operación."
-      },
       "UsuarioLoginDTO" : {
         "required" : [ "contrasena", "email" ],
         "type" : "object",
@@ -3685,15 +4356,24 @@
         }
       },
       "LoginResponseDTO" : {
-        "required" : [ "token" ],
+        "required" : [ "expiraEn", "refreshToken", "token" ],
         "type" : "object",
         "properties" : {
           "token" : {
             "type" : "string",
-            "description" : "JWT que debe enviarse en Authorization: Bearer <token>."
+            "description" : "JWT de acceso, corto (15 min). Debe enviarse en Authorization: Bearer <token>; al expirar el cliente lo renueva con /auth/refresh."
+          },
+          "refreshToken" : {
+            "type" : "string",
+            "description" : "Refresh token rotativo (90 días). Guardar de forma segura y usarlo solo en POST /auth/refresh; cada uso entrega uno nuevo y revoca el anterior. Para cerrar sesión enríelo en /auth/logout."
+          },
+          "expiraEn" : {
+            "type" : "string",
+            "description" : "Instante UTC (ISO-8601 con sufijo Z) en que expira el access token. Desde unos segundos antes empieza a refrescar de forma transparente.",
+            "format" : "date-time"
           }
         },
-        "description" : "Token JWT para autenticar las siguientes solicitudes."
+        "description" : "Par de tokens de la sesión: access token corto + refresh token rotativo."
       },
       "SimulacionCreditoRequestDTO" : {
         "required" : [ "modalidad", "montoCapital" ],
@@ -4145,6 +4825,46 @@
         },
         "description" : "Pago a registrar sobre una deuda."
       },
+      "RestablecerContrasenaDTO" : {
+        "required" : [ "nuevaContrasena", "token" ],
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string",
+            "description" : "Token recibido por correo; vale 1 hora y un solo uso."
+          },
+          "nuevaContrasena" : {
+            "maxLength" : 20,
+            "minLength" : 8,
+            "pattern" : "^(?=.*[A-Za-z])(?=.*\\d).*$",
+            "type" : "string",
+            "description" : "Nueva contraseña: 8 a 20 caracteres, con al menos una letra y un número."
+          }
+        },
+        "description" : "Restablecimiento de contraseña con token de un solo uso."
+      },
+      "RefreshTokenRequestDTO" : {
+        "required" : [ "refreshToken" ],
+        "type" : "object",
+        "properties" : {
+          "refreshToken" : {
+            "type" : "string",
+            "description" : "Token de sesión rotativo; en el refresh se consume y se entrega uno nuevo."
+          }
+        },
+        "description" : "Refresh token entregado por el login o por un refresh anterior."
+      },
+      "SolicitudRecuperacionDTO" : {
+        "required" : [ "email" ],
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "description" : "Correo con el que se registró la cuenta."
+          }
+        },
+        "description" : "Solicitud de recuperación de contraseña."
+      },
       "UsuarioResponseDTO" : {
         "required" : [ "apellido", "email", "fechaRegistro", "nombre", "rut" ],
         "type" : "object",
@@ -4419,6 +5139,48 @@
           }
         },
         "description" : "Pago de deuda con su desglose de capital, interés y costos."
+      },
+      "AppVersionResponseDTO" : {
+        "required" : [ "actualizacionObligatoria", "actualizacionSugerida", "mensaje", "urlTienda", "versionPrivacidad", "versionTerminos" ],
+        "type" : "object",
+        "properties" : {
+          "actualizacionObligatoria" : {
+            "type" : "boolean",
+            "description" : "true si la versión está por debajo del mínimo soportado: la app debe actualizar antes de seguir."
+          },
+          "actualizacionSugerida" : {
+            "type" : "boolean",
+            "description" : "true si hay una versión más reciente disponible y se sugiere actualizar sin bloquear."
+          },
+          "mensaje" : {
+            "type" : "string",
+            "description" : "Mensaje listo para mostrar al usuario, en español."
+          },
+          "urlTienda" : {
+            "type" : "string",
+            "description" : "URL de la tienda (Play Store o App Store) para actualizar la app."
+          },
+          "versionTerminos" : {
+            "type" : "string",
+            "description" : "Versión de los términos y condiciones vigentes que la app refleja."
+          },
+          "versionPrivacidad" : {
+            "type" : "string",
+            "description" : "Versión de la política de privacidad vigente que la app refleja."
+          }
+        },
+        "description" : "Política de actualización y legal vigente para la plataforma consultada."
+      },
+      "UsuarioEliminacionDTO" : {
+        "required" : [ "contrasena" ],
+        "type" : "object",
+        "properties" : {
+          "contrasena" : {
+            "type" : "string",
+            "description" : "Contraseña actual del usuario; el borrado se rechaza si no coincide."
+          }
+        },
+        "description" : "Cuerpo de DELETE /api/v1/usuarios/me: confirmación del usuario antes del borrado."
       },
       "ProblemaHttp" : {
         "required" : [ "codigo", "detail", "instance", "status", "title", "type" ],

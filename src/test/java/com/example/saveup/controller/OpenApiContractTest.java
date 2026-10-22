@@ -132,7 +132,14 @@ class OpenApiContractTest {
     }
 
     private void validarSeguridad(JsonNode operacion, String operationId, String metodo, String ruta) {
-        boolean publica = "registerUsuario".equals(operationId) || "loginUsuario".equals(operationId);
+        boolean publica = "registerUsuario".equals(operationId) || "loginUsuario".equals(operationId)
+                // T9.1: el refresh token es la credencial de estos endpoints, no el bearer
+                || "refrescarSesion".equals(operationId) || "cerrarSesion".equals(operationId)
+                // T9.3: recuperación de contraseña, siempre sin sesión válida
+                || "solicitarRecuperacionContrasena".equals(operationId)
+                || "restablecerContrasena".equals(operationId)
+                // T9.4: la política de versión se consulta al arrancar, sin sesión
+                || "obtenerVersionApp".equals(operationId);
         JsonNode security = operacion.path("security");
 
         if (publica) {

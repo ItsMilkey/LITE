@@ -78,6 +78,13 @@ public class OpenApiConfig {
                         errores.forEach((codigo, descripcion) ->
                                 operation.getResponses().putIfAbsent(codigo,
                                         respuestaProblemJson(descripcion, referencia)));
+
+                        // Login documenta además su 429 propio (T9.5, freno de fuerza bruta).
+                        if ("loginUsuario".equals(operation.getOperationId())) {
+                            operation.getResponses().putIfAbsent("429", respuestaProblemJson(
+                                    "Demasiados intentos fallidos de login; espera unos minutos.",
+                                    referencia));
+                        }
                     }));
         };
     }

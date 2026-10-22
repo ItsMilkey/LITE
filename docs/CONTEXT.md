@@ -3,6 +3,15 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 
 ## Entidades
 - USUARIO(rut PK, nombre, apellido, email, contrasena, fechaRegistro)
+- AUTH_REFRESH_TOKEN(id, usuario, tokenHash SHA-256, fechaExpiracion, fechaRevocacion?, fechaUso?) — sesión móvil (T9.1):
+  refresh rotativo de 90 días; el secreto nunca se persiste. FKs hacia USUARIO con ON DELETE CASCADE (V10).
+- TOKEN_VERIFICACION(id, usuario, tipo RESET_PASSWORD, tokenHash SHA-256, fechaExpiracion, usado, fechaCreacion) —
+  token de un solo uso, vale 1 hora (T9.3): pedir uno nuevo invalida los anteriores; solo se persiste el hash.
+  FK a USUARIO con ON DELETE CASCADE (V11).
+- No hay tabla para T9.4: la política de versiones (min/latest por plataforma, URL de tienda, versiones legales)
+  vive en application.properties y se resuelve en memoria (SemVerUtils + VersionAppService).
+- No hay tabla para T9.5: el contador de fuerza bruta vive en una caché Caffeine en memoria
+  (LoginRateLimiterService, clave email.toLowerCase()+":"+IP); se pierde al reiniciar sin riesgo de seguridad.
 - CATEGORIA(id, nombre, iconId, colorHex, tipoPresupuesto: NECESIDAD|DESEO|AHORRO|OTROS)
 - MOVIMIENTO(id, monto, descripcion, fecha [updatable=false], tipoMovimiento, usuario, categoria?, deuda?, metaAhorro?, movimientoOrigen?)
   Signo: + INGRESO_GENERAL y RETIRO_META; − GASTO_GENERAL, PAGO_DEUDA y ABONO_META. Saldo = SUM(monto).
@@ -16,8 +25,21 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 - ASIGNACION_META_PRESUPUESTO(id, configuracion, meta, porcentajeAsignacion)
 - PRESUPUESTO_CATEGORIA(id, usuario, categoria, limiteMensual > 0; UNIQUE(usuario, categoria)) — límite mensual recurrente por categoría
 
-## Endpoints (protegidos salvo register/login)
-- /api/v1/usuarios: POST register · POST login · GET me (UsuarioResponseDTO, sin entidad ni hash)
+## Endpoints (protegidos salvo register/login, auth/refresh, auth/logout y los de recuperación de contraseña)
+- /api/v1/usuarios: POST register · POST login (LoginResponseDTO {token, refreshToken, expiraEn}; T9.5: verificación de
+  bloqueo email+IP ANTES de la BD, cada 401 suma un intento (también correo inexistente) y un éxito resetea; 5 fallos
+  → 429 INTENTOS_LOGIN_EXCEDIDOS por 15 min) · GET me (UsuarioResponseDTO, sin entidad ni hash)
+  · PUT me/contrasena ({contrasenaActual, nuevaContrasena}) → 200; exige la actual (401 si no) y revoca TODAS las sesiones
+  · DELETE me ({contrasena}) → 204 irreversible: borra todo el dominio del usuario y sus sesiones (T9.2; 401 si la contraseña no coincide)
+- /api/v1/auth (T9.1): POST refresh (rota el par {token, refreshToken, expiraEn}; token usado/revocado → 401 REFRESH_INVALIDO
+  y revoca todas las sesiones del usuario) · POST logout (revoca el refresh; idempotente)
+- /api/v1/auth (T9.3, públicos): POST recuperar-contrasena ({email}) → 200 SIEMPRE con mensaje genérico (anti-enumeración);
+  el token de un solo uso sale por SMTP (log en consola con app.mail.log-only=true) · POST restablecer-contrasena
+  ({token, nuevaContrasena}) → 200; token inválido/reusado/expirado → 400 TOKEN_VERIFICACION_INVALIDO; revoca todas las sesiones
+- /api/v1/app/version (T9.4, público): GET ?plataforma=ANDROID|IOS&version=MAJOR.MINOR.PATCH → AppVersionResponseDTO
+  {actualizacionObligatoria (version < min-*, app bloqueada), actualizacionSugerida (entre min-* y latest-*), mensaje,
+  urlTienda, versionTerminos, versionPrivacidad}; plataforma/parámetro faltante → 400 PARAMETRO_INVALIDO,
+  SemVer mal formado → 400 DATOS_INVALIDOS
 - /api/v1/saldos/me
 - /api/v1/movimientos: POST · GET me (?limit) · GET paginados/me (?page&size&desde&hasta&tipoMovimiento&categoriaId&montoMin&montoMax&q) · PUT {id} · DELETE {id}
   POST solo acepta INGRESO_GENERAL, GASTO_GENERAL y PAGO_DEUDA. ABONO_META y RETIRO_META se rechazan con 400:
@@ -46,8 +68,11 @@ el mismo UUID queda en el log con la traza. Los 4xx se registran a INFO con stat
 | PARAMETRO_INVALIDO | 400 | Parámetro faltante o con tipo incorrecto |
 | DATOS_INVALIDOS | 400 | IllegalArgumentException o CalculoFinancieroException (entrada inválida) |
 | NO_AUTENTICADO | 401 | Token ausente o inválido |
-| TOKEN_EXPIRADO | 401 | Token válido pero expirado; el cliente puede volver al login sin ambigüedad |
-| CREDENCIALES_INVALIDAS | 401 | Email inexistente o contraseña incorrecta, con el mismo mensaje |
+| TOKEN_EXPIRADO | 401 | Token válido pero expirado; el cliente refresca con /auth/refresh (T9.1) |
+| REFRESH_INVALIDO | 401 | Refresh token inválido/reusado/revocado o usuario eliminado; volver al login |
+| TOKEN_VERIFICACION_INVALIDO | 400 | Token de restablecimiento inexistente, ya usado o expirado (no se distingue el motivo) |
+| CREDENCIALES_INVALIDAS | 401 | Email inexistente o contraseña incorrecta (también al eliminar cuenta), con el mismo mensaje |
+| INTENTOS_LOGIN_EXCEDIDOS | 429 | 5 fallos de login para el mismo email.toLowerCase()+IP (T9.5); el par queda bloqueado 15 min |
 | PROHIBIDO | 403 | Recurso de otro usuario; el detail es fijo |
 | NO_ENCONTRADO | 404 | EntityNotFoundException o ruta inexistente |
 | CONFLICTO_REGLA_NEGOCIO | 409 | Regla de negocio (ErrorNegocio) o DataIntegrityViolationException |
@@ -86,11 +111,47 @@ el mismo UUID queda en el log con la traza. Los 4xx se registran a INFO con stat
 - Contrato de datos para móviles (T8a): la zona del negocio es America/Santiago como constante de FechasMovimiento (sin ZoneId.systemDefault()); los instantes (Movimiento.fecha, Deuda.fechaCreacion, Usuario.fechaRegistro) se serializan ISO-8601 en UTC con sufijo Z y las fechas de calendario (LocalDate, incluida MetaAhorro.fechaLimite) como yyyy-MM-dd. JVM (-Duser.timezone=UTC), Hibernate (hibernate.jdbc.time_zone=UTC) y Jackson (spring.jackson.time-zone=UTC) persisten en UTC; los tests corren con -Duser.timezone=${test.timezone} (UTC por defecto). Dinero: número JSON con máximo 13 enteros + 2 decimales en todos los DTO de entrada (@Digits(13,2)); el servidor es la única fuente de aritmética y las tasas quedan fuera de esa regla.
 - La categoría 'Deudas' (NECESIDAD) se asigna automáticamente a los pagos de deuda.
 - Seguridad: JWT HMAC-SHA256 stateless; SecurityUtils.validarPropietario(rut).
-- Esquema: 8 tablas; V1 (DDL), V2 (seed de 10 categorías), V3 (deuda con condiciones de crédito), V4 (CHECK de signo de MOVIMIENTO), V5 (movimiento_origen_id: fk_movimiento_origen + idx_movimiento_origen_id, vínculo de Smart-Split), V6 (presupuesto_categoria: límite mensual por categoría, chk limite > 0, UNIQUE(usuario, categoria), RLS), V7 (renombra los nombres de constraint creados en V3–V6) y V8 (los devuelve a minúscula, valida el CHECK de signo de MOVIMIENTO, agrega 6 índices de FK y filtro y activa RLS en las 8 tablas de dominio) en db/migration/postgresql.
+- Sesión móvil (T9.1): access de 15 min + refresh opaco rotativo de 90 días persistido solo como hash SHA-256
+  (ver RefreshTokenService). La rotación marca fechaUso/fechaRevocación del token consumido; el reuso de un token
+  revocado revoca TODAS las sesiones del usuario (detección de robo). El logout revoca y la eliminación de cuenta
+  borra los refresh tokens.
+- Borrado de cuenta (T9.2): DELETE /api/v1/usuarios/me exige la contraseña actual (BCrypt; si no → 401
+  CREDENCIALES_INVALIDAS genérico) y corre en una transacción (@Transactional en UsuarioService.eliminarCuenta):
+  EliminacionDeCuentaService borra hijo→padre (asignaciones → presupuesto_categoria → configuración → movimientos
+  → metas → deudas → refresh tokens) y al final se elimina el usuario. Desde V10 las FKs hacia USUARIO tienen
+  ON DELETE CASCADE (respaldo); las FKs entre hijos siguen en NO ACTION a propósito. RUT/correo quedan libres
+  para re-registro.
+- Contraseñas (T9.3): PasswordService concentra recuperación y cambio. POST /auth/recuperar-contrasena responde
+  200 genérico siempre (no existe el correo → no registra nada, solo un log INFO); si existe, invalida los tokens
+  RESET_PASSWORD previos, guarda un token opaco (hash SHA-256, 1 h, un solo uso en TOKEN_VERIFICACION) y lo envía
+  con CorreoService: app.mail.log-only=true lo loguea en consola (dev/test, sin SMTP); false usa JavaMailSender
+  (exige spring.mail.* en prod; sin bean configurado falla con ERROR_INTERNO). POST /auth/restablecer-contrasena
+  valida el hash, marca usado, guarda BCrypt y revoca TODAS las sesiones (RefreshTokenService.revocarTodas);
+  token inválido/reusado/expirado → 400 TOKEN_VERIFICACION_INVALIDO con la misma superficie. PUT /usuarios/me/contrasena
+  exige la contraseña actual (si no → 401 CREDENCIALES_INVALIDAS) y también revoca todas las sesiones; el JWT de
+  acceso vigente mantiene su validez residual (máx. 15 min) porque es stateless. La URL opcional de restablecimiento
+  se configura en app.mail.url-restablecer (vacía = el correo muestra solo el token).
+- Versión mínima (T9.4): GET /api/v1/app/version compara la versión SemVer reportada por la app contra los umbrales
+  por plataforma de application.properties (app.version.min-*/latest-* con MAJOR.MINOR.PATCH). version < min-* →
+  actualizacionObligatoria=true (bloqueo), entre min-* y latest-* → actualizacionSugerida=true; los tres mensajes son
+  constantes en VersionAppService. SemVerUtils (service.version) valida el formato (3 segmentos de hasta 3 dígitos;
+  fallo → 400 DATOS_INVALIDOS) y compara numéricamente por segmentos ("1.10.0" > "1.9.1"), admitiendo ceros a la
+  izquierda. Publicar release = subir latest-*; activar bloqueo = subir min-*. Las plataformas son el enum
+  Plataforma (ANDROID, IOS): valor desconocido o parámetro faltante → 400 PARAMETRO_INVALIDO. Las URLs de tienda y
+  las versiones de legales (app.version.terminos/privacidad) viajan en la respuesta para la pantalla de legales.
+- Fuerza bruta en login (T9.5): LoginRateLimiterService (paquete security, caché Caffeine con ventana de 15 min
+  re-expirada por cada fallo) cuenta los intentos fallidos por la clave email.toLowerCase()+":" +IP, con IP resuelta
+  de la primera dirección de X-Forwarded-For o getRemoteAddr() (resolverIp, llamada desde el controller). El bloqueo
+  se consulta ANTES de tocar la BD en UsuarioService.autenticarUsuario(loginDTO, ipCliente): 5 fallos del par → 429
+  INTENTOS_LOGIN_EXCEDIDOS (controller no llega a findByEmail); cada 401 (contraseña incorrecta o correo inexistente)
+  suma un intento; un login exitoso resetea el contador. Contador en memoria del proceso (una instancia en Render);
+  al escalar horizontalmente mover la caché a Redis. El 429 se documenta en el contrato vía el customizer de
+  OpenApiConfig por operationId="loginUsuario".
+- Esquema: 10 tablas; V1 (DDL), V2 (seed de 10 categorías), V3 (deuda con condiciones de crédito), V4 (CHECK de signo de MOVIMIENTO), V5 (movimiento_origen_id: fk_movimiento_origen + idx_movimiento_origen_id, vínculo de Smart-Split), V6 (presupuesto_categoria: límite mensual por categoría, chk limite > 0, UNIQUE(usuario, categoria), RLS), V7 (renombra los nombres de constraint creados en V3–V6), V8 (los devuelve a minúscula, valida el CHECK de signo de MOVIMIENTO, agrega 6 índices de FK y filtro y activa RLS en las 8 tablas de dominio), V9 (T9.1: AUTH_REFRESH_TOKEN con índices y RLS), V10 (T9.2: ON DELETE CASCADE en las 6 FKs hacia USUARIO) y V11 (T9.3: TOKEN_VERIFICACION con FK CASCADE, hash único, índices y RLS) en db/migration/postgresql.
 
 ## Visión del módulo de deudas
 Dos usos con un mismo motor de cálculo: (1) simular un endeudamiento antes de contraerlo (cuánto cuesta, por cuánto tiempo, efecto de tasa y plazo, con fines de decisión y educación financiera) y (2) llevar la deuda real al detalle (cuánto falta, historial de pagos). Una deuda guardada = condiciones de una simulación + pagos.
 
 ## Tareas pendientes (docs/tareas/)
-[x] T0 BigDecimal · [x] T1a motor financiero y calendario · [x] T1b simulador (sin persistir) · [x] T1c deuda con condiciones, fechas y cuotas previas · [x] T2 pagos, imputación y saldos · [x] T3 detalle de deuda (ficha, cronograma, historial) · [x] T4 filtros y edición de movimientos · [x] T5 presupuesto por categoría e historial · [x] T8a contrato de datos (fechas, zona y dinero) · [x] T8b errores uniformes · [x] T8c OpenAPI, /api/v1 y guía Flutter · BACKLOG.md (diferido)
+[x] T0 BigDecimal · [x] T1a motor financiero y calendario · [x] T1b simulador (sin persistir) · [x] T1c deuda con condiciones, fechas y cuotas previas · [x] T2 pagos, imputación y saldos · [x] T3 detalle de deuda (ficha, cronograma, historial) · [x] T4 filtros y edición de movimientos · [x] T5 presupuesto por categoría e historial · [x] T8a contrato de datos (fechas, zona y dinero) · [x] T8b errores uniformes · [x] T8c OpenAPI, /api/v1 y guía Flutter · [x] T9.1 sesión móvil (refresh rotativo) · [x] T9.2 borrado de cuenta con cascada · [x] T9.3 contraseñas (recuperación y cambio) · [x] T9.4 versión mínima de la app · [x] T9.5 anti-fuerza bruta en login. **Fase A de T9 (T9.1–T9.5) concluida.** Pendientes de T9 (desacopladas): T9.6 push (FCM/APNs) y T9.7 legales — en docs/tareas/T9-sesion-movil.md. · BACKLOG.md (diferido).
 Orden: [x] T0 → [x] T1a → [x] T1b (el frontend ya puede consumirlo) → [x] T1c → [x] T2 → [x] T3. T4 y T5 solo dependen de T0.

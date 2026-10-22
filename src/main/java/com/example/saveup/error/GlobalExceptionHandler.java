@@ -1,5 +1,8 @@
 package com.example.saveup.error;
 
+import com.example.saveup.security.BloqueoPorFuerzaBrutaException;
+import com.example.saveup.service.RefreshTokenInvalidoException;
+import com.example.saveup.service.TokenVerificacionInvalidoException;
 import com.example.saveup.service.finanzas.CalculoFinancieroException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -115,6 +118,27 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> credencialesInvalidas(BadCredentialsException ex,
                                                                HttpServletRequest request) {
         return respuesta(CodigoError.CREDENCIALES_INVALIDAS, null, HttpStatus.UNAUTHORIZED,
+                request, List.of(), null);
+    }
+
+    @ExceptionHandler(RefreshTokenInvalidoException.class)
+    public ResponseEntity<ProblemDetail> refreshInvalido(RefreshTokenInvalidoException ex,
+                                                         HttpServletRequest request) {
+        return respuesta(CodigoError.REFRESH_INVALIDO, null, HttpStatus.UNAUTHORIZED,
+                request, List.of(), null);
+    }
+
+    @ExceptionHandler(TokenVerificacionInvalidoException.class)
+    public ResponseEntity<ProblemDetail> tokenVerificacionInvalido(TokenVerificacionInvalidoException ex,
+                                                                   HttpServletRequest request) {
+        return respuesta(CodigoError.TOKEN_VERIFICACION_INVALIDO, null, HttpStatus.BAD_REQUEST,
+                request, List.of(), null);
+    }
+
+    @ExceptionHandler(BloqueoPorFuerzaBrutaException.class)
+    public ResponseEntity<ProblemDetail> bloqueoPorFuerzaBruta(BloqueoPorFuerzaBrutaException ex,
+                                                               HttpServletRequest request) {
+        return respuesta(CodigoError.INTENTOS_LOGIN_EXCEDIDOS, null, HttpStatus.TOO_MANY_REQUESTS,
                 request, List.of(), null);
     }
 

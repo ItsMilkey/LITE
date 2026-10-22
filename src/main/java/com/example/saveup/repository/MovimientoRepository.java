@@ -19,6 +19,9 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long>,
 
     List<Movimiento> findByUsuarioRutOrderByFechaDesc(String rut);
 
+    // T9.2: borra todos los movimientos del usuario (deuda, metas y saldos mueren con la cuenta).
+    void deleteByUsuarioRut(String rut);
+
     // ¡CAMBIO IMPORTANTE! Ahora devuelve un objeto Page que contiene la lista y
     // metadatos.
     Page<Movimiento> findByUsuarioRutOrderByFechaDesc(String rut, Pageable pageable);

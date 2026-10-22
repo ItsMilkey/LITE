@@ -1,10 +1,29 @@
 # T9 — Sesión móvil y requisitos de las tiendas (BACKLOG: necesita decisiones, no implementar sin spec)
 
 Cosas que una app móvil publicada necesita y que el backend aún no tiene:
-- Refresh tokens y expiración: el JWT actual dura 24 h, así que sin refresh el usuario vuelve a iniciar sesión cada día. Decidir duración del access token, refresh token rotativo y revocación (logout).
-- Borrar cuenta desde la app (DELETE /api/v1/usuarios/me, con borrado en cascada de movimientos, deudas, metas y presupuestos). Las tiendas exigen esta opción en las apps que permiten crear cuenta: verifica las políticas vigentes de Apple y Google antes de publicar.
-- Recuperar contraseña (requiere envío de correo y un token de un solo uso) y cambiar contraseña.
-- Versión mínima de la app (forzar actualización): endpoint o cabecera para informar versiones soportadas.
-- Protección de login contra fuerza bruta (límite de intentos).
+- **[HECHO en T9.1]** Refresh tokens y expiración: access token de 15 min + refresh token rotativo de 90 días,
+  revocable y con detección de reuso (`POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`; tabla `auth_refresh_token`,
+  migración V9). Prestaciones pendientes de este punto: logout masivo expuesto en endpoint y el resto del desglose abajo.
+- **[HECHO en T9.2]** Borrar cuenta desde la app (DELETE /api/v1/usuarios/me, con borrado en cascada de movimientos,
+  deudas, metas y presupuestos; exige la contraseña actual, migración V10).
+- **[HECHO en T9.3]** Recuperar contraseña y cambiar contraseña: `POST /auth/recuperar-contrasena` (200 genérico
+  anti-enumeración, token de un solo uso por 1 h vía `token_verificacion`, migración V11; correo real con SMTP o
+  log-only en dev/test) + `POST /auth/restablecer-contrasena` + `PUT /usuarios/me/contrasena`; ambos cambios
+  revocan todas las sesiones activas. Pendiente: elegir proveedor SMTP (Brevo/Resend) y configurar la URL pública
+  de restablecimiento (`app.mail.url-restablecer`).
+- **[HECHO en T9.4]** Versión mínima de la app (forzar actualización): `GET /api/v1/app/version` público con
+  `?plataforma=ANDROID|IOS&version=MAJOR.MINOR.PATCH`; umbrales min-*/latest-* y URLs de tienda en
+  application.properties (SemVerUtils + VersionAppService). Al publicar cada release subir `latest-*`;
+  subir `min-*` solo cuando algo obliga a salir de la app. Cuando la app se publique, actualizar las URLs
+  `app.version.url-tienda-android/ios` con los enlaces reales.
+- **[HECHO en T9.5]** Protección de login contra fuerza bruta: `LoginRateLimiterService` (paquete `security`, caché
+  Caffeine en memoria, ventana de 15 min re-expirada por cada fallo) cuenta intentos fallidos por la clave
+  `email.toLowerCase() + ":" + IP` (IP resuelta desde la primera dirección de `X-Forwarded-For` o `getRemoteAddr()`).
+  El 5º fallo bloquea el par: `POST /usuarios/login` responde **429 INTENTOS_LOGIN_EXCEDIDOS** antes de consultar la BD;
+  cada 401 suma un intento (también con correo inexistente) y un login exitoso resetea el contador. Documentado en el
+  contrato con la respuesta 429 (customizer de OpenApiConfig por `operationId`). Nota: el contador vive en memoria del
+  proceso (suficiente para una sola instancia en Render); al escalar horizontalmente mover la caché a Redis.
 - Recordatorios de vencimiento de cuotas con notificaciones push (FCM/APNs). Requiere guardar tokens de dispositivo y un proceso programado.
 - Política de privacidad y términos (necesarios para publicar).
+- **Estado (oct 2026): Fase A de T9 (T9.1–T9.5) concluida.** Quedan: T9.6 (push, aplazado) y T9.7 (legal, aplazado),
+  desacoplados del backend porque dependen de la app pública y de las tiendas.

@@ -15,21 +15,66 @@ con el backend local; producción siempre HTTPS. No incluyas `/v3/api-docs` ni S
 
 ## 2. Token y autenticación
 
-- `POST /usuarios/register` y `POST /usuarios/login` son públicos. El login devuelve `{ "token": "..." }`.
-- Guarda el JWT con `flutter_secure_storage` (Keychain/Keystore), por ejemplo bajo la clave `saveup_jwt`; nunca en
-  `SharedPreferences`, logs ni código fuente.
+- `POST /usuarios/register`, `POST /usuarios/login`, `POST /auth/refresh`, `POST /auth/logout`,
+  `POST /auth/recuperar-contrasena`, `POST /auth/restablecer-contrasena` y `GET /app/version` son públicos. Login y refresh
+  devuelven `{ "token": "...", "refreshToken": "...", "expiraEn": "2026-10-22T12:15:00.000Z" }`.
+- Guarda ambos con `flutter_secure_storage` (Keychain/Keystore): `saveup_jwt` para el access token y `saveup_refresh` para
+  el refresh token; nunca en `SharedPreferences`, logs ni código fuente.
+- El access token dura **15 minutos** (`expiraEn` te dice cuándo) y el refresh token **90 días**. Rotativo: cada refresh
+  entrega un refresh token nuevo y revoca el anterior; el anterior deja de servir en cuanto se entregó el nuevo.
 - En cada solicitud protegida envía `Authorization: Bearer <token>`.
-- Si recibes 401 con `codigo = NO_AUTENTICADO` o `TOKEN_EXPIRADO`, borra el token y vuelve al login. No reintentes el login
-  automáticamente con credenciales guardadas.
+- Manejo del 401 en el interceptor: si `codigo = TOKEN_EXPIRADO`, llama **una sola vez** `POST /auth/refresh` con
+  `{ "refreshToken": "..." }` y reintenta la solicitud original; guarda el par nuevo. Si `codigo = REFRESH_INVALIDO`
+  (token inválido, reusado o revocado, incluido un logout en otro dispositivo) o el refresh también falla, borra ambos
+  tokens y vuelve al login. No reintentes el login automáticamente con credenciales guardadas.
+- Para cerrar sesión: `POST /auth/logout` con `{ "refreshToken": "..." }`; luego borra ambos tokens del almacenamiento.
+- **Política anti-fuerza bruta del login**: el backend cuenta los intentos fallidos por combinación de **correo + IP**
+  (la IP viene de la primera dirección de `X-Forwarded-For` que agrega el proxy de Render). Tras **5 fallos** ese par
+  queda bloqueado **15 minutos** y `POST /usuarios/login` responde **429 INTENTOS_LOGIN_EXCEDIDOS** — incluso con la
+  contraseña correcta, y el bloqueo no dependerá de reintentos: no reenvíes el login automáticamente. Al lograr un
+  login exitoso el contador se reinicia. En la UI: ante un 429 muestra "Demasiados intentos; espera unos minutos"
+  con un botón de reintento manual, y deshabilita el reenvío automático de credenciales guardadas.
+- **Cambiar la contraseña con sesión activa** (pantalla "Configuración → Seguridad"): `PUT /usuarios/me/contrasena` con
+  `Authorization: Bearer <token>` y `{ "contrasenaActual": "...", "nuevaContrasena": "..." }` (8–20 caracteres, con letra
+  y número). Devuelve 200 y **revoca todas las sesiones** (otros dispositivos quedan fuera); deja de usar el refresh
+  token guardado y pide login con la nueva contraseña. `401 CREDENCIALES_INVALIDAS` si la actual no coincide y
+  `400 VALIDACION_FALLIDA` (campo `nuevaContrasena`) si la nueva es débil.
+- **Recuperar la contraseña sin sesión** (pantalla "Olvidé mi contraseña", endpoint público):
+  1. `POST /auth/recuperar-contrasena` con `{ "email": "..." }` → **siempre 200 genérico** ("Si el correo está registrado…").
+     No muestres nada que dependa de si el correo existe: la respuesta es idéntica para todos (anti-enumeración).
+  2. El backend envía (o loguea, en dev) un token de un solo uso válido 1 hora. Cuando la app pública tenga pantalla de
+     restablecimiento, configúrala en `app.mail.url-restablecer`; mientras tanto el correo muestra el token en texto.
+     Pide al usuario pegar el token recibido y la contraseña nueva en el formulario.
+  3. `POST /auth/restablecer-contrasena` con `{ "token": "...", "nuevaContrasena": "..." }` → 200; el token queda
+     consumido (no se puede reusar) y **se revocan todas las sesiones** del usuario. `400 TOKEN_VERIFICACION_INVALIDO`
+     si el token es inválido, ya se usó o expiró: muestra "solicita uno nuevo" y deja reintentar desde el paso 1.
+- **Forzar actualización / versión mínima** (T9.4, endpoint público): al arrancar, antes de cualquier login, consulta
+  `GET /app/version?plataforma=ANDROID|IOS&version=MAJOR.MINOR.PATCH` con la versión de la app compilada
+  (`plataforma`/`version` son obligatorios). Responde
+  `{ actualizacionObligatoria, actualizacionSugerida, mensaje, urlTienda, versionTerminos, versionPrivacidad }`:
+  - `actualizacionObligatoria=true` (versión < mínimo soportado): bloquea el uso, muestra `mensaje` y abre `urlTienda`
+    con el botón "Actualizar". No envíes requests de caso de uso con una versión bloqueada.
+  - `actualizacionSugerida=true` (entre mínimo y la más reciente): muestra `mensaje` como aviso no intrusivo
+    (banner o diálogo descartable) y sigue operando.
+  - Ambos en `false` (al día o más nueva): no muestres nada.
+  - Muestra `versionTerminos`/`versionPrivacidad` en la pantalla de legales; si cambian respecto a lo guardado,
+    pide re-aceptación.
+  - Errores: parámetro ausente o plataforma inválida → `400 PARAMETRO_INVALIDO`; versión mal formada →
+    `400 DATOS_INVALIDOS`. Si la llamada falla por red, aplica política por defecto: degradar de forma segura
+    (continuar con aviso de estado desconocido), no bloquear el uso por no poder consultar.
+- **Eliminar la cuenta** (requisito de Apple y Google si la app permite crear cuentas): `DELETE /usuarios/me` con
+  `Authorization: Bearer <token>` y cuerpo `{ "contrasena": "..." }`. Borra en cascada todo el dominio del usuario
+  (movimientos, deudas, metas, presupuestos y sesiones) y devuelve **204**; es irreversible. `401 CREDENCIALES_INVALIDAS`
+  si la contraseña no coincide y `400 VALIDACION_FALLIDA` si falta. Confirma con el usuario (delante, no en un menú
+  escondido) antes de llamarla.
 
 ```dart
 final storage = FlutterSecureStorage();
 final dio = Dio(BaseOptions(baseUrl: 'https://lite-backend-1wn9.onrender.com/api/v1'));
-dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) async {
-  final token = await storage.read(key: 'saveup_jwt');
-  if (token != null) options.headers['Authorization'] = 'Bearer $token';
-  handler.next(options);
-}));
+// onRequest: adjunta Authorization: Bearer <token> (saveup_jwt).
+// onError: si status == 401 && codigo == TOKEN_EXPIRADO y no venimos de un refresh,
+// llama a /auth/refresh con saveup_refresh, persiste el par nuevo y reintenta;
+// con REFRESH_INVALIDO limpia ambas claves y ve al login.
 ```
 
 ## 3. Dinero, porcentajes y fechas (T8a)
@@ -65,8 +110,11 @@ muestra cada `{campo, mensaje}` junto al campo del formulario. En 500 muestra el
 | `PARAMETRO_INVALIDO` | 400 | Corregir el parámetro o filtro enviado. |
 | `DATOS_INVALIDOS` | 400 | Mostrar `detail` (regla de negocio o monto inválido). |
 | `NO_AUTENTICADO` | 401 | Ir al login y borrar el token. |
-| `TOKEN_EXPIRADO` | 401 | Ir al login y borrar el token. |
+| `TOKEN_EXPIRADO` | 401 | Llamar `POST /auth/refresh` una vez y reintentar; si persiste, ir al login. |
+| `REFRESH_INVALIDO` | 401 | La sesión ya no existe: borrar ambos tokens y volver al login. |
+| `TOKEN_VERIFICACION_INVALIDO` | 400 | El token de restablecimiento no sirve (inexistente, reusado o expirado): pedir uno nuevo. |
 | `CREDENCIALES_INVALIDAS` | 401 | Mostrar “correo o contraseña incorrectos” (mensaje genérico). |
+| `INTENTOS_LOGIN_EXCEDIDOS` | 429 | Login bloqueado 15 min por fuerza bruta: mensaje "espera unos minutos", reintento manual (sin línea a 0). |
 | `PROHIBIDO` | 403 | El recurso es de otro usuario; volver atrás. |
 | `NO_ENCONTRADO` | 404 | Mostrar estado vacío o refrescar la lista. |
 | `CONFLICTO_REGLA_NEGOCIO` | 409 | Mostrar `detail`; no reintentar automáticamente. |

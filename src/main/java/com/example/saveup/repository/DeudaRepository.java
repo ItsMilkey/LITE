@@ -14,6 +14,9 @@ public interface DeudaRepository extends JpaRepository<Deuda, Long> {
     // Encuentra todas las deudas de un usuario
     List<Deuda> findByUsuarioRut(String rut);
 
+    // T9.2: las deudas se borran con la cuenta (sus pagos ya son movimientos del mismo usuario).
+    void deleteByUsuarioRut(String rut);
+
     /**
      * SELECT + FROM comunes a las dos consultas con proyección a DeudaResponseDTO.
      * El WHERE y el GROUP BY se agregan en cada consulta.

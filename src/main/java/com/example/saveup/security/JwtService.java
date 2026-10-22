@@ -20,20 +20,34 @@ public class JwtService {
     @Value("${jwt.secret}")
     private String secretKey;
 
-    @Value("${jwt.expirationInMs:86400000}")
+    @Value("${jwt.expirationInMs:900000}")
     private long expirationInMs;
 
     public String generateToken(String rut, String email) {
+        return generarTokenConExpiracion(rut, email).token();
+    }
+
+    /** Par que devuelve la sesión: el JWT y su instante de expiración. */
+    public record TokenConExpiracion(String token, Date expiracion) {
+    }
+
+    /**
+     * Genera el JWT de acceso y su instante de expiración en un único paso, de
+     * modo que el contrato {@code expiraEn} coincida con la vigencia real.
+     */
+    public TokenConExpiracion generarTokenConExpiracion(String rut, String email) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expirationInMs);
 
-        return Jwts.builder()
+        String token = Jwts.builder()
                 .subject(rut)
                 .claim("email", email)
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(getSigningKey(), Jwts.SIG.HS256)
                 .compact();
+
+        return new TokenConExpiracion(token, expiryDate);
     }
 
     public String extractRut(String token) {

@@ -8,4 +8,7 @@ import java.util.Optional;
 @Repository
 public interface ConfiguracionPresupuestoRepository extends JpaRepository<ConfiguracionPresupuesto, Long> {
     Optional<ConfiguracionPresupuesto> findByUsuarioRut(String usuarioRut);
+
+    // T9.2: el presupuesto 50/30/20 muere con la cuenta.
+    void deleteByUsuarioRut(String usuarioRut);
 }
