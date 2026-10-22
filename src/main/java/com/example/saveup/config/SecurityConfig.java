@@ -53,6 +53,13 @@ public class SecurityConfig {
     @Value("${app.cors.max-age:3600}")
     private long maxAge;
 
+    /**
+     * La documentación interactiva solo es pública cuando springdoc está habilitado
+     * (dev). En prod la propiedad es false y las rutas quedan bajo autenticación.
+     */
+    @Value("${springdoc.api-docs.enabled:true}")
+    private boolean apiDocsHabilitado;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -63,19 +70,25 @@ public class SecurityConfig {
                 .authenticationEntryPoint(customAuthenticationEntryPoint)
                 .accessDeniedHandler(customAccessDeniedHandler)
             )
-            .authorizeHttpRequests(auth -> auth
+            .authorizeHttpRequests(auth -> {
                 // Peticiones Preflight de CORS siempre permitidas
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                // Endpoints públicos de registro y login
-                .requestMatchers(HttpMethod.POST, "/api/v1/usuarios/register", "/api/v1/usuarios/login").permitAll()
-                // Documentación interactiva solo disponible en dev; en prod springdoc está deshabilitado.
-                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Endpoints públicos de registro y login
+                        .requestMatchers(HttpMethod.POST, "/api/v1/usuarios/register", "/api/v1/usuarios/login")
+                        .permitAll();
+
+                // Documentación interactiva pública solo en dev: en prod springdoc está
+                // deshabilitado y, sin este matcher, las rutas exigen autenticación.
+                if (apiDocsHabilitado) {
+                    auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
+                }
+
                 // Endpoints públicos para health check y keep_alive de Render
-                .requestMatchers(HttpMethod.GET, "/", "/actuator/health").permitAll()
-                .requestMatchers(HttpMethod.HEAD, "/", "/actuator/health").permitAll()
-                // Todo el resto de la API requiere autenticación JWT obligatoria
-                .anyRequest().authenticated()
-            )
+                auth.requestMatchers(HttpMethod.GET, "/", "/actuator/health").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/", "/actuator/health").permitAll()
+                        // Todo el resto de la API requiere autenticación JWT obligatoria
+                        .anyRequest().authenticated();
+            })
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

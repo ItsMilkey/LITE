@@ -72,8 +72,11 @@ public class OpenApiConfig {
                         if (operation.getResponses() == null) {
                             operation.setResponses(new io.swagger.v3.oas.models.responses.ApiResponses());
                         }
+                        // Rellena solo los códigos que la operación no declare ya: una
+                        // respuesta específica (p. ej. un 409 propio con su descripción)
+                        // siempre gana sobre la plantilla estándar.
                         errores.forEach((codigo, descripcion) ->
-                                operation.getResponses().put(codigo,
+                                operation.getResponses().putIfAbsent(codigo,
                                         respuestaProblemJson(descripcion, referencia)));
                     }));
         };

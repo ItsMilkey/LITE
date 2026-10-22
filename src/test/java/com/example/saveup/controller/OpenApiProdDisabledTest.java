@@ -5,10 +5,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -34,11 +37,19 @@ class OpenApiProdDisabledTest {
     private MockMvc mockMvc;
 
     @Test
-    @DisplayName("En prod, /v3/api-docs y Swagger UI no están expuestos")
+    @DisplayName("En prod, la documentación exige autenticación y no está expuesta")
     void documentacionNoExpuestaEnProd() throws Exception {
+        // Sin token: la documentación no es pública en prod.
         mockMvc.perform(get("/v3/api-docs"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
         mockMvc.perform(get("/swagger-ui/index.html"))
+                .andExpect(status().isUnauthorized());
+
+        // Autenticado: springdoc está deshabilitado, así que las rutas no existen.
+        mockMvc.perform(get("/v3/api-docs").with(user("prod-user")))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/swagger-ui/index.html").with(user("prod-user")))
                 .andExpect(status().isNotFound());
     }
 }

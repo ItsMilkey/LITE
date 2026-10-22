@@ -1,5 +1,6 @@
 package com.example.saveup.controller;
 
+import com.example.saveup.config.OpenApiConfig;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -65,6 +66,33 @@ class OpenApiContractTest {
         assertTrue(Files.exists(CONTRATO), INSTRUCCION_REGENERAR);
         JsonNode guardado = objectMapper.readTree(Files.readString(CONTRATO, StandardCharsets.UTF_8));
         assertEquals(guardado, generado, INSTRUCCION_REGENERAR);
+    }
+
+    @Test
+    @DisplayName("El esquema ProblemaHttp cubre las propiedades del problem+json real")
+    void esquemaProblemaHttpCubreRespuestaReal() throws Exception {
+        MvcResult docs = mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode contrato = objectMapper.readTree(
+                docs.getResponse().getContentAsString(StandardCharsets.UTF_8));
+
+        JsonNode propiedades = contrato.path("components").path("schemas")
+                .path(OpenApiConfig.ESQUEMA_PROBLEMA).path("properties");
+        assertTrue(propiedades.isObject() && !propiedades.isEmpty(),
+                "El contrato debe declarar el esquema " + OpenApiConfig.ESQUEMA_PROBLEMA
+                        + " con propiedades.");
+
+        MvcResult error = mockMvc.perform(get("/api/v1/saldos/me"))
+                .andExpect(status().isUnauthorized())
+                .andReturn();
+        JsonNode problemaReal = objectMapper.readTree(
+                error.getResponse().getContentAsString(StandardCharsets.UTF_8));
+
+        problemaReal.fieldNames().forEachRemaining(campo ->
+                assertTrue(propiedades.has(campo),
+                        "El campo \"" + campo + "\" del problem+json real no existe en el esquema "
+                                + OpenApiConfig.ESQUEMA_PROBLEMA + "; actualiza ProblemaHttpDTO."));
     }
 
     private void validarContrato(JsonNode contrato) {
@@ -145,6 +173,13 @@ class OpenApiContractTest {
                 JsonNode schema = media.getValue().path("schema");
                 assertFalse(schema.isMissingNode() || schema.isNull(),
                         "La respuesta 2xx de " + metodo + " " + ruta + " debe tener un esquema concreto.");
+
+                boolean objetoVacio = "object".equals(schema.path("type").asText())
+                        && !schema.has("$ref")
+                        && schema.path("properties").isEmpty();
+                assertFalse(objetoVacio,
+                        "La respuesta 2xx de " + metodo + " " + ruta
+                                + " no puede ser un 'object' vacío; usa un $ref o declara propiedades.");
             });
         }
 
