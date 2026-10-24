@@ -24,6 +24,10 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 - CONFIGURACION_PRESUPUESTO(id, usuario 1:1, %necesidades, %deseos, %ahorro, activo, automatizarAhorroEnMetas)
 - ASIGNACION_META_PRESUPUESTO(id, configuracion, meta, porcentajeAsignacion)
 - PRESUPUESTO_CATEGORIA(id, usuario, categoria, limiteMensual > 0; UNIQUE(usuario, categoria)) — límite mensual recurrente por categoría
+- DISPOSITIVO_PUSH(id, usuario, token FCM UNIQUE global, plataforma ANDROID|IOS, activo, fechaRegistro, fechaUltimoUso) —
+  T9.6. Un token que cambia de cuenta se reasigna; `activo=false` = FCM lo rechazó y no se reintenta.
+- RECORDATORIO_ENVIADO(id, usuario, deuda, cuotaNumero, tipo PROXIMA_VENCER|VENCE_HOY|VENCIDA, fechaEnvio;
+  UNIQUE(deuda, cuota, tipo)) — T9.6, bitácora de deduplicación del job de recordatorios.
 
 ## Endpoints (protegidos salvo register/login, auth/refresh, auth/logout y los de recuperación de contraseña)
 - /api/v1/usuarios: POST register · POST login (LoginResponseDTO {token, refreshToken, expiraEn}; T9.5: verificación de
@@ -48,6 +52,11 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 - /api/v1/metas: POST · GET me · POST {id}/abonar · POST {id}/retirar · PUT {id} · DELETE {id}
 - /api/v1/deudas: POST · GET me · GET {id} · POST {id}/pagar · PUT {id} · PATCH {id}/cancelar · GET {id}/amortizacion · GET {id}/pagos (?page&size, fecha desc)
 - /api/v1/presupuestos: GET me (DTO; sin configuración → 404 NO_ENCONTRADO) · POST me (DTO; porcentajes deben sumar 100.00 y ninguno ser negativo) · GET ejecucion/me (?month&year) · GET categorias/me · PUT categorias/me · GET categorias/ejecucion/me (?month&year) · GET historial/me (?desde&hasta=YYYY-MM)
+- /api/v1/notificaciones (T9.6): POST dispositivos ({token, plataforma}; upsert idempotente, reasigna tokens entre
+  cuentas) · GET dispositivos (solo activos, token enmascarado) · DELETE dispositivos ({token}; idempotente)
+  · POST recordatorios/ejecutar (cron externo, cabecera X-Cron-Secret en vez de JWT; 202 {evaluados, enviados, omitidos};
+  secreto vacío ⇒ 403). Job a las 09:00 America/Santiago: T-3, T-0 y T+1 sobre la próxima cuota impaga; una push por
+  usuario; deduplica por (deuda, cuota, tipo); token rechazado por FCM ⇒ dispositivo inactivo.
 - /api/v1/reportes/movimientos/exportar (?alcance&formato&mes&anio)
 - /api/v1/simulaciones: POST credito (simulación sin persistencia, motor financiero + resumen educativo)
 
@@ -153,5 +162,5 @@ el mismo UUID queda en el log con la traza. Los 4xx se registran a INFO con stat
 Dos usos con un mismo motor de cálculo: (1) simular un endeudamiento antes de contraerlo (cuánto cuesta, por cuánto tiempo, efecto de tasa y plazo, con fines de decisión y educación financiera) y (2) llevar la deuda real al detalle (cuánto falta, historial de pagos). Una deuda guardada = condiciones de una simulación + pagos.
 
 ## Tareas pendientes (docs/tareas/)
-[x] T0 BigDecimal · [x] T1a motor financiero y calendario · [x] T1b simulador (sin persistir) · [x] T1c deuda con condiciones, fechas y cuotas previas · [x] T2 pagos, imputación y saldos · [x] T3 detalle de deuda (ficha, cronograma, historial) · [x] T4 filtros y edición de movimientos · [x] T5 presupuesto por categoría e historial · [x] T8a contrato de datos (fechas, zona y dinero) · [x] T8b errores uniformes · [x] T8c OpenAPI, /api/v1 y guía Flutter · [x] T9.1 sesión móvil (refresh rotativo) · [x] T9.2 borrado de cuenta con cascada · [x] T9.3 contraseñas (recuperación y cambio) · [x] T9.4 versión mínima de la app · [x] T9.5 anti-fuerza bruta en login. **Fase A de T9 (T9.1–T9.5) concluida.** Pendientes de T9 (desacopladas): T9.6 push (FCM/APNs) y T9.7 legales — en docs/tareas/T9-sesion-movil.md. · BACKLOG.md (diferido).
+[x] T0 BigDecimal · [x] T1a motor financiero y calendario · [x] T1b simulador (sin persistir) · [x] T1c deuda con condiciones, fechas y cuotas previas · [x] T2 pagos, imputación y saldos · [x] T3 detalle de deuda (ficha, cronograma, historial) · [x] T4 filtros y edición de movimientos · [x] T5 presupuesto por categoría e historial · [x] T8a contrato de datos (fechas, zona y dinero) · [x] T8b errores uniformes · [x] T8c OpenAPI, /api/v1 y guía Flutter · [x] T9.1 sesión móvil (refresh rotativo) · [x] T9.2 borrado de cuenta con cascada · [x] T9.3 contraseñas (recuperación y cambio) · [x] T9.4 versión mínima de la app · [x] T9.5 anti-fuerza bruta en login · [x] T9.6 recordatorios de vencimiento por push (FCM + job diario). **Fase A de T9 (T9.1–T9.5) y T9.6 concluidas.** Pendiente de T9: T9.7 legales — en docs/tareas/T9-sesion-movil.md. · BACKLOG.md (diferido).
 Orden: [x] T0 → [x] T1a → [x] T1b (el frontend ya puede consumirlo) → [x] T1c → [x] T2 → [x] T3. T4 y T5 solo dependen de T0.

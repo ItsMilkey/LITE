@@ -84,7 +84,11 @@ public class SecurityConfig {
                                 "/api/v1/auth/recuperar-contrasena", "/api/v1/auth/restablecer-contrasena")
                         .permitAll()
                         // Versión mínima (T9.4): la app lo consulta al arrancar, antes de tener sesión
-                        .requestMatchers(HttpMethod.GET, "/api/v1/app/version").permitAll();
+                        .requestMatchers(HttpMethod.GET, "/api/v1/app/version").permitAll()
+                        // Job de recordatorios (T9.6): lo invoca un cron externo. No usa JWT;
+                        // la credencial es X-Cron-Secret y el controlador la valida.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/notificaciones/recordatorios/ejecutar")
+                        .permitAll();
 
                 // Documentación interactiva pública solo en dev: en prod springdoc está
                 // deshabilitado y, sin este matcher, las rutas exigen autenticación.

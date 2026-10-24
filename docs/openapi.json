@@ -31,6 +31,9 @@
     "name" : "App",
     "description" : "Política de versiones soportadas de la app móvil (endpoint público)."
   }, {
+    "name" : "Notificaciones",
+    "description" : "Dispositivos para recordatorios push de vencimiento."
+  }, {
     "name" : "Presupuestos",
     "description" : "Configuración 50/30/20, límites por categoría, ejecución e historial."
   }, {
@@ -1257,6 +1260,361 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/notificaciones/recordatorios/ejecutar" : {
+      "post" : {
+        "tags" : [ "Notificaciones" ],
+        "summary" : "Ejecuta la corrida de recordatorios (cron externo)",
+        "operationId" : "ejecutarRecordatorios",
+        "parameters" : [ {
+          "name" : "X-Cron-Secret",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "202" : {
+            "description" : "Corrida aceptada y ejecutada",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResultadoRecordatoriosDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notificaciones/dispositivos" : {
+      "get" : {
+        "tags" : [ "Notificaciones" ],
+        "summary" : "Lista los dispositivos activos del usuario autenticado",
+        "operationId" : "listarDispositivos",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/DispositivoPushResponseDTO"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "Notificaciones" ],
+        "summary" : "Registra o refresca el dispositivo del usuario autenticado",
+        "operationId" : "registrarDispositivo",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DispositivoPushRequestDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Dispositivo registrado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DispositivoPushResponseDTO"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "El dispositivo ya existía y se refrescó",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DispositivoPushResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "delete" : {
+        "tags" : [ "Notificaciones" ],
+        "summary" : "Deja de notificar a un dispositivo (idempotente)",
+        "operationId" : "eliminarDispositivo",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DispositivoPushBajaDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Dispositivo eliminado (idempotente)"
           },
           "400" : {
             "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
@@ -4749,6 +5107,76 @@
         },
         "description" : "Configuración 50/30/20 guardada por el usuario."
       },
+      "ResultadoRecordatoriosDTO" : {
+        "required" : [ "enviados", "evaluados", "omitidos" ],
+        "type" : "object",
+        "properties" : {
+          "evaluados" : {
+            "type" : "integer",
+            "description" : "Cuotas pendientes evaluadas.",
+            "format" : "int32"
+          },
+          "enviados" : {
+            "type" : "integer",
+            "description" : "Avisos enviados y registrados.",
+            "format" : "int32"
+          },
+          "omitidos" : {
+            "type" : "integer",
+            "description" : "Avisos omitidos por ya enviados, sin dispositivo o con fallo de entrega.",
+            "format" : "int32"
+          }
+        },
+        "description" : "Resumen de la corrida de recordatorios."
+      },
+      "DispositivoPushRequestDTO" : {
+        "required" : [ "plataforma", "token" ],
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string",
+            "description" : "Token de Firebase Cloud Messaging del dispositivo."
+          },
+          "plataforma" : {
+            "type" : "string",
+            "description" : "Plataforma del dispositivo.",
+            "enum" : [ "ANDROID", "IOS" ]
+          }
+        },
+        "description" : "Dispositivo que recibirá notificaciones push."
+      },
+      "DispositivoPushResponseDTO" : {
+        "required" : [ "activo", "fechaRegistro", "id", "plataforma", "tokenEnmascarado" ],
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "description" : "Identificador interno del registro.",
+            "format" : "int64"
+          },
+          "plataforma" : {
+            "type" : "string",
+            "description" : "Plataforma del dispositivo.",
+            "enum" : [ "ANDROID", "IOS" ]
+          },
+          "activo" : {
+            "type" : "boolean",
+            "description" : "false si FCM rechazó el token y ya no se intenta."
+          },
+          "fechaRegistro" : {
+            "type" : "string",
+            "description" : "Instante de registro en ISO-8601 UTC.",
+            "format" : "date-time"
+          },
+          "tokenEnmascarado" : {
+            "type" : "string",
+            "description" : "Token con solo los primeros y últimos caracteres visibles."
+          }
+        },
+        "description" : "Dispositivo registrado para notificaciones push."
+      },
       "MovimientoRegistroDTO" : {
         "required" : [ "descripcion", "monto", "tipoMovimiento" ],
         "type" : "object",
@@ -5181,6 +5609,19 @@
           }
         },
         "description" : "Cuerpo de DELETE /api/v1/usuarios/me: confirmación del usuario antes del borrado."
+      },
+      "DispositivoPushBajaDTO" : {
+        "required" : [ "token" ],
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string",
+            "description" : "Token de Firebase Cloud Messaging del dispositivo."
+          }
+        },
+        "description" : "Token del dispositivo que se deja de notificar."
       },
       "ProblemaHttp" : {
         "required" : [ "codigo", "detail", "instance", "status", "title", "type" ],

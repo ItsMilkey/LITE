@@ -140,3 +140,36 @@ openapi-generator-cli generate \
 - Si el contrato cambia, actualiza `docs/openapi.json` con
   `.\mvnw.cmd "-Dopenapi.update=true" test -Dtest=OpenApiContractTest` y vuelve a generar el cliente.
 - En Flutter ejecuta `dart run build_runner build --delete-conflicting-outputs` si el generador produce modelos `json_serializable`.
+
+## 6. Notificaciones push (T9.6)
+
+La app recibe recordatorios de cuota a las **09:00 de America/Santiago** en tres momentos: **3 días antes**
+(`PROXIMA_VENCER`), **el día del vencimiento** (`VENCE_HOY`) y **un día después** (`VENCIDA`). Se envía **una sola push
+por usuario y por corrida**, aunque tenga varias cuotas; el detalle viaja en el payload.
+
+1. Tras el login (o al arrancar con sesión guardada), pide el permiso del sistema operativo y obtén el token de FCM.
+   No lo pidas antes de que el usuario entienda para qué sirve.
+2. Regístralo: `POST /api/v1/notificaciones/dispositivos` con `Authorization: Bearer <token>` y
+   `{ "token": "<fcm-token>", "plataforma": "ANDROID" | "IOS" }`. Responde `201` la primera vez y `200` si el
+   dispositivo ya existía (es idempotente; sirve también para refrescar `fechaUltimoUso`).
+3. Si FCM rota el token (`onTokenRefresh`), repite el `POST` con el nuevo. El anterior se desactiva solo cuando FCM lo
+   rechaza en un envío.
+4. En el **logout**, antes de borrar el JWT, llama `DELETE /api/v1/notificaciones/dispositivos` con
+   `{ "token": "<fcm-token>" }` (`204`, idempotente). Si no lo haces, el dispositivo seguirá recibiendo avisos hasta
+   que FCM rechace el token.
+5. `GET /api/v1/notificaciones/dispositivos` lista los activos; el token solo se devuelve enmascarado
+   (`tokenEnmascarado`). No lo uses para reenviar: el valor completo vive únicamente en el teléfono.
+
+Payload de datos de la notificación:
+
+```json
+{ "tipo": "RECORDATORIO_CUOTA", "cantidad": "1", "deudaId": "77", "cuota": "3", "deepLink": "saveup://deudas/77" }
+```
+
+Con `cantidad > 1` no viene `deudaId` y el `deepLink` es `saveup://deudas` (lista). Configura el manejo del *tap* para
+navegar con `deepLink`; no interpretes el título, que puede cambiar.
+
+En dev y mientras no haya proyecto de Firebase, el backend funciona con `app.push.log-only=true`: el job "envía" y
+loguea. El **cron externo** que dispara el job llama `POST /api/v1/notificaciones/recordatorios/ejecutar` con la
+cabecera `X-Cron-Secret` (no usa JWT) y recibe `202 {evaluados, enviados, omitidos}`.
+

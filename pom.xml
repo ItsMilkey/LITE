@@ -53,6 +53,14 @@
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
         </dependency>
+        <!-- === PUSH (T9.6): notificaciones FCM para Android e iOS === -->
+        <!-- Solo lo usa FcmPushSender; con app.push.log-only=true (por defecto)
+             no se inicializa Firebase ni se necesita credencial alguna. -->
+        <dependency>
+            <groupId>com.google.firebase</groupId>
+            <artifactId>firebase-admin</artifactId>
+            <version>9.3.0</version>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

@@ -25,5 +25,8 @@ Cosas que una app móvil publicada necesita y que el backend aún no tiene:
   proceso (suficiente para una sola instancia en Render); al escalar horizontalmente mover la caché a Redis.
 - Recordatorios de vencimiento de cuotas con notificaciones push (FCM/APNs). Requiere guardar tokens de dispositivo y un proceso programado.
 - Política de privacidad y términos (necesarios para publicar).
-- **Estado (oct 2026): Fase A de T9 (T9.1–T9.5) concluida.** Quedan: T9.6 (push, aplazado) y T9.7 (legal, aplazado),
-  desacoplados del backend porque dependen de la app pública y de las tiendas.
+- **Estado (oct 2026): Fase A de T9 (T9.1–T9.5) y T9.6 concluidas.** Queda T9.7 (legal, aplazado, depende de la app
+  pública y de las tiendas). T9.6 se implementó en [`T9.6-notificaciones-push.md`](T9.6-notificaciones-push.md):
+  dispositivos FCM, job diario a las 09:00 de Santiago (T-3/T-0/T+1), deduplicación y trigger de cron externo.
+  Nota: T9.6 **no** estaba desacoplado del backend — requirió tabla, endpoints y job; el doc anterior lo agrupaba
+  por error con legales.

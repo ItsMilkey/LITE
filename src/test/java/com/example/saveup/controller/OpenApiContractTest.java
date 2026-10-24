@@ -139,7 +139,9 @@ class OpenApiContractTest {
                 || "solicitarRecuperacionContrasena".equals(operationId)
                 || "restablecerContrasena".equals(operationId)
                 // T9.4: la política de versión se consulta al arrancar, sin sesión
-                || "obtenerVersionApp".equals(operationId);
+                || "obtenerVersionApp".equals(operationId)
+                // T9.6: lo invoca un cron externo; no usa bearerAuth sino X-Cron-Secret
+                || "ejecutarRecordatorios".equals(operationId);
         JsonNode security = operacion.path("security");
 
         if (publica) {
