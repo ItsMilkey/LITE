@@ -39,3 +39,5 @@ build/
 diff.txt
 *.orig
 *.rej
+# Logs de test redirigidos desde PowerShell (UTF-16, no versionar)
+test-output.log
