@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.Map;
 
@@ -51,6 +52,10 @@ class RecordatorioServiceTest {
 
     private static final String RUT = "12345678-9";
     private static final String TOKEN = "token-de-prueba-1234567890";
+
+    /** Instante dentro de la ventana permitida ([08:00, 22:00)) para las corridas. */
+    private static final ZonedDateTime VENTANA =
+            ZonedDateTime.of(2026, 10, 24, 9, 0, 0, 0, FechasMovimiento.zona());
 
     @Autowired
     private RecordatorioService recordatorioService;
@@ -94,7 +99,7 @@ class RecordatorioServiceTest {
     void proximaVencer_enviaYRegistra() {
         deuda(FechasMovimiento.hoy().plusDays(3), "Notebook");
 
-        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar();
+        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar(VENTANA);
 
         assertEquals(1, resultado.evaluados());
         assertEquals(1, resultado.enviados());
@@ -111,7 +116,7 @@ class RecordatorioServiceTest {
     void venceHoy_envia() {
         deuda(FechasMovimiento.hoy(), "Notebook");
 
-        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar();
+        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar(VENTANA);
 
         assertEquals(1, resultado.enviados());
         ArgumentCaptor<String> cuerpo = ArgumentCaptor.forClass(String.class);
@@ -124,7 +129,7 @@ class RecordatorioServiceTest {
     void vencidaAyer_envia() {
         deuda(FechasMovimiento.hoy().minusDays(1), "Notebook");
 
-        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar();
+        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar(VENTANA);
 
         assertEquals(1, resultado.enviados());
         ArgumentCaptor<String> cuerpo = ArgumentCaptor.forClass(String.class);
@@ -137,7 +142,7 @@ class RecordatorioServiceTest {
     void fueraDeVentana_noEnvia() {
         deuda(FechasMovimiento.hoy().plusDays(10), "Notebook");
 
-        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar();
+        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar(VENTANA);
 
         assertEquals(1, resultado.evaluados());
         assertEquals(0, resultado.enviados());
@@ -149,8 +154,8 @@ class RecordatorioServiceTest {
     void segundaCorrida_noDuplica() {
         deuda(FechasMovimiento.hoy().plusDays(3), "Notebook");
 
-        recordatorioService.ejecutar();
-        ResultadoRecordatoriosDTO segunda = recordatorioService.ejecutar();
+        recordatorioService.ejecutar(VENTANA);
+        ResultadoRecordatoriosDTO segunda = recordatorioService.ejecutar(VENTANA);
 
         assertEquals(0, segunda.enviados());
         assertEquals(1, segunda.omitidos());
@@ -164,7 +169,7 @@ class RecordatorioServiceTest {
         deuda(FechasMovimiento.hoy().plusDays(3), "Notebook");
         deuda(FechasMovimiento.hoy().plusDays(3), "Auto");
 
-        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar();
+        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar(VENTANA);
 
         assertEquals(2, resultado.evaluados());
         assertEquals(2, resultado.enviados());
@@ -181,7 +186,7 @@ class RecordatorioServiceTest {
     void payloadIncluyeDeepLink() {
         Deuda deuda = deuda(FechasMovimiento.hoy().plusDays(3), "Notebook");
 
-        recordatorioService.ejecutar();
+        recordatorioService.ejecutar(VENTANA);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Map<String, String>> datos = ArgumentCaptor.forClass(Map.class);
@@ -198,7 +203,7 @@ class RecordatorioServiceTest {
         deuda.setEstado(EstadoDeuda.PAGADA);
         deudaRepository.save(deuda);
 
-        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar();
+        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar(VENTANA);
 
         assertEquals(0, resultado.enviados());
         verify(pushSender, times(0)).enviar(anyString(), anyString(), anyString(), anyMap());
@@ -211,7 +216,7 @@ class RecordatorioServiceTest {
                 .thenReturn(PushSender.ResultadoEnvio.tokenMuerto());
         deuda(FechasMovimiento.hoy().plusDays(3), "Notebook");
 
-        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar();
+        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar(VENTANA);
 
         assertEquals(0, resultado.enviados());
         assertEquals(1, resultado.omitidos());
@@ -225,7 +230,7 @@ class RecordatorioServiceTest {
         dispositivoRepository.findByToken(TOKEN).orElseThrow().setActivo(false);
         deuda(FechasMovimiento.hoy().plusDays(3), "Notebook");
 
-        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar();
+        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar(VENTANA);
 
         assertEquals(0, resultado.evaluados());
         assertEquals(0, resultado.enviados());
@@ -241,6 +246,90 @@ class RecordatorioServiceTest {
         assertEquals(TipoRecordatorio.VENCIDA, RecordatorioService.tipoDeAviso(hoy, hoy.minusDays(1), 3));
         assertNull(RecordatorioService.tipoDeAviso(hoy, hoy.plusDays(2), 3));
         assertNull(RecordatorioService.tipoDeAviso(hoy, hoy.minusDays(2), 3));
+    }
+
+    @Test
+    @DisplayName("03:15 está fuera de la ventana 08:00–22:00: no envía aunque haya cuotas en ventana")
+    void madrugada_noEnvia() {
+        deuda(FechasMovimiento.hoy().plusDays(3), "Notebook");
+
+        ZonedDateTime deMadrugada = ZonedDateTime.of(2026, 10, 24, 3, 15, 0, 0, FechasMovimiento.zona());
+        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar(deMadrugada);
+
+        assertEquals(0, resultado.evaluados());
+        assertEquals(0, resultado.enviados());
+        assertEquals(0, resultado.omitidos());
+        verify(pushSender, times(0)).enviar(anyString(), anyString(), anyString(), anyMap());
+    }
+
+    @Test
+    @DisplayName("23:15 está fuera de la ventana 08:00–22:00: no envía aunque haya cuotas en ventana")
+    void noche_noEnvia() {
+        deuda(FechasMovimiento.hoy().plusDays(3), "Notebook");
+
+        ZonedDateTime deNoche = ZonedDateTime.of(2026, 10, 24, 23, 15, 0, 0, FechasMovimiento.zona());
+        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar(deNoche);
+
+        assertEquals(0, resultado.evaluados());
+        assertEquals(0, resultado.enviados());
+        assertEquals(0, resultado.omitidos());
+        verify(pushSender, times(0)).enviar(anyString(), anyString(), anyString(), anyMap());
+    }
+
+    @Test
+    @DisplayName("08:00 es el límite incluido de la ventana: envía")
+    void inicioVentana_envia() {
+        deuda(FechasMovimiento.hoy().plusDays(3), "Notebook");
+
+        ZonedDateTime inicio = ZonedDateTime.of(2026, 10, 24, 8, 0, 0, 0, FechasMovimiento.zona());
+        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar(inicio);
+
+        assertEquals(1, resultado.enviados());
+        assertEquals(1, recordatorioRepository.count());
+    }
+
+    @Test
+    @DisplayName("21:59 es el último minuto dentro de la ventana: envía")
+    void finVentana_envia() {
+        deuda(FechasMovimiento.hoy().plusDays(3), "Notebook");
+
+        ZonedDateTime limitrofe = ZonedDateTime.of(2026, 10, 24, 21, 59, 0, 0, FechasMovimiento.zona());
+        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar(limitrofe);
+
+        assertEquals(1, resultado.enviados());
+        assertEquals(1, recordatorioRepository.count());
+    }
+
+    @Test
+    @DisplayName("Deuda eliminada durante el envío: la corrida no falla y no persiste su recordatorio")
+    void deudaEliminadaDuranteEnvio_noFalla() {
+        Deuda deuda = deuda(FechasMovimiento.hoy().plusDays(3), "Notebook");
+        when(pushSender.enviar(anyString(), anyString(), anyString(), anyMap()))
+                .thenAnswer(invocacion -> {
+                    // Simula el borrado concurrente: la deuda desaparece después
+                    // de evaluarse y de enviarse la push, antes de persistir.
+                    deudaRepository.deleteById(deuda.getId());
+                    return PushSender.ResultadoEnvio.ok();
+                });
+
+        ResultadoRecordatoriosDTO resultado = recordatorioService.ejecutar(VENTANA);
+
+        assertEquals(0, resultado.enviados());
+        assertEquals(0, recordatorioRepository.count());
+        verify(pushSender, times(1)).enviar(anyString(), anyString(), anyString(), anyMap());
+    }
+
+    @Test
+    @DisplayName("N cuotas con mezcla VENCE_HOY: texto plural aprobado (que vencen hoy)")
+    void variasCuotas_textoPluralAprobado() {
+        deuda(FechasMovimiento.hoy().plusDays(3), "Notebook");
+        deuda(FechasMovimiento.hoy(), "Auto");
+
+        recordatorioService.ejecutar(VENTANA);
+
+        ArgumentCaptor<String> cuerpo = ArgumentCaptor.forClass(String.class);
+        verify(pushSender, times(1)).enviar(anyString(), anyString(), cuerpo.capture(), anyMap());
+        assertEquals("Tienes 2 cuotas que vencen hoy", cuerpo.getValue());
     }
 
     // ─────────────────────────────── Helpers ───────────────────────────────

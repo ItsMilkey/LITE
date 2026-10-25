@@ -1,5 +1,6 @@
 package com.example.saveup.pagination;
 
+import com.example.saveup.error.DatosInvalidosException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -22,7 +23,7 @@ public final class Paginacion {
 
     public static Pageable crear(int page, int size, Sort sort) {
         if (page < 0 || size < 1 || size > 100) {
-            throw new IllegalArgumentException(MENSAJE_INVALIDO);
+            throw new DatosInvalidosException(MENSAJE_INVALIDO);
         }
         return PageRequest.of(page, size, sort != null ? sort : Sort.unsorted());
     }

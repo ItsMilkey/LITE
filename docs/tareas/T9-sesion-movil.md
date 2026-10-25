@@ -15,7 +15,10 @@ Cosas que una app móvil publicada necesita y que el backend aún no tiene:
   `?plataforma=ANDROID|IOS&version=MAJOR.MINOR.PATCH`; umbrales min-*/latest-* y URLs de tienda en
   application.properties (SemVerUtils + VersionAppService). Al publicar cada release subir `latest-*`;
   subir `min-*` solo cuando algo obliga a salir de la app. Cuando la app se publique, actualizar las URLs
-  `app.version.url-tienda-android/ios` con los enlaces reales.
+  `app.version.url-tienda-android/ios` con los enlaces reales. Nota post-review: la respuesta ya incluye
+  `versionTerminos` y `versionPrivacidad` (`app.version.terminos/privacidad`) para alimentar la pantalla de
+  legales del cliente; es la única raíz de T9.7 anticipada — T9.7 sigue aplazado y nada más de legales está
+  implementado.
 - **[HECHO en T9.5]** Protección de login contra fuerza bruta: `LoginRateLimiterService` (paquete `security`, caché
   Caffeine en memoria, ventana de 15 min re-expirada por cada fallo) cuenta intentos fallidos por la clave
   `email.toLowerCase() + ":" + IP` (IP resuelta desde la primera dirección de `X-Forwarded-For` o `getRemoteAddr()`).

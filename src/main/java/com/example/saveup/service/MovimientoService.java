@@ -8,6 +8,7 @@ import com.example.saveup.dto.MovimientoResponseDTO;
 import com.example.saveup.dto.PageResponseDTO;
 import com.example.saveup.dto.PagoDeudaDTO;
 import com.example.saveup.error.CodigoError;
+import com.example.saveup.error.DatosInvalidosException;
 import com.example.saveup.error.ErrorNegocio;
 import com.example.saveup.model.Categoria;
 import com.example.saveup.model.Movimiento;
@@ -136,10 +137,10 @@ public class MovimientoService {
      */
     private MovimientoResponseDTO registrarPagoDeuda(MovimientoRegistroDTO dto) {
         if (dto.getDeudaId() == null) {
-            throw new IllegalArgumentException("El campo 'deudaId' es obligatorio para movimientos de tipo PAGO_DEUDA.");
+            throw new DatosInvalidosException("El campo 'deudaId' es obligatorio para movimientos de tipo PAGO_DEUDA.");
         }
         if (dto.getMonto() == null) {
-            throw new IllegalArgumentException("El monto del pago es obligatorio.");
+            throw new DatosInvalidosException("El monto del pago es obligatorio.");
         }
 
         PagoDeudaDTO pago = new PagoDeudaDTO();
@@ -289,17 +290,17 @@ public class MovimientoService {
             return;
         }
         if (filtro.getDesde() != null && filtro.getHasta() != null && filtro.getDesde().isAfter(filtro.getHasta())) {
-            throw new IllegalArgumentException("La fecha 'desde' no puede ser posterior a 'hasta'.");
+            throw new DatosInvalidosException("La fecha 'desde' no puede ser posterior a 'hasta'.");
         }
         if (filtro.getMontoMin() != null && filtro.getMontoMin().compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("El monto mínimo no puede ser negativo.");
+            throw new DatosInvalidosException("El monto mínimo no puede ser negativo.");
         }
         if (filtro.getMontoMax() != null && filtro.getMontoMax().compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("El monto máximo no puede ser negativo.");
+            throw new DatosInvalidosException("El monto máximo no puede ser negativo.");
         }
         if (filtro.getMontoMin() != null && filtro.getMontoMax() != null
                 && filtro.getMontoMin().compareTo(filtro.getMontoMax()) > 0) {
-            throw new IllegalArgumentException("El monto mínimo no puede ser mayor que el monto máximo.");
+            throw new DatosInvalidosException("El monto mínimo no puede ser mayor que el monto máximo.");
         }
     }
 
@@ -314,10 +315,10 @@ public class MovimientoService {
      */
     private void validarTipoRegistrable(TipoMovimiento tipo) {
         if (tipo == null) {
-            throw new IllegalArgumentException("El tipo de movimiento es obligatorio.");
+            throw new DatosInvalidosException("El tipo de movimiento es obligatorio.");
         }
         if (!TIPOS_PERMITIDOS.contains(tipo)) {
-            throw new IllegalArgumentException(
+            throw new DatosInvalidosException(
                     "Los movimientos hacia y desde metas se registran desde la sección de metas.");
         }
     }

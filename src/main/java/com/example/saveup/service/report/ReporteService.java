@@ -1,5 +1,6 @@
 package com.example.saveup.service.report;
 
+import com.example.saveup.error.DatosInvalidosException;
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.service.movimiento.FechasMovimiento;
@@ -51,7 +52,7 @@ public class ReporteService {
             generator = strategies.get("CSV");
         }
         if (generator == null)
-            throw new IllegalArgumentException("Formato no soportado: " + formato);
+            throw new DatosInvalidosException("Formato no soportado: " + formato);
 
         // 3. Generar
         byte[] content = generator.generarReporte(movimientos);
@@ -65,10 +66,10 @@ public class ReporteService {
 
     private void validarPeriodo(Integer mes, Integer anio) {
         if (mes != null && (mes < MES_MIN || mes > MES_MAX)) {
-            throw new IllegalArgumentException("El mes debe estar entre 1 y 12.");
+            throw new DatosInvalidosException("El mes debe estar entre 1 y 12.");
         }
         if (anio != null && (anio < ANIO_MIN || anio > ANIO_MAX)) {
-            throw new IllegalArgumentException("El año debe estar entre 2000 y 2100.");
+            throw new DatosInvalidosException("El año debe estar entre 2000 y 2100.");
         }
     }
 

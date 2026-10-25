@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Date;
@@ -56,6 +57,16 @@ public class RecordatorioService {
     /** Payload que la app usa para navegar al tocar la notificación. */
     static final String TIPO_PAYLOAD = "RECORDATORIO_CUOTA";
 
+    /**
+     * Ventana horaria permitida del aviso (T9.6 D4): [08:00, 22:00) en la zona
+     * del negocio. Defendida aquí y no solo en el horario del cron: el trigger
+     * externo puede disparar cada hora y así nunca sale una push de madrugada
+     * (o antes de las 08:00) aunque cambie la configuración del cron.
+     */
+    static final int HORA_INICIO = 8;
+
+    static final int HORA_FIN = 22;
+
     private final DispositivoPushRepository dispositivoRepository;
 
     private final RecordatorioEnviadoRepository recordatorioRepository;
@@ -83,20 +94,34 @@ public class RecordatorioService {
 
     /**
      * Ejecuta una corrida completa y devuelve el resumen. Es idempotente: dos
-     * llamadas el mismo día producen el mismo estado final.
-     *
-     * <p>El envío ocurre dentro de la transacción para que la bitácora de
-     * deduplicación y el resultado del envío sean consistentes. Con el volumen
-     * esperado del MVP (una corrida diaria) es aceptable; si el número de
-     * dispositivos crece, conviene separar cálculo, envío y persistencia.
+     * llamadas el mismo día producen el mismo estado final. No envía nada fuera
+     * de la ventana permitida ({@link #HORA_INICIO}–{@link #HORA_FIN}).
      */
     @Transactional
     public ResultadoRecordatoriosDTO ejecutar() {
+        return ejecutar(ZonedDateTime.now(FechasMovimiento.zona()));
+    }
+
+    /**
+     * Corrida con el instante inyectado (seam para tests). Es el punto único de
+     * entrada del scheduler interno y del endpoint de cron: cualquiera que sea
+     * la configuración del disparador, la regla de horario vale igual.
+     */
+    @Transactional
+    public ResultadoRecordatoriosDTO ejecutar(ZonedDateTime ahora) {
+        int hora = ahora.getHour();
+        if (hora < HORA_INICIO || hora >= HORA_FIN) {
+            LOG.info("Recordatorios fuera de la ventana permitida [{}:00, {}:00); "
+                    + "no se evalúa ni envía nada (hora={}:00 {}", HORA_INICIO, HORA_FIN, hora,
+                    ahora.getZone());
+            return new ResultadoRecordatoriosDTO(0, 0, 0);
+        }
+
         LocalDate hoy = FechasMovimiento.hoy();
         int ventana = Math.max(1, diasAntes);
 
         int evaluados = 0;
-        int enviados = 0;
+        int envios = 0;
         int omitidos = 0;
 
         for (String rut : dispositivoRepository.findRutsConDispositivosActivos()) {
@@ -133,27 +158,25 @@ public class RecordatorioService {
                 continue;
             }
 
-            boolean algunEnvio = enviar(rut, avisos, destinos);
+            boolean algunEnvio = enviar(rut, avisos, destinos, ventana);
             if (!algunEnvio) {
                 omitidos += avisos.size();
                 continue;
             }
 
-            Usuario usuario = destinos.get(0).getUsuario();
-            avisos.forEach(aviso -> recordatorioRepository.save(nuevoRecordatorio(usuario, aviso)));
-            enviados += avisos.size();
+            envios += persistir(destinos.get(0).getUsuario(), avisos);
         }
 
-        if (enviados > 0 || omitidos > 0) {
+        if (envios > 0 || omitidos > 0) {
             LOG.info("Recordatorios T9.6: evaluados={} enviados={} omitidos={}",
-                    evaluados, enviados, omitidos);
+                    evaluados, envios, omitidos);
         }
-        return new ResultadoRecordatoriosDTO(evaluados, enviados, omitidos);
+        return new ResultadoRecordatoriosDTO(evaluados, envios, omitidos);
     }
 
     /** Envía la push agrupada; devuelve true si al menos un dispositivo la aceptó. */
-    private boolean enviar(String rut, List<Aviso> avisos, List<DispositivoPush> destinos) {
-        String cuerpo = componerCuerpo(avisos);
+    private boolean enviar(String rut, List<Aviso> avisos, List<DispositivoPush> destinos, int ventana) {
+        String cuerpo = componerCuerpo(avisos, ventana);
         Map<String, String> datos = componerDatos(avisos);
 
         boolean algunEnvio = false;
@@ -174,6 +197,33 @@ public class RecordatorioService {
     }
 
     /**
+     * Persiste la bitácora de deduplicación de cada aviso. La deuda pudo haber
+     * sido eliminada mientras la push volaba: en ese caso se registra y se
+     * continúa (la corrida no falla por un borrado concurrente).
+     *
+     * @return la cantidad de recordatorios realmente persistidos.
+     */
+    private int persistir(Usuario usuario, List<Aviso> avisos) {
+        Map<Long, Deuda> deudasExistentes = deudaRepository
+                .findAllById(avisos.stream().map(Aviso::deudaId).toList())
+                .stream()
+                .collect(Collectors.toMap(Deuda::getId, deuda -> deuda));
+
+        int persistidos = 0;
+        for (Aviso aviso : avisos) {
+            Deuda deuda = deudasExistentes.get(aviso.deudaId());
+            if (deuda == null) {
+                LOG.info("Deuda {} eliminada durante la corrida; no se persiste su recordatorio",
+                        aviso.deudaId());
+                continue;
+            }
+            recordatorioRepository.save(nuevoRecordatorio(usuario, deuda, aviso));
+            persistidos++;
+        }
+        return persistidos;
+    }
+
+    /**
      * Ventana del aviso. T-{@code ventana}, mismo día y un día después. Fuera de
      * esas tres fechas no hay notificación: no se insiste todos los días.
      */
@@ -191,11 +241,11 @@ public class RecordatorioService {
         return null;
     }
 
-    private String componerCuerpo(List<Aviso> avisos) {
+    private String componerCuerpo(List<Aviso> avisos, int ventana) {
         if (avisos.size() == 1) {
             Aviso aviso = avisos.get(0);
             String cuando = switch (aviso.tipo()) {
-                case PROXIMA_VENCER -> "vence en " + Math.max(1, diasAntes) + " días";
+                case PROXIMA_VENCER -> "vence en " + ventana + " días";
                 case VENCE_HOY -> "vence hoy";
                 case VENCIDA -> "venció ayer";
             };
@@ -207,7 +257,8 @@ public class RecordatorioService {
         if (tipos.equals(Set.of(TipoRecordatorio.VENCIDA))) {
             cuando = "vencidas";
         } else if (tipos.contains(TipoRecordatorio.VENCE_HOY)) {
-            cuando = "por vencer o vencidas hoy";
+            // Texto aprobado en T9.6 §5 ("Tienes 3 cuotas que vencen hoy").
+            cuando = "que vencen hoy";
         } else {
             cuando = "por vencer";
         }
@@ -230,9 +281,8 @@ public class RecordatorioService {
         return datos;
     }
 
-    private RecordatorioEnviado nuevoRecordatorio(Usuario usuario, Aviso aviso) {
+    private RecordatorioEnviado nuevoRecordatorio(Usuario usuario, Deuda deuda, Aviso aviso) {
         RecordatorioEnviado recordatorio = new RecordatorioEnviado();
-        Deuda deuda = deudaRepository.getReferenceById(aviso.deudaId());
         recordatorio.setUsuario(usuario);
         recordatorio.setDeuda(deuda);
         recordatorio.setCuotaNumero(aviso.cuota());

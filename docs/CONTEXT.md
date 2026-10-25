@@ -55,8 +55,10 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 - /api/v1/notificaciones (T9.6): POST dispositivos ({token, plataforma}; upsert idempotente, reasigna tokens entre
   cuentas) · GET dispositivos (solo activos, token enmascarado) · DELETE dispositivos ({token}; idempotente)
   · POST recordatorios/ejecutar (cron externo, cabecera X-Cron-Secret en vez de JWT; 202 {evaluados, enviados, omitidos};
-  secreto vacío ⇒ 403). Job a las 09:00 America/Santiago: T-3, T-0 y T+1 sobre la próxima cuota impaga; una push por
-  usuario; deduplica por (deuda, cuota, tipo); token rechazado por FCM ⇒ dispositivo inactivo.
+  secreto vacío ⇒ 403). El job NO envía fuera de la ventana [08:00, 22:00) America/Santiago (defendida en código,
+  RecordatorioService.ejecutar; el cron externo puede disparar cada hora sin riesgo) y a las 09:00 America/Santiago:
+  T-3, T-0 y T+1 sobre la próxima cuota impaga; una push por usuario; deduplica por (deuda, cuota, tipo); token
+  rechazado por FCM ⇒ dispositivo inactivo.
 - /api/v1/reportes/movimientos/exportar (?alcance&formato&mes&anio)
 - /api/v1/simulaciones: POST credito (simulación sin persistencia, motor financiero + resumen educativo)
 
@@ -75,7 +77,7 @@ el mismo UUID queda en el log con la traza. Los 4xx se registran a INFO con stat
 | VALIDACION_FALLIDA | 400 | Bean Validation de DTO o parámetros; incluye `errores[]` |
 | SOLICITUD_INVALIDA | 400/405/415 | JSON malformado, enum desconocido, método o Content-Type no soportado |
 | PARAMETRO_INVALIDO | 400 | Parámetro faltante o con tipo incorrecto |
-| DATOS_INVALIDOS | 400 | IllegalArgumentException o CalculoFinancieroException (entrada inválida) |
+| DATOS_INVALIDOS | 400 | DatosInvalidosException o CalculoFinancieroException (entrada inválida): detail propio. IAE de librería (NumberFormatException, DateTimeParseException) → detail genérico sin exponer su mensaje |
 | NO_AUTENTICADO | 401 | Token ausente o inválido |
 | TOKEN_EXPIRADO | 401 | Token válido pero expirado; el cliente refresca con /auth/refresh (T9.1) |
 | REFRESH_INVALIDO | 401 | Refresh token inválido/reusado/revocado o usuario eliminado; volver al login |
@@ -130,7 +132,10 @@ el mismo UUID queda en el log con la traza. Los 4xx se registran a INFO con stat
   → metas → deudas → refresh tokens) y al final se elimina el usuario. Desde V10 las FKs hacia USUARIO tienen
   ON DELETE CASCADE (respaldo); las FKs entre hijos siguen en NO ACTION a propósito. RUT/correo quedan libres
   para re-registro.
-- Contraseñas (T9.3): PasswordService concentra recuperación y cambio. POST /auth/recuperar-contrasena responde
+- Contraseñas (T9.3): PasswordService concentra recuperación y cambio. Política única (ContrasenaValida, paquete
+  validation): 8–64 caracteres, al menos una letra y un número, máximo 72 bytes en UTF-8 (límite de BCrypt sin
+  truncar; aplica también a cambio y restablecimiento vía ContrasenaMaxBytes). El login NO la valida: compara la
+  contraseña contra el hash tal cual. POST /auth/recuperar-contrasena responde
   200 genérico siempre (no existe el correo → no registra nada, solo un log INFO); si existe, invalida los tokens
   RESET_PASSWORD previos, guarda un token opaco (hash SHA-256, 1 h, un solo uso en TOKEN_VERIFICACION) y lo envía
   con CorreoService: app.mail.log-only=true lo loguea en consola (dev/test, sin SMTP); false usa JavaMailSender

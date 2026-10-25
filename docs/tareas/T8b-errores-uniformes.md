@@ -1,7 +1,11 @@
 # T8b — Errores uniformes (RFC 7807 / problem+json)
 Depende de: T8a (opcional). Modelo sugerido: Opus o Gemini Pro para el plan; Sonnet 4.6 Thinking para implementar. Empieza con el inventario y espera mi "ok".
 
-**Estado: implementado.** Inventario aprobado con los 13 códigos de la tabla de abajo.
+**Estado: implementado.** Inventario aprobado con los 13 códigos de la tabla de abajo; después de T9.1–T9.5 el enum
+`CodigoError` quedó en **16** (se sumaron `REFRESH_INVALIDO`, `TOKEN_VERIFICACION_INVALIDO` e `INTENTOS_LOGIN_EXCEDIDOS`
+con sus filas; `docs/CONTEXT.md` es la tabla viva). Refuerzo post-review: el `detail` de `DATOS_INVALIDOS` solo lleva
+mensajes escritos en el repo (`DatosInvalidosException` y `CalculoFinancieroException`); un `IllegalArgumentException`
+de librería (`NumberFormatException`, `DateTimeParseException`…) recibe el detail genérico y su texto queda en el log.
 
 ## Objetivo
 Un único formato de error, estable y documentado, que el cliente Flutter pueda mapear a mensajes localizados. Hoy cada controlador captura excepciones y responde {"error": mensaje}, y muchos devuelven ResponseEntity<?>, lo que además impide generar un contrato OpenAPI con tipos.

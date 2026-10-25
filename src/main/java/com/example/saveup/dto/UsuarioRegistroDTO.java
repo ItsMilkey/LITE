@@ -33,9 +33,10 @@ public class UsuarioRegistroDTO {
     private String email;
 
     @ContrasenaValida
-    @Schema(description = "Contraseña de 8 a 20 caracteres, con al menos una letra y un número.",
+    @Schema(description = "Contraseña de 8 a 64 caracteres, con al menos una letra y un número, "
+            + "de hasta 72 bytes en UTF-8.",
             requiredMode = Schema.RequiredMode.REQUIRED,
-            minLength = 8, maxLength = 20,
+            minLength = 8, maxLength = 64,
             pattern = "^(?=.*[A-Za-z])(?=.*\\d).*$")
     private String contrasena;
 }

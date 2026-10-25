@@ -35,10 +35,13 @@ con el backend local; producción siempre HTTPS. No incluyas `/v3/api-docs` ni S
   login exitoso el contador se reinicia. En la UI: ante un 429 muestra "Demasiados intentos; espera unos minutos"
   con un botón de reintento manual, y deshabilita el reenvío automático de credenciales guardadas.
 - **Cambiar la contraseña con sesión activa** (pantalla "Configuración → Seguridad"): `PUT /usuarios/me/contrasena` con
-  `Authorization: Bearer <token>` y `{ "contrasenaActual": "...", "nuevaContrasena": "..." }` (8–20 caracteres, con letra
-  y número). Devuelve 200 y **revoca todas las sesiones** (otros dispositivos quedan fuera); deja de usar el refresh
+  `Authorization: Bearer <token>` y `{ "contrasenaActual": "...", "nuevaContrasena": "..." }`. Devuelve 200 y **revoca todas las sesiones** (otros dispositivos quedan fuera); deja de usar el refresh
   token guardado y pide login con la nueva contraseña. `401 CREDENCIALES_INVALIDAS` si la actual no coincide y
   `400 VALIDACION_FALLIDA` (campo `nuevaContrasena`) si la nueva es débil.
+- **Política de contraseñas** (registro, cambio y restablecimiento; el **login NO la valida**: compara contra el hash tal
+  cual): **8 a 64 caracteres**, al menos **una letra y un número**, y máximo **72 bytes en UTF-8** (el límite que BCrypt
+  cifra sin truncar; los acentos y la 'ñ' pesan 2 bytes por carácter). Endpoints: `POST /usuarios/register`,
+  `PUT /usuarios/me/contrasena` y `POST /auth/restablecer-contrasena`.
 - **Recuperar la contraseña sin sesión** (pantalla "Olvidé mi contraseña", endpoint público):
   1. `POST /auth/recuperar-contrasena` con `{ "email": "..." }` → **siempre 200 genérico** ("Si el correo está registrado…").
      No muestres nada que dependa de si el correo existe: la respuesta es idéntica para todos (anti-enumeración).

@@ -83,7 +83,7 @@ class MovimientoFiltrosEdicionTest {
 
     @BeforeEach
     void setUp() {
-        token = jwtService.generateToken(RUT_AUTENTICADO, "test@example.com");
+        token = jwtService.generarTokenConExpiracion(RUT_AUTENTICADO, "test@example.com").token();
         usuario = usuarioRepository.save(nuevoUsuario(RUT_AUTENTICADO));
         ajeno = usuarioRepository.save(nuevoUsuario(RUT_AJENO));
         categoria = categoriaRepository.save(

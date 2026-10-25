@@ -20,12 +20,9 @@ public class JwtService {
     @Value("${jwt.secret}")
     private String secretKey;
 
+    /** Tiempo de vida del JWT de acceso. */
     @Value("${jwt.expirationInMs:900000}")
     private long expirationInMs;
-
-    public String generateToken(String rut, String email) {
-        return generarTokenConExpiracion(rut, email).token();
-    }
 
     /** Par que devuelve la sesión: el JWT y su instante de expiración. */
     public record TokenConExpiracion(String token, Date expiracion) {

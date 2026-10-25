@@ -1,5 +1,6 @@
 package com.example.saveup.service.movimiento;
 
+import com.example.saveup.error.DatosInvalidosException;
 import com.example.saveup.model.enums.TipoMovimiento;
 
 import java.math.BigDecimal;
@@ -55,15 +56,15 @@ public final class SignoMovimiento {
      */
     public static BigDecimal aplicar(TipoMovimiento tipo, BigDecimal monto) {
         if (tipo == null) {
-            throw new IllegalArgumentException("El tipo de movimiento es obligatorio.");
+            throw new DatosInvalidosException("El tipo de movimiento es obligatorio.");
         }
         if (monto == null) {
-            throw new IllegalArgumentException("El monto del movimiento es obligatorio.");
+            throw new DatosInvalidosException("El monto del movimiento es obligatorio.");
         }
 
         BigDecimal normalizado = monto.abs().setScale(ESCALA_DINERO, REDONDEO);
         if (normalizado.compareTo(BigDecimal.ZERO) == 0) {
-            throw new IllegalArgumentException("El monto del movimiento no puede ser 0.");
+            throw new DatosInvalidosException("El monto del movimiento no puede ser 0.");
         }
 
         Boolean negativo = ES_NEGATIVO.get(tipo);
@@ -79,7 +80,7 @@ public final class SignoMovimiento {
     /** Indica si el tipo guarda su monto en negativo. */
     public static boolean esNegativo(TipoMovimiento tipo) {
         if (tipo == null) {
-            throw new IllegalArgumentException("El tipo de movimiento es obligatorio.");
+            throw new DatosInvalidosException("El tipo de movimiento es obligatorio.");
         }
         Boolean negativo = ES_NEGATIVO.get(tipo);
         if (negativo == null) {

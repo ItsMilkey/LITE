@@ -1,5 +1,7 @@
 package com.example.saveup.service.version;
 
+import com.example.saveup.error.DatosInvalidosException;
+
 import java.util.regex.Pattern;
 
 /**
@@ -24,7 +26,7 @@ public final class SemVerUtils {
      */
     public static void exigirFormato(String version) {
         if (version == null || version.isBlank() || !FORMATO.matcher(version.trim()).matches()) {
-            throw new IllegalArgumentException(
+            throw new DatosInvalidosException(
                     "La versión debe tener el formato MAJOR.MINOR.PATCH (por ejemplo 1.4.2).");
         }
     }

@@ -9,6 +9,7 @@ import com.example.saveup.dto.PagoDeudaDTO;
 import com.example.saveup.dto.PagoDeudaResponseDTO;
 import com.example.saveup.dto.SimulacionCreditoResponseDTO.CuotaSimulacionDTO;
 import com.example.saveup.error.CodigoError;
+import com.example.saveup.error.DatosInvalidosException;
 import com.example.saveup.error.ErrorNegocio;
 import com.example.saveup.model.Categoria;
 import com.example.saveup.model.Deuda;
@@ -208,7 +209,7 @@ public class DeudaService {
             deuda.setCuotasPagadasPrevias(dto.getCuotasPagadasPrevias());
         }
         if (deuda.getCuotasPagadasPrevias() >= deuda.getCantidadCuotas()) {
-            throw new IllegalArgumentException("cuotasPagadasPrevias (" + deuda.getCuotasPagadasPrevias()
+            throw new DatosInvalidosException("cuotasPagadasPrevias (" + deuda.getCuotasPagadasPrevias()
                     + ") no puede ser mayor o igual a cantidadCuotas (" + deuda.getCantidadCuotas() + ")");
         }
         deuda.setMontoPagadoPrevio(
@@ -400,7 +401,7 @@ public class DeudaService {
         } else {
             // Compatibilidad
             if (dto.getMontoTotal() == null || dto.getCantidadCuotas() == null) {
-                throw new IllegalArgumentException("Si no hay bloque condiciones, debe proporcionar montoTotal y cantidadCuotas");
+                throw new DatosInvalidosException("Si no hay bloque condiciones, debe proporcionar montoTotal y cantidadCuotas");
             }
             CondicionesCreditoInput compDto = CondicionesCreditoInput.builder()
                 .modalidad(ModalidadCalculo.SIN_INTERES)
@@ -411,7 +412,7 @@ public class DeudaService {
         }
 
         if (deuda.getCuotasPagadasPrevias() >= res.cantidadCuotas()) {
-            throw new IllegalArgumentException("cuotasPagadasPrevias (" + deuda.getCuotasPagadasPrevias() +
+            throw new DatosInvalidosException("cuotasPagadasPrevias (" + deuda.getCuotasPagadasPrevias() +
                 ") no puede ser mayor o igual a cantidadCuotas (" + res.cantidadCuotas() + ")");
         }
 
@@ -459,10 +460,10 @@ public class DeudaService {
 
     private BigDecimal montoPersonalizado(BigDecimal monto) {
         if (monto == null) {
-            throw new IllegalArgumentException("El monto del pago es obligatorio en modo MONTO_PERSONALIZADO.");
+            throw new DatosInvalidosException("El monto del pago es obligatorio en modo MONTO_PERSONALIZADO.");
         }
         if (monto.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("El monto del pago debe ser mayor a 0.");
+            throw new DatosInvalidosException("El monto del pago debe ser mayor a 0.");
         }
         return monto.setScale(ESCALA_DINERO, REDONDEO);
     }

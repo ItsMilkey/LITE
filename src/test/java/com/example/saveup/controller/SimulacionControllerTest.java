@@ -56,7 +56,7 @@ class SimulacionControllerTest {
 
     @BeforeEach
     void setUp() {
-        validToken = jwtService.generateToken("12345678-5", "test@example.com");
+        validToken = jwtService.generarTokenConExpiracion("12345678-5", "test@example.com").token();
     }
 
     @Test

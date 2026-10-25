@@ -86,7 +86,7 @@ class PagoDeudaIntegracionTest {
 
     @BeforeEach
     void setUp() {
-        token = jwtService.generateToken(RUT, "test@example.com");
+        token = jwtService.generarTokenConExpiracion(RUT, "test@example.com").token();
 
         usuario = new Usuario();
         usuario.setRut(RUT);

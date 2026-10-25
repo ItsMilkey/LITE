@@ -8,6 +8,7 @@ import com.example.saveup.dto.EjecucionPresupuestoDTO;
 import com.example.saveup.dto.HistorialPresupuestoDTO;
 import com.example.saveup.dto.PresupuestoCategoriaDTO;
 import com.example.saveup.dto.PresupuestoCategoriaItemDTO;
+import com.example.saveup.error.DatosInvalidosException;
 import com.example.saveup.model.AsignacionMetaPresupuesto;
 import com.example.saveup.model.Categoria;
 import com.example.saveup.model.ConfiguracionPresupuesto;
@@ -208,20 +209,20 @@ public class PresupuestoService {
 
         for (PresupuestoCategoriaItemDTO item : items) {
             if (item == null || item.getCategoriaId() == null) {
-                throw new IllegalArgumentException("Cada límite debe indicar una categoría.");
+                throw new DatosInvalidosException("Cada límite debe indicar una categoría.");
             }
             if (item.getLimiteMensual() == null) {
-                throw new IllegalArgumentException("Cada límite debe indicar un monto mensual.");
+                throw new DatosInvalidosException("Cada límite debe indicar un monto mensual.");
             }
             if (item.getLimiteMensual().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException("El límite mensual debe ser mayor a 0.");
+                throw new DatosInvalidosException("El límite mensual debe ser mayor a 0.");
             }
             if (!categoriaIdsVistos.add(item.getCategoriaId())) {
-                throw new IllegalArgumentException(
+                throw new DatosInvalidosException(
                         "La categoría " + item.getCategoriaId() + " está repetida en la petición.");
             }
             Categoria categoria = categoriaRepository.findById(item.getCategoriaId())
-                    .orElseThrow(() -> new IllegalArgumentException(
+                    .orElseThrow(() -> new DatosInvalidosException(
                             "La categoría " + item.getCategoriaId() + " no existe."));
             if (usuario == null) {
                 usuario = usuarioRepository.findById(rut)
@@ -341,11 +342,11 @@ public class PresupuestoService {
         YearMonth fin = parsearMes(hasta, "hasta");
 
         if (inicio.isAfter(fin)) {
-            throw new IllegalArgumentException("El mes 'desde' no puede ser posterior al mes 'hasta'.");
+            throw new DatosInvalidosException("El mes 'desde' no puede ser posterior al mes 'hasta'.");
         }
         long cantidadMeses = ChronoUnit.MONTHS.between(inicio, fin) + 1;
         if (cantidadMeses > MAX_MESES_HISTORIAL) {
-            throw new IllegalArgumentException(
+            throw new DatosInvalidosException(
                     "El historial admite como máximo " + MAX_MESES_HISTORIAL + " meses; el rango pedido tiene "
                             + cantidadMeses + ".");
         }
@@ -374,18 +375,18 @@ public class PresupuestoService {
                 || request.getPorcentajeNecesidades() == null
                 || request.getPorcentajeDeseos() == null
                 || request.getPorcentajeAhorro() == null) {
-            throw new IllegalArgumentException("Los porcentajes de necesidades, deseos y ahorro son obligatorios.");
+            throw new DatosInvalidosException("Los porcentajes de necesidades, deseos y ahorro son obligatorios.");
         }
         if (request.getPorcentajeNecesidades().compareTo(BigDecimal.ZERO) < 0
                 || request.getPorcentajeDeseos().compareTo(BigDecimal.ZERO) < 0
                 || request.getPorcentajeAhorro().compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Ningún porcentaje (necesidades, deseos, ahorro) puede ser negativo.");
+            throw new DatosInvalidosException("Ningún porcentaje (necesidades, deseos, ahorro) puede ser negativo.");
         }
         BigDecimal suma = request.getPorcentajeNecesidades()
                 .add(request.getPorcentajeDeseos())
                 .add(request.getPorcentajeAhorro());
         if (suma.compareTo(CIEN) != 0) {
-            throw new IllegalArgumentException(
+            throw new DatosInvalidosException(
                     "La suma de los porcentajes (necesidades + deseos + ahorro) debe ser exactamente 100.00; se recibió "
                             + suma + ".");
         }
@@ -431,19 +432,19 @@ public class PresupuestoService {
         int m = month != null ? month : ahora.getMonthValue();
         int y = year != null ? year : ahora.getYear();
         if (m < 1 || m > 12) {
-            throw new IllegalArgumentException("El mes debe estar entre 1 y 12.");
+            throw new DatosInvalidosException("El mes debe estar entre 1 y 12.");
         }
         return YearMonth.of(y, m);
     }
 
     private YearMonth parsearMes(String valor, String campo) {
         if (valor == null || valor.isBlank()) {
-            throw new IllegalArgumentException("El parámetro '" + campo + "' es obligatorio (formato YYYY-MM).");
+            throw new DatosInvalidosException("El parámetro '" + campo + "' es obligatorio (formato YYYY-MM).");
         }
         try {
             return YearMonth.parse(valor.trim());
         } catch (DateTimeParseException e) {
-            throw new IllegalArgumentException("El parámetro '" + campo + "' debe tener el formato YYYY-MM.");
+            throw new DatosInvalidosException("El parámetro '" + campo + "' debe tener el formato YYYY-MM.");
         }
     }
 }

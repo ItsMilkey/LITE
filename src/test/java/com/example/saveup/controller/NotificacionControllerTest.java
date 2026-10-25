@@ -56,7 +56,7 @@ class NotificacionControllerTest {
 
     @BeforeEach
     void setUp() {
-        token = jwtService.generateToken(RUT, "test@example.com");
+        token = jwtService.generarTokenConExpiracion(RUT, "test@example.com").token();
         usuario = usuarioRepository.save(nuevoUsuario(RUT, "test@example.com"));
     }
 

@@ -63,7 +63,7 @@ class PresupuestoCategoriaControllerTest {
 
     @BeforeEach
     void setUp() {
-        token = jwtService.generateToken(RUT, "test@example.com");
+        token = jwtService.generarTokenConExpiracion(RUT, "test@example.com").token();
         usuario = usuarioRepository.save(nuevoUsuario(RUT));
         comida = categoriaRepository.save(
                 new Categoria(null, "Comida T5", "ic_fastfood", "#FFC107", TipoPresupuesto.NECESIDAD));

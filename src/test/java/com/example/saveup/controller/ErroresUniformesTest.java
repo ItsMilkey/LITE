@@ -69,7 +69,7 @@ class ErroresUniformesTest {
 
     @BeforeEach
     void setUp() {
-        token = jwtService.generateToken(RUT, "test@example.com");
+        token = jwtService.generarTokenConExpiracion(RUT, "test@example.com").token();
     }
 
     private static ResultMatcher problemJson() {
@@ -94,7 +94,7 @@ class ErroresUniformesTest {
         String expirado;
         try {
             ReflectionTestUtils.setField(jwtService, "expirationInMs", -1_000L);
-            expirado = jwtService.generateToken(RUT, "test@example.com");
+            expirado = jwtService.generarTokenConExpiracion(RUT, "test@example.com").token();
         } finally {
             ReflectionTestUtils.setField(jwtService, "expirationInMs", original);
         }

@@ -72,7 +72,7 @@ class DeudaControllerTest {
 
     @BeforeEach
     void setUp() {
-        validToken = jwtService.generateToken(RUT, "test@example.com");
+        validToken = jwtService.generarTokenConExpiracion(RUT, "test@example.com").token();
 
         usuario = new Usuario();
         usuario.setRut(RUT);

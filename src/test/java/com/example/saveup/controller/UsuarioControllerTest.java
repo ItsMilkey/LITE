@@ -86,7 +86,7 @@ class UsuarioControllerTest {
         usuarioConHash.setContrasena(HASH_EN_BD);
         usuarioConHash.setFechaRegistro(Date.from(Instant.parse("2026-10-15T12:00:00Z")));
 
-        validToken = jwtService.generateToken(RUT, EMAIL);
+        validToken = jwtService.generarTokenConExpiracion(RUT, EMAIL).token();
     }
 
     @Test
@@ -150,6 +150,33 @@ class UsuarioControllerTest {
                     assertFalse(body.contains(hashReal),
                             "La respuesta de /login no debe contener el hash de la contraseña");
                 });
+    }
+
+    @Test
+    @DisplayName("POST /login no aplica la política de contraseñas: una clave que no la cumple no genera 400")
+    void login_noValidaLaPoliticaDeContrasenas() throws Exception {
+        // La política (8–64, letra+número, ≤72 bytes, T9.3) solo aplica a registro,
+        // cambio y restablecimiento: el login compara la clave contra el hash tal cual.
+        String hashReal = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder()
+                .encode("ClaveReal123");
+        Usuario usuarioLogin = new Usuario();
+        usuarioLogin.setRut(RUT);
+        usuarioLogin.setNombre("Ana");
+        usuarioLogin.setApellido("Perez");
+        usuarioLogin.setEmail(EMAIL);
+        usuarioLogin.setContrasena(hashReal);
+        usuarioLogin.setFechaRegistro(Date.from(Instant.parse("2026-10-15T12:00:00Z")));
+        when(usuarioRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuarioLogin));
+
+        UsuarioLoginDTO dto = new UsuarioLoginDTO();
+        dto.setEmail(EMAIL);
+        dto.setContrasena("a1"); // contrasena que no cumple la política
+
+        mockMvc.perform(post("/api/v1/usuarios/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.codigo").value("CREDENCIALES_INVALIDAS"));
     }
 
     @Test

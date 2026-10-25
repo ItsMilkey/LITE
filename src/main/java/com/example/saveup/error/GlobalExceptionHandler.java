@@ -32,6 +32,7 @@ import org.springframework.web.multipart.support.MissingServletRequestPartExcept
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -62,9 +63,14 @@ public class GlobalExceptionHandler {
                                                               HttpServletRequest request) {
         List<ErrorCampo> errores = new ArrayList<>();
         ex.getAllValidationResults().forEach(resultado -> {
-            String campo = resultado.getMethodParameter().getParameterName();
-            resultado.getResolvableErrors().forEach(error ->
-                    errores.add(new ErrorCampo(campo != null ? campo : "parametro", error.getDefaultMessage())));
+            String campoParametro = resultado.getMethodParameter().getParameterName();
+            resultado.getResolvableErrors().forEach(error -> {
+                String campo = error instanceof FieldError fieldError
+                        && fieldError.getField() != null && !fieldError.getField().isBlank()
+                        ? fieldError.getField()
+                        : nombreCampoDesdePropertyPath(campoParametro);
+                errores.add(new ErrorCampo(campo, error.getDefaultMessage()));
+            });
         });
         return respuesta(CodigoError.VALIDACION_FALLIDA, null, HttpStatus.BAD_REQUEST,
                 request, errores, null);
@@ -74,10 +80,35 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> validacionRestricciones(ConstraintViolationException ex,
                                                                  HttpServletRequest request) {
         List<ErrorCampo> errores = ex.getConstraintViolations().stream()
-                .map(violacion -> new ErrorCampo(violacion.getPropertyPath().toString(), violacion.getMessage()))
+                .map(violacion -> new ErrorCampo(
+                        nombreCampoDesdePropertyPath(violacion.getPropertyPath().toString()),
+                        violacion.getMessage()))
                 .toList();
         return respuesta(CodigoError.VALIDACION_FALLIDA, null, HttpStatus.BAD_REQUEST,
                 request, errores, null);
+    }
+
+    /**
+     * Nombre de campo para el cliente a partir del propertyPath de una
+     * restricción de método. T8b pide el nombre JSON (p. ej.
+     * {@code condiciones.montoCapital}), no el rastro interno: la forma
+     * {@code metodo.argumento[0].condiciones.montoCapital} se recorta hasta
+     * la cola del campo y un nombre simple ({@code limit}) sigue igual.
+     */
+    static String nombreCampoDesdePropertyPath(String propertyPath) {
+        if (propertyPath == null || propertyPath.isBlank()) {
+            return "parametro";
+        }
+        int ultimoCierre = propertyPath.lastIndexOf(']');
+        if (ultimoCierre >= 0) {
+            int desde = ultimoCierre + 1;
+            if (desde < propertyPath.length() && propertyPath.charAt(desde) == '.') {
+                desde++;
+            }
+            return propertyPath.substring(desde);
+        }
+        int ultimoPunto = propertyPath.lastIndexOf('.');
+        return ultimoPunto >= 0 ? propertyPath.substring(ultimoPunto + 1) : propertyPath;
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -96,10 +127,25 @@ public class GlobalExceptionHandler {
                 request, List.of(), null);
     }
 
-    @ExceptionHandler({IllegalArgumentException.class, CalculoFinancieroException.class})
+    /**
+     * El {@code detail} solo muestra mensajes escritos por el repo
+     * ({@link DatosInvalidosException} y {@link CalculoFinancieroException}).
+     * Un IAE de librería (incluido {@link NumberFormatException}, su subclase)
+     * o un parseo de fechas fallido no exponen su texto: puede venir en inglés
+     * o revelar clases. El cliente recibe el detail genérico y la causa queda
+     * en el log para diagnosticar.
+     */
+    @ExceptionHandler({IllegalArgumentException.class, CalculoFinancieroException.class,
+            DateTimeParseException.class})
     public ResponseEntity<ProblemDetail> datosInvalidos(RuntimeException ex, HttpServletRequest request) {
-        return respuesta(CodigoError.DATOS_INVALIDOS, ex.getMessage(), HttpStatus.BAD_REQUEST,
-                request, List.of(), null);
+        if (ex instanceof DatosInvalidosException || ex instanceof CalculoFinancieroException) {
+            return respuesta(CodigoError.DATOS_INVALIDOS, ex.getMessage(), HttpStatus.BAD_REQUEST,
+                    request, List.of(), null);
+        }
+        LOG.warn("Entrada inválida no controlada en {} {}: {}",
+                request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return respuesta(CodigoError.DATOS_INVALIDOS, CodigoError.DATOS_INVALIDOS.getDetail(),
+                HttpStatus.BAD_REQUEST, request, List.of(), null);
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
