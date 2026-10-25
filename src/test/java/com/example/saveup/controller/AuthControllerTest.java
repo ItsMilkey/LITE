@@ -57,7 +57,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Ciclo de vida de la sesión móvil (T9.1): refresh rotativo, detección de
  * reuso, logout idempotente y acceso público a los endpoints de autenticación.
  */
-@SpringBootTest
+@SpringBootTest(properties = "app.mail.enabled = true") // la suite base lo deja desactivado
 @AutoConfigureMockMvc
 class AuthControllerTest {
 

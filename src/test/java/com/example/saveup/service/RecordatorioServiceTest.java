@@ -46,7 +46,7 @@ import static org.mockito.Mockito.when;
  * T9.6 — Reglas del job de recordatorios contra H2 real. El {@link PushSender}
  * se mockea: los tests no hablan con FCM ni dependen del log.
  */
-@SpringBootTest
+@SpringBootTest(properties = "app.push.enabled = true") // la suite base lo deja desactivado
 @Transactional
 class RecordatorioServiceTest {
 

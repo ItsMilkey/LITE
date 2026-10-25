@@ -1513,8 +1513,8 @@
           "required" : true
         },
         "responses" : {
-          "200" : {
-            "description" : "El dispositivo ya existía y se refrescó",
+          "201" : {
+            "description" : "Dispositivo registrado",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -1523,8 +1523,8 @@
               }
             }
           },
-          "201" : {
-            "description" : "Dispositivo registrado",
+          "200" : {
+            "description" : "El dispositivo ya existía y se refrescó",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -2445,7 +2445,7 @@
       "post" : {
         "tags" : [ "Autenticación" ],
         "summary" : "Solicita el restablecimiento de la contraseña",
-        "description" : "Envía (o loguea, con app.mail.log-only=true) un token de un solo uso\nválido 1 hora al correo registrado. Responde 200 con un mensaje\ngenérico SIEMPRE, exista o no el correo, para no permitir enumerar\ncuentas.",
+        "description" : "Envía (o loguea, con app.mail.log-only=true; nada si\napp.mail.enabled=false, función PENDIENTE de activación) un token de un solo uso\nválido 1 hora al correo registrado. Responde 200 con un mensaje\ngenérico SIEMPRE, exista o no el correo, para no permitir enumerar\ncuentas.",
         "operationId" : "solicitarRecuperacionContrasena",
         "requestBody" : {
           "content" : {

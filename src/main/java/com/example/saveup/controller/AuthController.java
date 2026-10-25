@@ -66,7 +66,8 @@ public class AuthController {
     @PostMapping("/recuperar-contrasena")
     @Operation(summary = "Solicita el restablecimiento de la contraseña",
             description = """
-                    Envía (o loguea, con app.mail.log-only=true) un token de un solo uso
+                    Envía (o loguea, con app.mail.log-only=true; nada si
+                    app.mail.enabled=false, función PENDIENTE de activación) un token de un solo uso
                     válido 1 hora al correo registrado. Responde 200 con un mensaje
                     genérico SIEMPRE, exista o no el correo, para no permitir enumerar
                     cuentas.""", operationId = "solicitarRecuperacionContrasena")

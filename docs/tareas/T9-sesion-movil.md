@@ -11,6 +11,15 @@ Cosas que una app móvil publicada necesita y que el backend aún no tiene:
   log-only en dev/test) + `POST /auth/restablecer-contrasena` + `PUT /usuarios/me/contrasena`; ambos cambios
   revocan todas las sesiones activas. Pendiente: elegir proveedor SMTP (Brevo/Resend) y configurar la URL pública
   de restablecimiento (`app.mail.url-restablecer`).
+
+  **Estado T9.3: implementado en código; PENDIENTE de activación (requiere proveedor externo).** Falta:
+  - Proveedor de correo: **preferir una API HTTP** (Resend/Brevo/Amazon SES) antes que SMTP directo — Render
+    gratuito puede bloquear el SMTP saliente.
+  - Remitente y dominio verificado (SPF/DKIM) para que no caiga en spam.
+  - Plantilla del correo (hoy es texto simple compuesto en `PasswordService`).
+  - URL pública de la pantalla de restablecimiento (`app.mail.url-restablecer`; vacío = solo el token).
+  - Activar con la variable `APP_MAIL_ENABLED=true` (por defecto el flujo no genera ni envía nada; solo log WARN).
+    Si se niega a una API HTTP y se usa SMTP: `app.mail.log-only=false` + `spring.mail.*` con `SPRING_MAIL_HOST/PORT/USERNAME/PASSWORD`.
 - **[HECHO en T9.4]** Versión mínima de la app (forzar actualización): `GET /api/v1/app/version` público con
   `?plataforma=ANDROID|IOS&version=MAJOR.MINOR.PATCH`; umbrales min-*/latest-* y URLs de tienda en
   application.properties (SemVerUtils + VersionAppService). Al publicar cada release subir `latest-*`;
@@ -28,7 +37,9 @@ Cosas que una app móvil publicada necesita y que el backend aún no tiene:
   proceso (suficiente para una sola instancia en Render); al escalar horizontalmente mover la caché a Redis.
 - Recordatorios de vencimiento de cuotas con notificaciones push (FCM/APNs). Requiere guardar tokens de dispositivo y un proceso programado.
 - Política de privacidad y términos (necesarios para publicar).
-- **Estado (oct 2026): Fase A de T9 (T9.1–T9.5) y T9.6 concluidas.** Queda T9.7 (legal, aplazado, depende de la app
+- **Estado (oct 2026): Fase A de T9 (T9.1–T9.5) y T9.6 concluidas.** T9.3 y T9.6 quedan marcadas como
+  **PENDIENTES de activación** (implementadas en código, requieren proveedor externo): ver
+  docs/DESPLIEGUE.md y los encabezados de cada tarea. Queda T9.7 (legal, aplazado, depende de la app
   pública y de las tiendas). T9.6 se implementó en [`T9.6-notificaciones-push.md`](T9.6-notificaciones-push.md):
   dispositivos FCM, job diario a las 09:00 de Santiago (T-3/T-0/T+1), deduplicación y trigger de cron externo.
   Nota: T9.6 **no** estaba desacoplado del backend — requirió tabla, endpoints y job; el doc anterior lo agrupaba

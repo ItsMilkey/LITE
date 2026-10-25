@@ -38,7 +38,7 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 - /api/v1/auth (T9.1): POST refresh (rota el par {token, refreshToken, expiraEn}; token usado/revocado → 401 REFRESH_INVALIDO
   y revoca todas las sesiones del usuario) · POST logout (revoca el refresh; idempotente)
 - /api/v1/auth (T9.3, públicos): POST recuperar-contrasena ({email}) → 200 SIEMPRE con mensaje genérico (anti-enumeración);
-  el token de un solo uso sale por SMTP (log en consola con app.mail.log-only=true) · POST restablecer-contrasena
+  PENDIENTE de activación: con app.mail.enabled=false (por defecto) no genera ni envía nada (log WARN) · POST restablecer-contrasena
   ({token, nuevaContrasena}) → 200; token inválido/reusado/expirado → 400 TOKEN_VERIFICACION_INVALIDO; revoca todas las sesiones
 - /api/v1/app/version (T9.4, público): GET ?plataforma=ANDROID|IOS&version=MAJOR.MINOR.PATCH → AppVersionResponseDTO
   {actualizacionObligatoria (version < min-*, app bloqueada), actualizacionSugerida (entre min-* y latest-*), mensaje,
@@ -54,13 +54,35 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 - /api/v1/presupuestos: GET me (DTO; sin configuración → 404 NO_ENCONTRADO) · POST me (DTO; porcentajes deben sumar 100.00 y ninguno ser negativo) · GET ejecucion/me (?month&year) · GET categorias/me · PUT categorias/me · GET categorias/ejecucion/me (?month&year) · GET historial/me (?desde&hasta=YYYY-MM)
 - /api/v1/notificaciones (T9.6): POST dispositivos ({token, plataforma}; upsert idempotente, reasigna tokens entre
   cuentas) · GET dispositivos (solo activos, token enmascarado) · DELETE dispositivos ({token}; idempotente)
-  · POST recordatorios/ejecutar (cron externo, cabecera X-Cron-Secret en vez de JWT; 202 {evaluados, enviados, omitidos};
-  secreto vacío ⇒ 403). El job NO envía fuera de la ventana [08:00, 22:00) America/Santiago (defendida en código,
+  `POST /recordatorios/ejecutar` (cron externo, cabecera X-Cron-Secret en vez de JWT; 202 {evaluados, enviados, omitidos};
+  secreto vacío ⇒ 403). PENDIENTE de activación: con `app.push.enabled=false` (por defecto) la corrida es no-op
+  total, no envía ni persiste bitácora. El job NO envía fuera de la ventana [08:00, 22:00) America/Santiago (defendida en código,
   RecordatorioService.ejecutar; el cron externo puede disparar cada hora sin riesgo) y a las 09:00 America/Santiago:
   T-3, T-0 y T+1 sobre la próxima cuota impaga; una push por usuario; deduplica por (deuda, cuota, tipo); token
   rechazado por FCM ⇒ dispositivo inactivo.
 - /api/v1/reportes/movimientos/exportar (?alcance&formato&mes&anio)
 - /api/v1/simulaciones: POST credito (simulación sin persistencia, motor financiero + resumen educativo)
+
+## Funciones desactivadas por defecto (PENDIENTE de activación)
+
+El correo de recuperación (T9.3) y los recordatorios push (T9.6) están implementados en código pero
+apagados con banderas maestras — el envío real requiere proveedores externos que aún no existen:
+
+- `app.mail.enabled` (env: `APP_MAIL_ENABLED`, por defecto `false`): apagada, `POST
+  /auth/recuperar-contrasena` no genera ni envía nada (ni persiste token); responde 200 con el
+  mensaje genérico de siempre y deja un log WARN. `CorreoService.enviar` también es no-op (WARN).
+- `app.push.enabled` (env: `APP_PUSH_ENABLED`, por defecto `false`): apagada,
+  `RecordatorioService.ejecutar(...)` es no-op total (no envía y NO persiste
+  `RECORDATORIO_ENVIADO`, para no perder avisos al activar); también lo es con el `@Scheduled`
+  interno y el trigger del cron. El registro y la baja de tokens (T9.6) siguen funcionando. El
+  `PushSender` activo es `NoOpPushSender`; con la bandera activa cambia a `LogPushSender`
+  (log-only) o `FcmPushSender` (envío real, exige `app.push.log-only=false` +
+  `FIREBASE_CREDENTIALS`; si falta, la app arranca igual y cada envío falla con ERROR en el log).
+
+Qué falta: T9.3 — proveedor de correo (preferir API HTTP; Render free puede bloquear SMTP
+saliente), remitente y dominio verificados, plantilla y URL de restablecimiento. T9.6 — proyecto
+Firebase + credenciales, app móvil registrando tokens y disparador externo (no hay workflow de
+GitHub Actions: el disparo del cron es manual/externo). Detalles en docs/DESPLIEGUE.md.
 
 ## Errores uniformes (T8b)
 Todos los errores usan `application/problem+json`:

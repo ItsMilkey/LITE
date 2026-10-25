@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Date;
 import java.util.List;
@@ -70,6 +71,10 @@ class PasswordServiceTest {
         passwordService = new PasswordService(usuarioRepository, passwordEncoder,
                 new com.example.saveup.security.VerificadorDeContrasena(passwordEncoder),
                 tokenRepository, refreshTokenService, correoService);
+        // La suite base desactiva el correo; los casos de recuperación activo
+        // lo simulan con la bandera en true (solamente los tests de la bandera
+        // en false la dejan como está).
+        ReflectionTestUtils.setField(passwordService, "correoHabilitado", true);
 
         usuario = new Usuario();
         usuario.setRut(RUT);
@@ -144,6 +149,18 @@ class PasswordServiceTest {
 
         // Al existir, se registra token (la búsqueda normalizada encontró al usuario)
         verify(tokenRepository).save(any(TokenVerificacion.class));
+    }
+
+    @Test
+    @DisplayName("app.mail.enabled=false → no registra token, no envía nada y no consulta BD (PENDIENTE de activación)")
+    void solicitarRecuperacion_correoDeshabilitado_noGeneraNada() {
+        // La bandera apagada (en la app queda desactivada por defecto):
+        // debe cortar ANTES de tocar la BD.
+        ReflectionTestUtils.setField(passwordService, "correoHabilitado", false);
+
+        passwordService.solicitarRecuperacion(EMAIL);
+
+        verifyNoInteractions(usuarioRepository, tokenRepository, correoService);
     }
 
     // ───────────────── restablecer ─────────────────

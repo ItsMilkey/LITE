@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -27,9 +28,15 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Adaptador real de FCM (T9.6). Solo se activa con
- * {@code app.push.log-only=false}; en cualquier otro caso manda
- * {@link LogPushSender}.
+ * Adaptador real de FCM (T9.6). Se activa solo con
+ * {@code app.push.enabled=true} y {@code app.push.log-only=false}; en los
+ * demás casos mandan {@link NoOpPushSender} (desactivado) o
+ * {@link LogPushSender} (estado intermedio mientras se consigue Firebase).
+ *
+ * <p>El arranque nunca se rompe por crédito faltante o inválido: con la
+ * función activa y credenciales ausentes/malas, {@code @PostConstruct}
+ * registra el problema con ERROR y el envío falla de forma ruidosa por
+ * corrida, con un mensaje claro en el log.
  *
  * <p>Las credenciales llegan en {@code FIREBASE_CREDENTIALS}: el JSON del
  * service account de Firebase, en base64 (o crudo si empieza con <code>{</code>).
@@ -43,6 +50,7 @@ import java.util.Set;
  */
 @Service
 @ConditionalOnProperty(name = "app.push.log-only", havingValue = "false")
+@Conditional(CondicionesPush.PushHabilitado.class)
 public class FcmPushSender implements PushSender {
 
     private static final Logger LOG = LoggerFactory.getLogger(FcmPushSender.class);
@@ -64,9 +72,10 @@ public class FcmPushSender implements PushSender {
     @PostConstruct
     void inicializar() {
         if (credenciales == null || credenciales.isBlank()) {
-            throw new IllegalStateException(
-                    "app.push.log-only=false pero FIREBASE_CREDENTIALS está vacío: "
-                            + "configura el JSON del service account (base64) o deja log-only=true");
+            LOG.error("Push activo pero FIREBASE_CREDENTIALS está vacío: los envíos push fallarán "
+                    + "hasta configurar el JSON del service account (base64). "
+                    + "Alternativa mientras tanto: app.push.log-only=true.");
+            return;
         }
 
         try (InputStream entrada = new ByteArrayInputStream(decodificar(credenciales))) {
@@ -79,13 +88,23 @@ public class FcmPushSender implements PushSender {
             this.mensajeria = FirebaseMessaging.getInstance(app);
             LOG.info("FCM inicializado para notificaciones push (T9.6)");
         } catch (IOException | IllegalArgumentException e) {
-            throw new IllegalStateException(
-                    "No se pudieron leer las credenciales de Firebase (FIREBASE_CREDENTIALS)", e);
+            // Credenciales mal formadas no deben impedir el arranque
+            // (la función falla con error claro, igual que si faltaran).
+            this.mensajeria = null;
+            LOG.error("No se pudieron leer las credenciales de Firebase (FIREBASE_CREDENTIALS): "
+                    + "los envíos push fallarán.", e);
         }
     }
 
     @Override
     public ResultadoEnvio enviar(String token, String titulo, String cuerpo, Map<String, String> datos) {
+        if (mensajeria == null) {
+            // Push activo sin credenciales (o con credenciales ilegibles):
+            // error claro en cada intento, sin tirar la app.
+            LOG.error("Envío push ignorado: FCM no está inicializado (FIREBASE_CREDENTIALS "
+                    + "ausente o inválida). Función PENDIENTE de activación.");
+            return ResultadoEnvio.fallo();
+        }
         try {
             mensajeria.send(Message.builder()
                     .setToken(token)

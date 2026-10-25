@@ -49,6 +49,15 @@ public class PasswordService {
     @Value("${app.mail.url-restablecer:}")
     private String urlRestablecer;
 
+    /**
+     * Bandera maestra del correo (T9.3, PENDIENTE de activación): con
+     * {@code app.mail.enabled=false} la recuperación no genera ni envía nada
+     * (ni siquiera se persiste un token que nadie recibiría); respuesta HTTP
+     * idéntica. La app puede arrancar sin ninguna credencial de correo.
+     */
+    @Value("${app.mail.enabled:false}")
+    private boolean correoHabilitado;
+
     public PasswordService(UsuarioRepository usuarioRepository,
                            PasswordEncoder passwordEncoder,
                            VerificadorDeContrasena verificadorDeContrasena,
@@ -70,6 +79,13 @@ public class PasswordService {
      */
     @Transactional
     public void solicitarRecuperacion(String email) {
+        if (!correoHabilitado) {
+            LOG.warn("Solicitud de recuperación ignorada: el correo está deshabilitado "
+                    + "(app.mail.enabled=false). No se genera ni envía nada; la función está "
+                    + "PENDIENTE de activación (requiere proveedor externo).");
+            return;
+        }
+
         Optional<Usuario> usuario = usuarioRepository.findByEmail(email == null ? "" : email.trim());
         if (usuario.isEmpty()) {
             LOG.info("Solicitud de recuperación para un correo sin cuenta registrada.");

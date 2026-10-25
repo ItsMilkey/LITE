@@ -48,6 +48,12 @@ import java.util.stream.Collectors;
  *   <li>Se persiste el aviso solo si al menos un dispositivo aceptó el envío.
  *       Si todos fallaron, mañana se reintenta.</li>
  * </ul>
+ *
+ * <p>BANDERA MAESTRA {@code app.push.enabled=false} (por defecto): la corrida
+ * es un no-op total — no envía y NO persiste {@code RECORDATORIO_ENVIADO},
+ * para no perder avisos cuando la función se active (requiere proveedor
+ * externo; PENDIENTE de activación). El registro y la baja de tokens de
+ * dispositivo (T9.6) funcionan igual con la bandera apagada.
  */
 @Service
 public class RecordatorioService {
@@ -80,6 +86,13 @@ public class RecordatorioService {
     @Value("${app.push.dias-antes:3}")
     private int diasAntes;
 
+    /**
+     * Bandera maestra de la feature (T9.6, PENDIENTE de activación): con
+     * {@code app.push.enabled=false} la corrida no envía ni persiste nada.
+     */
+    @Value("${app.push.enabled:false}")
+    private boolean pushHabilitado;
+
     public RecordatorioService(DispositivoPushRepository dispositivoRepository,
                                RecordatorioEnviadoRepository recordatorioRepository,
                                DeudaRepository deudaRepository,
@@ -109,6 +122,13 @@ public class RecordatorioService {
      */
     @Transactional
     public ResultadoRecordatoriosDTO ejecutar(ZonedDateTime ahora) {
+        if (!pushHabilitado) {
+            LOG.info("Recordatorios deshabilitados (app.push.enabled=false): no-op total; "
+                    + "no se envía NI se persiste RECORDATORIO_ENVIADO para no perder avisos "
+                    + "cuando la función se active.");
+            return new ResultadoRecordatoriosDTO(0, 0, 0);
+        }
+
         int hora = ahora.getHour();
         if (hora < HORA_INICIO || hora >= HORA_FIN) {
             LOG.info("Recordatorios fuera de la ventana permitida [{}:00, {}:00); "

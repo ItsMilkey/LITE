@@ -2,6 +2,15 @@
 
 Criterio: se difiere lo que es aditivo (se puede agregar después sin romper el modelo de datos ni el contrato) y lo que aún no tiene una decisión de producto.
 
+- **Activar correo y push (T9.3/T9.6)** — el código está implementado y las funciones PENDIENTES de
+  activación (banderas `APP_MAIL_ENABLED` / `APP_PUSH_ENABLED` en `false` por defecto). Para el correo:
+  proveedor con API HTTP preferido (Render free puede bloquear SMTP saliente), remitente y dominio
+  verificados, plantilla y URL de restablecimiento (`app.mail.url-restablecer`). Para el push: proyecto
+  Firebase + `FIREBASE_CREDENTIALS`, app móvil registrando tokens en `/notificaciones/dispositivos`
+  (permiso de notificaciones) y disparador externo (cron → `POST /recordatorios/ejecutar` con
+  `PUSH_CRON_SECRET`; no hay workflow de GitHub Actions programado). Guía completa en
+  `docs/DESPLIEGUE.md` ("Opcionales (funciones desactivadas hasta configurarlas)").
+
 - **T6 — Simular abono extra**: reducir plazo vs reducir cuota, intereses ahorrados. Requiere recalcular el cronograma (hoy es fijo, ver T2).
 - **Seguro como % del saldo** (p. ej. desgravamen) en lugar de monto fijo por cuota.
 - **Gastos iniciales financiados** (sumados al capital) además de descontados.
