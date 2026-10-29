@@ -45,7 +45,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Verifica que ningún endpoint de usuario exponga el hash de la contraseña.
  */
-@SpringBootTest
+@SpringBootTest(properties = "app.behind-proxy=true")
 @AutoConfigureMockMvc
 class UsuarioControllerTest {
 

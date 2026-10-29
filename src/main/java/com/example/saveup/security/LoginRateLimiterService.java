@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -73,16 +74,24 @@ public class LoginRateLimiterService {
     }
 
     /**
-     * Resuelve la IP del cliente: la cabecera X-Forwarded-For que colocan los
-     * balanceadores (Render/proxy) toma la PRIMERA dirección, que es la del
-     * cliente original; a falta de ella, la conexión directa.
+     * Con {@code app.behind-proxy=true} la app confía en la cabecera
+     * {@code X-Forwarded-For} que coloca un reverse proxy de confianza y toma la
+     * PRIMERA dirección (la del cliente original). Con el valor por defecto
+     * ({@code false}) la cabecera se ignora: si la app es accesible directamente,
+     * un atacante podría falsificarla para esquivar el bloqueo.
      */
+    @Value("${app.behind-proxy:false}")
+    private boolean behindProxy;
+
+    /** Resuelve la IP del cliente según la bandera de proxy. */
     public String resolverIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            String cliente = forwarded.split(",")[0].trim();
-            if (!cliente.isEmpty()) {
-                return cliente;
+        if (behindProxy) {
+            String forwarded = request.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                String cliente = forwarded.split(",")[0].trim();
+                if (!cliente.isEmpty()) {
+                    return cliente;
+                }
             }
         }
         return request.getRemoteAddr();

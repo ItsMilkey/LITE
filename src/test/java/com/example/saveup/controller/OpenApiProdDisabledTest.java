@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.flyway.enabled=false",
-        "jwt.secret=test_secret_para_openapi_prod_123456789",
+        "jwt.secret=c2F2ZXVwLWxpdGUtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
         "jwt.expirationInMs=86400000"
 })
 @ActiveProfiles("prod")

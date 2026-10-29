@@ -21,7 +21,7 @@ proveedor externo.
 | `SPRING_DATASOURCE_URL` | JDBC de PostgreSQL (Supabase Session Pooler), con TLS o el arranque falla | Sí | JDBC de Postgres con `?sslmode=require` | `jdbc:postgresql://aws-1-sa-east-1.pooler.supabase.example:5432/postgres?sslmode=require` |
 | `SPRING_DATASOURCE_USERNAME` | Usuario de la base de datos (Supabase) | Sí | Texto | `postgres.pooler-pico` |
 | `SPRING_DATASOURCE_PASSWORD` | Contraseña de la base de datos; **secreto** | Sí | Texto | `**********` (rota al darse de baja del repo) |
-| `JWT_SECRET` | Clave HMAC-SHA256 que firma los access token; sin ella el contexto no arranca | Sí | Texto aleatorio; recomendado ≥ 32 bytes | `7Kf9#ezPq2Xw9vYcFgYvE8qTb8Rk9NcA2Jd5Hf7Xq3Lm9TzX4Rb8NvYcFsGk5Jd` (ficticio) |
+| `JWT_SECRET` | Clave HMAC-SHA256 que firma los access token; sin ella el contexto no arranca | Sí | **Base64** de 48 bytes aleatorios (`$b = New-Object byte[] 48; ([Security.Cryptography.RandomNumberGenerator]::Create()).GetBytes($b); [Convert]::ToBase64String($b)`); al menos 32 bytes decodificados | `3q2+7w...` (ficticio) |
 
 ## Opcionales (funciones desactivadas hasta configurarlas)
 
@@ -39,8 +39,9 @@ app arranca igual, pero cada envío falla con un error claro en el log.
 | `APP_PUSH_ENABLED` | Bandera maestra de los recordatorios push (`app.push.enabled`). Por defecto `false`: los recordatorios son no-op total (no envían ni persisten bitácora) | Se quiere activar los recordatorios de cuota | Boolean | `true` |
 | `PUSH_CRON_SECRET` | Credencial del cabecera `X-Cron-Secret` del disparador externo `POST /api/v1/notificaciones/recordatorios/ejecutar`. Si **queda vacía el endpoint queda cerrado (403)** | Recordatorios push activados (sin él no hay disparo) | Texto secreto (`application.properties#app.push.cron-secret`) | `c9bf1e42-2f4a-493e-a2ba-e3a0d5f3b1c9` (ficticio) |
 | `FIREBASE_CREDENTIALS` | Credenciales del service account de FCM que habilita `FcmPushSender`. Es obligatorio **proyecto Firebase** y la app móvil registrando su token en `POST /notificaciones/dispositivos` (hoy ausente) | `APP_PUSH_ENABLED=true` y `app.push.log-only=false` | JSON del service account **en base64** (también acepta el JSON crudo) | `ewogICJ0eXBlIjogInNlcnZp...` (ficticio) |
-| `SPRING_PROFILES_ACTIVE` | Sobreescribe el perfil activo (`application.properties` ya fija `prod`) | Rara vez: solo si el PaaS la define distinto | `prod` | `prod` |
+| `SPRING_PROFILES_ACTIVE` | `application.properties` fija `dev`; en el PaaS **hay que definirla como `prod`** para cargar `application-prod.properties` | Sí (despliegue) | `prod` | `prod` |
 | `SERVER_PORT` | Puerto donde escucha el servidor (por defecto `8080`; algunos PaaS lo fijan por `PORT`) | Si el PaaS lo exige | Entero | `8080` |
+| `APP_BEHIND_PROXY` | `true` solo si la app está detrás de un reverse proxy de confianza (Render). Habilita confiar en `X-Forwarded-For` para el límite de intentos de login; con `false` la cabecera se ignora y se usa la IP de la conexión | Despliegue detrás de proxy | Boolean | `true` |
 
 ## Ajustes dentro de `application*.properties` (no son variables) antes de publicar
 
@@ -60,6 +61,30 @@ app arranca igual, pero cada envío falla con un error claro en el log.
 - `app.version.url-tienda-android/ios` — URLs reales de tienda cuando existan reemplaza los
   placeholders `cl.saveup.lite`.
 - `app.cors.allowed-origins` — restringir a los dominios de la app cuando existan (hoy `*`).
+
+## Claves de `application*.properties` (referencia completa)
+
+Estas claves ya están fijadas en los archivos; se listan para que el despliegue no dependa de
+suposiciones. Solo se cambian editando el archivo o con una variable de entorno equivalente.
+
+| Clave | dev / prod | Nota |
+|---|---|---|
+| `spring.flyway.locations` | `classpath:db/migration/postgresql` en ambos | carpeta de migraciones |
+| `spring.flyway.baseline-on-migrate` | `true` en ambos | marca en V0 una BD preexistente |
+| `spring.flyway.baseline-version` | `0` en ambos | versión base del baseline |
+| `spring.flyway.validate-on-migrate` | `true` en ambos | checksum de migraciones aplicadas |
+| `spring.jpa.hibernate.ddl-auto` | `validate` / `none` | dev valida el esquema; prod no lo toca |
+| `jwt.expirationInMs` | `900000` | 15 minutos de vida del access token |
+| `springdoc.api-docs.enabled` / `springdoc.swagger-ui.enabled` | activos / `false` | el contrato de prod vive en `docs/openapi.json` |
+| `app.cors.allowed-methods` / `allowed-headers` / `max-age` | iguales en ambos | `allow-credentials` es `true` en dev y `false` en prod |
+| `app.mail.url-restablecer` | vacío | URL pública de la pantalla de restablecimiento |
+| `app.push.dias-antes` | `3` | antelación del aviso PROXIMA_VENCER |
+| `app.version.min-ios` / `latest-ios` | `1.0.0` | mismos umbrales que Android |
+| `app.version.terminos` / `privacidad` | `1` | versión de los documentos legales |
+| `spring.jackson.time-zone` / `hibernate.jdbc.time_zone` | `UTC` | contrato de fechas e instantes en UTC |
+| `spring.jackson.date-format` / `write-dates-as-timestamps` | ISO-8601 / `false` | fechas de calendario y dinero |
+| `server.port` / `spring.application.name` | `8080` / `SaveUp` | — |
+| `logging.level.*` | solo dev | trazas SQL, Hikari y JDBC para depurar |
 
 ## Notas
 

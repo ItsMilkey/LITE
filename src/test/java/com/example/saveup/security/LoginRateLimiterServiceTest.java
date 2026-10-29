@@ -3,6 +3,7 @@ package com.example.saveup.security;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -100,13 +101,25 @@ class LoginRateLimiterServiceTest {
     }
 
     @Test
-    @DisplayName("resolverIp usa la PRIMERA dirección de X-Forwarded-For")
+    @DisplayName("resolverIp usa la PRIMERA dirección de X-Forwarded-For con app.behind-proxy=true")
     void resolverIp_primeraDireccionDelForward() {
+        ReflectionTestUtils.setField(limiter, "behindProxy", true);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("X-Forwarded-For", "203.0.113.7, 10.0.0.2, 10.0.0.3");
         request.setRemoteAddr("172.17.0.5");
 
         assertEquals("203.0.113.7", limiter.resolverIp(request));
+    }
+
+    @Test
+    @DisplayName("resolverIp sin la bandera de proxy ignora X-Forwarded-For (valor por defecto)")
+    void resolverIp_sinBanderaIgnoraForward() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("X-Forwarded-For", "203.0.113.7");
+        request.setRemoteAddr("172.17.0.5");
+
+        assertEquals("172.17.0.5", limiter.resolverIp(request),
+                "Sin app.behind-proxy la cabecera no es de confianza.");
     }
 
     @Test

@@ -41,3 +41,13 @@ diff.txt
 *.rej
 # Logs de test redirigidos desde PowerShell (UTF-16, no versionar)
 test-output.log
+
+### Secretos y credenciales (nunca versionar) ###
+.env
+.env.*
+*.p12
+*.jks
+*.dump
+*service-account*.json
+*adminsdk*.json
+*firebase-credentials*.json

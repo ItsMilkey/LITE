@@ -5,12 +5,11 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.function.Function;
 
@@ -19,6 +18,34 @@ public class JwtService {
 
     @Value("${jwt.secret}")
     private String secretKey;
+
+    /** Clave de firma ya validada; se construye una sola vez al arrancar. */
+    private SecretKey signingKey;
+
+    /**
+     * Valida la clave al arrancar para fallar rápido: debe ser Base64 y
+     * decodificar al menos 32 bytes (HMAC-SHA256). Una clave ausente, con
+     * Base64 inválido o demasiado corta impide el arranque con un mensaje claro.
+     */
+    @PostConstruct
+    void inicializarClaveDeFirma() {
+        if (secretKey == null || secretKey.isBlank()) {
+            throw new IllegalStateException(
+                    "jwt.secret no está definido: define JWT_SECRET con 48 bytes aleatorios en Base64.");
+        }
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(secretKey);
+        } catch (RuntimeException e) {
+            throw new IllegalStateException(
+                    "jwt.secret debe ser Base64 válido: define JWT_SECRET con 48 bytes aleatorios en Base64.", e);
+        }
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException(
+                    "jwt.secret debe decodificar al menos 32 bytes para HMAC-SHA256 (se recomiendan 48).");
+        }
+        this.signingKey = Keys.hmacShaKeyFor(keyBytes);
+    }
 
     /** Tiempo de vida del JWT de acceso. */
     @Value("${jwt.expirationInMs:900000}")
@@ -41,7 +68,7 @@ public class JwtService {
                 .claim("email", email)
                 .issuedAt(now)
                 .expiration(expiryDate)
-                .signWith(getSigningKey(), Jwts.SIG.HS256)
+                .signWith(signingKey, Jwts.SIG.HS256)
                 .compact();
 
         return new TokenConExpiracion(token, expiryDate);
@@ -83,25 +110,9 @@ public class JwtService {
 
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
-                .verifyWith(getSigningKey())
+                .verifyWith(signingKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-    }
-
-    private SecretKey getSigningKey() {
-        byte[] keyBytes;
-        try {
-            keyBytes = Decoders.BASE64.decode(secretKey);
-        } catch (Exception e) {
-            keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
-        }
-
-        // HMAC-SHA256 requiere al menos 256 bits (32 bytes)
-        if (keyBytes.length < 32) {
-            keyBytes = Arrays.copyOf(keyBytes, 32);
-        }
-
-        return Keys.hmacShaKeyFor(keyBytes);
     }
 }
