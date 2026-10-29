@@ -98,3 +98,29 @@ suposiciones. Solo se cambian editando el archivo o con una variable de entorno 
 - Al rotar secretos: cambiar `JWT_SECRET` no revoca los access ya emitidos (durán como máximo
   15 min) y entra en vigencia al reiniciar la instancia; cambiar `PUSH_CRON_SECRET` exige
   actualizar el cron externo en la misma ventana.
+
+## Integración continua (`.github/workflows/ci.yml`)
+
+Cada push a `main` y cada pull request ejecutan dos jobs:
+
+| Job | Qué verifica |
+|---|---|
+| `tests` (matriz UTC y Asia/Tokyo) | La suite completa sobre H2 (421 tests). Repite la corrida en una zona desplazada para detectar dependencias de la zona horaria del entorno. |
+| `migraciones` | Levanta un PostgreSQL 16 efímero con Testcontainers, aplica **V1..V12** con Flyway y deja que Hibernate valide las entidades (`ddl-auto=validate`). También comprueba que todas las tablas de dominio tienen RLS. |
+
+El job `migraciones` es la red de seguridad que faltaba: la suite normal corre sobre H2 con
+`ddl-auto=create-drop` y `spring.flyway.enabled=false`, así que nunca ejecuta las migraciones. Un
+desajuste entre una migración y una entidad (como el nombre de PK de V9/V11) solo aparecía al
+desplegar.
+
+Comandos equivalentes en local (requiere Docker para el segundo):
+
+```powershell
+.\mvnw.cmd test                                    # suite H2, sin Docker (421 tests)
+.\mvnw.cmd test -Ppostgres -Dtest=MigracionesPostgresTest   # Flyway + validate sobre PostgreSQL 16
+```
+
+El test de migraciones está etiquetado `postgres` y excluido de `mvn test`; el perfil `-Ppostgres`
+lo vuelve a incluir. Para que el gate sea efectivo, activa en GitHub **Settings → Branches →
+Branch protection rules** sobre `main` y exige los dos jobs de CI antes de mergear: Render
+despliega desde `main`, así que sin esa regla el CI puede pasar en rojo sin bloquear el deploy.

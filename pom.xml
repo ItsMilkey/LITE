@@ -21,6 +21,10 @@
         <springdoc.version>2.6.0</springdoc.version>
         <!-- Zona de la JVM en tests; se puede sobreescribir con -Dtest.timezone=Asia/Tokyo -->
         <test.timezone>UTC</test.timezone>
+        <!-- Spring Boot 3.3.0 fija Testcontainers 1.19.8, cuyo docker-java usa la
+             API 1.32 y Docker 29+ la rechaza (mínimo 1.40). 1.21.4 usa
+             docker-java 3.4.2, compatible con daemons actuales. -->
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <dependencies>
@@ -139,6 +143,20 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- === MIGRACIONES SOBRE POSTGRESQL REAL (CI) === -->
+        <!-- La suite normal usa H2 con ddl-auto=create-drop y nunca ejecuta
+             Flyway. MigracionesPostgresTest levanta un PostgreSQL 16 efímero
+             para aplicar V1..V12 y validar las entidades con Hibernate. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -173,6 +191,8 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>-Duser.timezone=${test.timezone}</argLine>
+                    <!-- MigracionesPostgresTest necesita Docker; CI la ejecuta con -Ppostgres. -->
+                    <excludedGroups>postgres</excludedGroups>
                 </configuration>
             </plugin>
             <plugin>
@@ -190,4 +210,23 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Suite de migraciones sobre PostgreSQL real (Docker/Testcontainers).
+             Se excluye por defecto para que `mvn test` no exija Docker. -->
+        <profile>
+            <id>postgres</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <excludedGroups combine.self="override"/>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
