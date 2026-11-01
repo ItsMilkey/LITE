@@ -58,8 +58,8 @@ sequenceDiagram
     P->>PCR: findByUsuarioRut(rut)
     P->>MR: movimientos del mes (ventana semiabierta)
     P->>P: gastado = suma abs GASTO_GENERAL + PAGO_DEUDA de la categoria
-    P->>EE: desdePorcentaje(gastado x 100 / limite)
-    EE-->>P: OK / ALERTA / EXCEDIDO
+    P->>EE: desde(gastado, limite) — multiplicación cruzada exacta
+    EE-->>P: BAJO_EL_PLAN / CERCA_DEL_PLAN / SOBRE_EL_PLAN
     P-->>C: lista de EjecucionCategoriaDTO
     C-->>U: 200
 
@@ -78,5 +78,6 @@ sequenceDiagram
 - Toda identidad llega como RUT del token; `PresupuestoService` nunca lee el usuario del cuerpo.
 - La ventana de un mes es **semiabierta** `[inicioDeMes, inicioDeMesSiguiente)` y la resuelve `FechasMovimiento`, única clase que convierte `YearMonth`/`LocalDate` a `java.util.Date`.
 - **Ejecución general**: `presupuesto = ingresos del mes × porcentaje`; gasto real = `GASTO_GENERAL` + `PAGO_DEUDA` clasificados por `categoria.tipoPresupuesto`; `ahorroRealizado` = suma de `ABONO_META`.
-- **Ejecución por categoría**: `gastado` cuenta `GASTO_GENERAL` y `PAGO_DEUDA` de esa categoría en el mes; `estado = EstadoEjecucion.desdePorcentaje(porcentajeUsado)` con umbrales 80/100.
+- **Ejecución por categoría**: `gastado` cuenta `GASTO_GENERAL` y `PAGO_DEUDA` de esa categoría en el mes; `estado = EstadoEjecucion.desde(gastado, limite)` (T10a) compara `gastado × 100` contra `umbral × limite` sin redondear: BAJO_EL_PLAN (<80 %), CERCA_DEL_PLAN (80 %–100 % inclusive) y SOBRE_EL_PLAN (>100 %). Los estados son neutros: ninguno es un error.
+- **Catálogo (T10a)**: `GET /api/v1/categorias` devuelve 18 categorías con `codigo` estable y orden NECESIDAD → DESEO → AHORRO → OTROS y luego por nombre. El backend busca por `codigo` (`DEUDAS`, `AHORRO`), nunca por nombre.
 - El historial reutiliza `calcularEjecucionGeneral` mes a mes (no duplica el cálculo) y accede a la BD con **una consulta por mes**.

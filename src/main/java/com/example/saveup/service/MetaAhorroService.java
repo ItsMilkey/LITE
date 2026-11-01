@@ -88,7 +88,7 @@ public class MetaAhorroService {
         abono.setDescripcion(dto.getDescripcion());
 
         // ASIGNAR CATEGORÍA AHORRO
-        categoriaRepository.findByNombre("Ahorro").ifPresent(abono::setCategoria);
+        categoriaRepository.findByCodigo("AHORRO").ifPresent(abono::setCategoria);
 
         movimientoRepository.save(abono);
 
@@ -126,7 +126,7 @@ public class MetaAhorroService {
         retiro.setDescripcion(dto.getDescripcion());
 
         // ASIGNAR CATEGORÍA AHORRO
-        categoriaRepository.findByNombre("Ahorro").ifPresent(retiro::setCategoria);
+        categoriaRepository.findByCodigo("AHORRO").ifPresent(retiro::setCategoria);
 
         movimientoRepository.save(retiro);
 

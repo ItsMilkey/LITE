@@ -39,7 +39,10 @@ Casos de uso: **UC19–UC23** · Endpoints: `/api/v1/presupuestos` · Diagrama d
 - Criterios de aceptación:
   - `GET /api/v1/presupuestos/categorias/ejecucion/me?month&year` devuelve por categoría `{categoria, limite, gastado, porcentajeUsado, estado}`.
   - `gastado` = suma en **valor absoluto** de `GASTO_GENERAL` y `PAGO_DEUDA` de esa categoría en el mes.
-  - `estado = EstadoEjecucion.desdePorcentaje(...)` con `UMBRAL_ALERTA = 80` y `UMBRAL_EXCEDIDO = 100`: `OK` (< 80), `ALERTA` (≥ 80), `EXCEDIDO` (≥ 100). Los bordes se comparan con `compareTo`.
+  - `estado = EstadoEjecucion.desde(gastado, limite)` con `UMBRAL_CERCA = 80` y `UMBRAL_SOBRE = 100`, comparando
+    `gastado × 100` contra `umbral × limite` (multiplicación cruzada exacta, sin redondear): `BAJO_EL_PLAN` (< 80 %),
+    `CERCA_DEL_PLAN` (80 % a 100 % inclusive) y `SOBRE_EL_PLAN` (> 100 %). El 100 % exacto es `CERCA_DEL_PLAN`.
+  - Los estados son **informativos y neutros**: ninguno es un error; sobrepasar el límite tampoco lo es.
   - El estado es **derivado, no persistido**.
 - Trazabilidad: UC22 · `GET /api/v1/presupuestos/categorias/ejecucion/me` · T5
 - Acción en la app (Flutter): barras de progreso con color según el semáforo.
@@ -90,4 +93,17 @@ Casos de uso: **UC19–UC23** · Endpoints: `/api/v1/presupuestos` · Diagrama d
 - Acción en la app (Flutter): selector de rango acotado a 24 meses.
 - Estado: **implementada**
 
-> La categoría **"Deudas"** (`NECESIDAD`) se asigna automáticamente a los pagos de deuda.
+### HU-05-10 — Catálogo de categorías con código estable
+**Como** usuario, **quiero** que mis movimientos y presupuestos usen un catálogo claro de categorías, **para** clasificar mis gastos sin ambigüedad.
+- Criterios de aceptación:
+  - `GET /api/v1/categorias` devuelve **18 categorías** predefinidas, cada una con `id`, `codigo`, `nombre`, `iconId`,
+    `colorHex` y `tipoPresupuesto`.
+  - El orden es estable: `NECESIDAD` → `DESEO` → `AHORRO` → `OTROS` y luego por nombre.
+  - `codigo` es único, no nulo y con formato `^[A-Z][A-Z0-9_]*$`; el backend busca por `codigo`, nunca por nombre.
+  - Renombrar una categoría en la base no cambia el comportamiento (pago de deuda → `DEUDAS`, Smart-Split → `AHORRO`).
+- Trazabilidad: (sin UC propio; soporte de UC20–UC23) · `GET /api/v1/categorias` · T10a
+- Acción en la app (Flutter): menú de categorías que usa `codigo` como clave y muestra `nombre`, `iconId` y `colorHex`.
+- Estado: **implementada**
+
+> La categoría de `codigo` **`DEUDAS`** (`NECESIDAD`) se asigna automáticamente a los pagos de deuda; Smart-Split y los
+> abonos/retiros de metas usan `codigo` **`AHORRO`**.

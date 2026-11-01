@@ -12,7 +12,9 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
   vive en application.properties y se resuelve en memoria (SemVerUtils + VersionAppService).
 - No hay tabla para T9.5: el contador de fuerza bruta vive en una caché Caffeine en memoria
   (LoginRateLimiterService, clave email.toLowerCase()+":"+IP); se pierde al reiniciar sin riesgo de seguridad.
-- CATEGORIA(id, nombre, iconId, colorHex, tipoPresupuesto: NECESIDAD|DESEO|AHORRO|OTROS)
+- CATEGORIA(id, codigo UNIQUE, nombre, iconId, colorHex, tipoPresupuesto: NECESIDAD|DESEO|AHORRO|OTROS) —
+  catálogo predefinido de 18 filas (T10a). `codigo` es la clave estable (p. ej. `ALIMENTACION_BASE`, `DEUDAS`, `AHORRO`);
+  el código busca por `codigo`, nunca por nombre. Las 8 filas nuevas y los renombres viven en V13.
 - MOVIMIENTO(id, monto, descripcion, fecha [updatable=false], tipoMovimiento, usuario, categoria?, deuda?, metaAhorro?, movimientoOrigen?)
   Signo: + INGRESO_GENERAL y RETIRO_META; − GASTO_GENERAL, PAGO_DEUDA y ABONO_META. Saldo = SUM(monto).
   El signo NO lo decide el cliente: lo impone el tipo vía SignoMovimiento (ver reglas vigentes).
@@ -29,7 +31,7 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
 - RECORDATORIO_ENVIADO(id, usuario, deuda, cuotaNumero, tipo PROXIMA_VENCER|VENCE_HOY|VENCIDA, fechaEnvio;
   UNIQUE(deuda, cuota, tipo)) — T9.6, bitácora de deduplicación del job de recordatorios.
 
-## Endpoints (protegidos salvo register/login, auth/refresh, auth/logout y los de recuperación de contraseña)
+## Endpoints (protegidos salvo register/login, auth/refresh, auth/logout, recuperación de contraseña, `GET /app/version` y el disparador del cron, que usa `X-Cron-Secret` en vez de JWT)
 - /api/v1/usuarios: POST register · POST login (LoginResponseDTO {token, refreshToken, expiraEn}; T9.5: verificación de
   bloqueo email+IP ANTES de la BD, cada 401 suma un intento (también correo inexistente) y un éxito resetea; 5 fallos
   → 429 INTENTOS_LOGIN_EXCEDIDOS por 15 min) · GET me (UsuarioResponseDTO, sin entidad ni hash)
@@ -44,11 +46,11 @@ Resumen de docs/DOCUMENTACION_COMPLETA_SAVEUP_LITE.txt. Mantenlo actualizado al 
   {actualizacionObligatoria (version < min-*, app bloqueada), actualizacionSugerida (entre min-* y latest-*), mensaje,
   urlTienda, versionTerminos, versionPrivacidad}; plataforma/parámetro faltante → 400 PARAMETRO_INVALIDO,
   SemVer mal formado → 400 DATOS_INVALIDOS
-- /api/v1/saldos/me
+- /api/v1/saldos · /api/v1/saldos/me (la primera es alias de compatibilidad con `operationId` propio; el cliente generado no duplica métodos)
 - /api/v1/movimientos: POST · GET me (?limit) · GET paginados/me (?page&size&desde&hasta&tipoMovimiento&categoriaId&montoMin&montoMax&q) · PUT {id} · DELETE {id}
   POST solo acepta INGRESO_GENERAL, GASTO_GENERAL y PAGO_DEUDA. ABONO_META y RETIRO_META se rechazan con 400:
   se registran únicamente desde la sección de metas, donde existe la meta que los respalda.
-- /api/v1/categorias: GET
+- /api/v1/categorias: GET (18 categorías con `codigo`, orden estable por tipo y nombre)
 - /api/v1/metas: POST · GET me · POST {id}/abonar · POST {id}/retirar · PUT {id} · DELETE {id}
 - /api/v1/deudas: POST · GET me · GET {id} · POST {id}/pagar · PUT {id} · PATCH {id}/cancelar · GET {id}/amortizacion · GET {id}/pagos (?page&size, fecha desc)
 - /api/v1/presupuestos: GET me (DTO; sin configuración → 404 NO_ENCONTRADO) · POST me (DTO; porcentajes deben sumar 100.00 y ninguno ser negativo) · GET ejecucion/me (?month&year) · GET categorias/me · PUT categorias/me · GET categorias/ejecucion/me (?month&year) · GET historial/me (?desde&hasta=YYYY-MM)
@@ -78,6 +80,9 @@ apagados con banderas maestras — el envío real requiere proveedores externos 
   `PushSender` activo es `NoOpPushSender`; con la bandera activa cambia a `LogPushSender`
   (log-only) o `FcmPushSender` (envío real, exige `app.push.log-only=false` +
   `FIREBASE_CREDENTIALS`; si falta, la app arranca igual y cada envío falla con ERROR en el log).
+
+En el perfil `dev` (el activo por defecto en `application.properties`) ambas banderas se sobreescriben a `true` y el
+modo de envío queda en `log-only=true`; en `prod` quedan en `false`.
 
 Qué falta: T9.3 — proveedor de correo (preferir API HTTP; Render free puede bloquear SMTP
 saliente), remitente y dominio verificados, plantilla y URL de restablecimiento. T9.6 — proyecto
@@ -140,9 +145,9 @@ el mismo UUID queda en el log con la traza. Los 4xx se registran a INFO con stat
 - Detalle e historial (T3): GET /api/v1/deudas/{id} devuelve la ficha enriquecida y valida propiedad (ajena → 403), igual que /amortizacion y el resto del módulo (SecurityUtils.validarPropietario, AccessDeniedException → 403; nunca SecurityException). GET /api/v1/deudas/{id}/pagos es paginado (fecha desc) y devuelve {id, fecha, monto (positivo), capital, interes, costos, descripcion}; el desglose de cada pago se calcula en memoria como imputación acumulada tras ese pago − la del anterior (base = cuotas previas), no se persiste y usa una sola consulta de pagos. GET /api/v1/deudas/{id}/amortizacion agrega por cuota estado (PAGADA|PARCIAL|PENDIENTE), montoPagado y previa vía ImputacionPagos. CuotaSimulacionDTO se arma con el mapper compartido `CuotaSimulacionDTO.from(tabla, fechas)`, usado por el simulador y el detalle de deuda.
 - PAGO_DEUDA puede crearse por /api/v1/deudas/{id}/pagar y por POST /api/v1/movimientos, pero ambas rutas terminan en DeudaService.registrarPago: mismo movimiento (negativo, por SignoMovimiento) y mismo estado de deuda.
 - Ejecución presupuestaria: presupuesto = ingresos del mes × %; gasto real = GASTO_GENERAL y PAGO_DEUDA clasificados por categoria.tipoPresupuesto; ahorroRealizado = SUM de ABONO_META del mes.
-- Presupuesto por categoría e historial (T5): PresupuestoService calcula el mes completo en la ventana semiabierta [inicioDeMes, inicioDeMesSiguiente) de FechasMovimiento. GET/PUT /categorias/me lee/reemplaza el conjunto de límites (PUT valida que cada categoría exista, que el límite sea > 0 y que no haya categorías repetidas; si no → 400) siempre por el RUT del token. GET /categorias/ejecucion/me devuelve por categoría {categoria, limite, gastado, porcentajeUsado, estado}: gastado = suma en abs de GASTO_GENERAL y PAGO_DEUDA de esa categoría en el mes; estado = EstadoEjecucion.desdePorcentaje (constantes UMBRAL_ALERTA=80 y UMBRAL_EXCEDIDO=100) → OK (<80), ALERTA (≥80) o EXCEDIDO (≥100). GET /historial/me?desde&hasta (YYYY-MM, inclusivos) reutiliza calcularEjecucionGeneral mes a mes (no duplica el cálculo); máximo 24 meses, rango invertido o formato inválido → 400. Un mes sin ingresos devuelve ceros (sin dividir por 0). POST /me exige necesidades + deseos + ahorro = 100.00 con compareTo y ningún porcentaje negativo; PresupuestoService concentra el guardado y responde ConfiguracionPresupuestoResponseDTO (no la entidad).
+- Presupuesto por categoría e historial (T5): PresupuestoService calcula el mes completo en la ventana semiabierta [inicioDeMes, inicioDeMesSiguiente) de FechasMovimiento. GET/PUT /categorias/me lee/reemplaza el conjunto de límites (PUT valida que cada categoría exista, que el límite sea > 0 y que no haya categorías repetidas; si no → 400) siempre por el RUT del token. GET /categorias/ejecucion/me devuelve por categoría {categoria, limite, gastado, porcentajeUsado, estado}: gastado = suma en abs de GASTO_GENERAL y PAGO_DEUDA de esa categoría en el mes; estado = EstadoEjecucion.desde(gastado, limite) (comparación exacta por multiplicación cruzada, sin redondear el porcentaje) → BAJO_EL_PLAN (<80 %), CERCA_DEL_PLAN (80 %–100 % inclusive) o SOBRE_EL_PLAN (>100 %). Los estados son neutros e informativos; el 100 % exacto es CERCA_DEL_PLAN. GET /historial/me?desde&hasta (YYYY-MM, inclusivos) reutiliza calcularEjecucionGeneral mes a mes (no duplica el cálculo); máximo 24 meses, rango invertido o formato inválido → 400. Un mes sin ingresos devuelve ceros (sin dividir por 0). POST /me exige necesidades + deseos + ahorro = 100.00 con compareTo y ningún porcentaje negativo; PresupuestoService concentra el guardado y responde ConfiguracionPresupuestoResponseDTO (no la entidad).
 - Contrato de datos para móviles (T8a): la zona del negocio es America/Santiago como constante de FechasMovimiento (sin ZoneId.systemDefault()); los instantes (Movimiento.fecha, Deuda.fechaCreacion, Usuario.fechaRegistro) se serializan ISO-8601 en UTC con sufijo Z y las fechas de calendario (LocalDate, incluida MetaAhorro.fechaLimite) como yyyy-MM-dd. JVM (-Duser.timezone=UTC), Hibernate (hibernate.jdbc.time_zone=UTC) y Jackson (spring.jackson.time-zone=UTC) persisten en UTC; los tests corren con -Duser.timezone=${test.timezone} (UTC por defecto). Dinero: número JSON con máximo 13 enteros + 2 decimales en todos los DTO de entrada (@Digits(13,2)); el servidor es la única fuente de aritmética y las tasas quedan fuera de esa regla.
-- La categoría 'Deudas' (NECESIDAD) se asigna automáticamente a los pagos de deuda.
+- La categoría de `codigo` DEUDAS (NECESIDAD) se asigna automáticamente a los pagos de deuda; Smart-Split y los abonos/retiros de metas usan `codigo` AHORRO. Ningún nombre visible se usa como clave.
 - Seguridad: JWT HMAC-SHA256 stateless; SecurityUtils.validarPropietario(rut).
 - Sesión móvil (T9.1): access de 15 min + refresh opaco rotativo de 90 días persistido solo como hash SHA-256
   (ver RefreshTokenService). La rotación marca fechaUso/fechaRevocación del token consumido; el reuso de un token
@@ -177,17 +182,18 @@ el mismo UUID queda en el log con la traza. Los 4xx se registran a INFO con stat
   las versiones de legales (app.version.terminos/privacidad) viajan en la respuesta para la pantalla de legales.
 - Fuerza bruta en login (T9.5): LoginRateLimiterService (paquete security, caché Caffeine con ventana de 15 min
   re-expirada por cada fallo) cuenta los intentos fallidos por la clave email.toLowerCase()+":" +IP, con IP resuelta
-  de la primera dirección de X-Forwarded-For o getRemoteAddr() (resolverIp, llamada desde el controller). El bloqueo
+  de la primera dirección de X-Forwarded-For solo si `app.behind-proxy=true` (si no, getRemoteAddr(); resolverIp,
+  llamada desde el controller). El bloqueo
   se consulta ANTES de tocar la BD en UsuarioService.autenticarUsuario(loginDTO, ipCliente): 5 fallos del par → 429
   INTENTOS_LOGIN_EXCEDIDOS (controller no llega a findByEmail); cada 401 (contraseña incorrecta o correo inexistente)
   suma un intento; un login exitoso resetea el contador. Contador en memoria del proceso (una instancia en Render);
   al escalar horizontalmente mover la caché a Redis. El 429 se documenta en el contrato vía el customizer de
   OpenApiConfig por operationId="loginUsuario".
-- Esquema: 10 tablas; V1 (DDL), V2 (seed de 10 categorías), V3 (deuda con condiciones de crédito), V4 (CHECK de signo de MOVIMIENTO), V5 (movimiento_origen_id: fk_movimiento_origen + idx_movimiento_origen_id, vínculo de Smart-Split), V6 (presupuesto_categoria: límite mensual por categoría, chk limite > 0, UNIQUE(usuario, categoria), RLS), V7 (renombra los nombres de constraint creados en V3–V6), V8 (los devuelve a minúscula, valida el CHECK de signo de MOVIMIENTO, agrega 6 índices de FK y filtro y activa RLS en las 8 tablas de dominio), V9 (T9.1: AUTH_REFRESH_TOKEN con índices y RLS), V10 (T9.2: ON DELETE CASCADE en las 6 FKs hacia USUARIO) y V11 (T9.3: TOKEN_VERIFICACION con FK CASCADE, hash único, índices y RLS) en db/migration/postgresql.
+- Esquema: 12 tablas; V1 (DDL), V2 (seed de 10 categorías), V3 (deuda con condiciones de crédito), V4 (CHECK de signo de MOVIMIENTO), V5 (movimiento_origen_id: fk_movimiento_origen + idx_movimiento_origen_id, vínculo de Smart-Split), V6 (presupuesto_categoria: límite mensual por categoría, chk limite > 0, UNIQUE(usuario, categoria), RLS), V7 (renombra los nombres de constraint creados en V3–V6), V8 (los devuelve a minúscula, valida el CHECK de signo de MOVIMIENTO, agrega 6 índices de FK y filtro y activa RLS en las 8 tablas de dominio), V9 (T9.1: AUTH_REFRESH_TOKEN con índices y RLS), V10 (T9.2: ON DELETE CASCADE en las 6 FKs hacia USUARIO), V11 (T9.3: TOKEN_VERIFICACION con FK CASCADE, hash único, índices y RLS) y V12 (T9.6: DISPOSITIVO_PUSH y RECORDATORIO_ENVIADO, token FCM único global, deduplicación por (deuda, cuota, tipo), FKs CASCADE hacia USUARIO/DEUDA, índices y RLS) y V13 (T10a: `codigo` estable en categoria, renombre de 8 filas y 8 categorías nuevas; uq/chk de código) en db/migration/postgresql.
 
 ## Visión del módulo de deudas
 Dos usos con un mismo motor de cálculo: (1) simular un endeudamiento antes de contraerlo (cuánto cuesta, por cuánto tiempo, efecto de tasa y plazo, con fines de decisión y educación financiera) y (2) llevar la deuda real al detalle (cuánto falta, historial de pagos). Una deuda guardada = condiciones de una simulación + pagos.
 
 ## Tareas pendientes (docs/tareas/)
-[x] T0 BigDecimal · [x] T1a motor financiero y calendario · [x] T1b simulador (sin persistir) · [x] T1c deuda con condiciones, fechas y cuotas previas · [x] T2 pagos, imputación y saldos · [x] T3 detalle de deuda (ficha, cronograma, historial) · [x] T4 filtros y edición de movimientos · [x] T5 presupuesto por categoría e historial · [x] T8a contrato de datos (fechas, zona y dinero) · [x] T8b errores uniformes · [x] T8c OpenAPI, /api/v1 y guía Flutter · [x] T9.1 sesión móvil (refresh rotativo) · [x] T9.2 borrado de cuenta con cascada · [x] T9.3 contraseñas (recuperación y cambio) · [x] T9.4 versión mínima de la app · [x] T9.5 anti-fuerza bruta en login · [x] T9.6 recordatorios de vencimiento por push (FCM + job diario). **Fase A de T9 (T9.1–T9.5) y T9.6 concluidas.** Pendiente de T9: T9.7 legales — en docs/tareas/T9-sesion-movil.md. · BACKLOG.md (diferido).
+[x] T0 BigDecimal · [x] T1a motor financiero y calendario · [x] T1b simulador (sin persistir) · [x] T1c deuda con condiciones, fechas y cuotas previas · [x] T2 pagos, imputación y saldos · [x] T3 detalle de deuda (ficha, cronograma, historial) · [x] T4 filtros y edición de movimientos · [x] T5 presupuesto por categoría e historial · [x] T8a contrato de datos (fechas, zona y dinero) · [x] T8b errores uniformes · [x] T8c OpenAPI, /api/v1 y guía Flutter · [x] T9.1 sesión móvil (refresh rotativo) · [x] T9.2 borrado de cuenta con cascada · [x] T9.3 contraseñas (recuperación y cambio) · [x] T9.4 versión mínima de la app · [x] T9.5 anti-fuerza bruta en login · [x] T9.6 recordatorios de vencimiento por push (FCM + job diario). **Fase A de T9 (T9.1–T9.5) y T9.6 concluidas.** Pendiente de T9: T9.7 legales — en docs/tareas/T9-sesion-movil.md. · [x] T10a catálogo de 18 categorías, código estable y estados neutros. · BACKLOG.md (diferido).
 Orden: [x] T0 → [x] T1a → [x] T1b (el frontend ya puede consumirlo) → [x] T1c → [x] T2 → [x] T3. T4 y T5 solo dependen de T0.

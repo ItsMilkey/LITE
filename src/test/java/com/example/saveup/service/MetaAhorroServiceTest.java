@@ -101,7 +101,7 @@ class MetaAhorroServiceTest {
         Categoria catAhorro = new Categoria(1L, "Ahorro", "ic_savings", "#3F51B5", TipoPresupuesto.AHORRO);
 
         when(metaAhorroRepository.findById(1L)).thenReturn(Optional.of(meta));
-        when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.of(catAhorro));
+        when(categoriaRepository.findByCodigo("AHORRO")).thenReturn(Optional.of(catAhorro));
         when(metaAhorroRepository.save(any(MetaAhorro.class))).thenAnswer(inv -> inv.getArgument(0));
 
         MetaAhorroResponseDTO response = metaAhorroService.realizarAbono(1L, dto);
@@ -122,7 +122,7 @@ class MetaAhorroServiceTest {
         dto.setDescripcion("Abono manual");
 
         when(metaAhorroRepository.findById(1L)).thenReturn(Optional.of(meta));
-        when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.empty());
+        when(categoriaRepository.findByCodigo("AHORRO")).thenReturn(Optional.empty());
         when(metaAhorroRepository.save(any(MetaAhorro.class))).thenAnswer(inv -> inv.getArgument(0));
 
         metaAhorroService.realizarAbono(1L, dto);
@@ -145,7 +145,7 @@ class MetaAhorroServiceTest {
 
         when(metaAhorroRepository.findById(1L)).thenReturn(Optional.of(meta));
         when(metaAhorroRepository.findTotalAhorradoByMetaId(1L)).thenReturn(new java.math.BigDecimal("100000.00"));
-        when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.empty());
+        when(categoriaRepository.findByCodigo("AHORRO")).thenReturn(Optional.empty());
         when(metaAhorroRepository.save(any(MetaAhorro.class))).thenAnswer(inv -> inv.getArgument(0));
 
         metaAhorroService.realizarRetiro(1L, dto);
@@ -235,7 +235,7 @@ class MetaAhorroServiceTest {
         meta.setMontoActual(java.math.BigDecimal.ZERO);
 
         when(metaAhorroRepository.findById(1L)).thenReturn(Optional.of(meta));
-        when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.empty());
+        when(categoriaRepository.findByCodigo("AHORRO")).thenReturn(Optional.empty());
         when(metaAhorroRepository.save(any(MetaAhorro.class))).thenAnswer(inv -> inv.getArgument(0));
         when(movimientoRepository.save(any(Movimiento.class))).thenAnswer(inv -> inv.getArgument(0));
 

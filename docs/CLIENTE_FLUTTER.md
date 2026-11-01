@@ -25,11 +25,13 @@ con el backend local; producción siempre HTTPS. No incluyas `/v3/api-docs` ni S
 - En cada solicitud protegida envía `Authorization: Bearer <token>`.
 - Manejo del 401 en el interceptor: si `codigo = TOKEN_EXPIRADO`, llama **una sola vez** `POST /auth/refresh` con
   `{ "refreshToken": "..." }` y reintenta la solicitud original; guarda el par nuevo. Si `codigo = REFRESH_INVALIDO`
-  (token inválido, reusado o revocado, incluido un logout en otro dispositivo) o el refresh también falla, borra ambos
-  tokens y vuelve al login. No reintentes el login automáticamente con credenciales guardadas.
+  (token inválido, reusado, revocado por cambio o restablecimiento de contraseña, detección de reuso o cuenta eliminada)
+  o el refresh también falla, borra ambos tokens y vuelve al login. No reintentes el login automáticamente con
+  credenciales guardadas.
 - Para cerrar sesión: `POST /auth/logout` con `{ "refreshToken": "..." }`; luego borra ambos tokens del almacenamiento.
 - **Política anti-fuerza bruta del login**: el backend cuenta los intentos fallidos por combinación de **correo + IP**
-  (la IP viene de la primera dirección de `X-Forwarded-For` que agrega el proxy de Render). Tras **5 fallos** ese par
+  (la IP sale de la primera dirección de `X-Forwarded-For` cuando el backend corre detrás de un proxy de confianza,
+  `APP_BEHIND_PROXY=true`; si no, usa la IP de la conexión). Tras **5 fallos** ese par
   queda bloqueado **15 minutos** y `POST /usuarios/login` responde **429 INTENTOS_LOGIN_EXCEDIDOS** — incluso con la
   contraseña correcta, y el bloqueo no dependerá de reintentos: no reenvíes el login automáticamente. Al lograr un
   login exitoso el contador se reinicia. En la UI: ante un 429 muestra "Demasiados intentos; espera unos minutos"
@@ -45,7 +47,9 @@ con el backend local; producción siempre HTTPS. No incluyas `/v3/api-docs` ni S
 - **Recuperar la contraseña sin sesión** (pantalla "Olvidé mi contraseña", endpoint público):
   1. `POST /auth/recuperar-contrasena` con `{ "email": "..." }` → **siempre 200 genérico** ("Si el correo está registrado…").
      No muestres nada que dependa de si el correo existe: la respuesta es idéntica para todos (anti-enumeración).
-  2. El backend envía (o loguea, en dev) un token de un solo uso válido 1 hora. Cuando la app pública tenga pantalla de
+  2. Con el envío activo, el backend envía (o loguea, en dev) un token de un solo uso válido 1 hora. **En producción
+     el correo está PENDIENTE de activación** (`app.mail.enabled=false` por defecto): la solicitud responde igual, pero
+     no genera ni envía token; la UI debe indicar que el envío aún no está disponible. Cuando exista pantalla pública de
      restablecimiento, configúrala en `app.mail.url-restablecer`; mientras tanto el correo muestra el token en texto.
      Pide al usuario pegar el token recibido y la contraseña nueva en el formulario.
   3. `POST /auth/restablecer-contrasena` con `{ "token": "...", "nuevaContrasena": "..." }` → 200; el token queda
@@ -92,6 +96,18 @@ final dio = Dio(BaseOptions(baseUrl: 'https://lite-backend-1wn9.onrender.com/api
   la zona del negocio es `America/Santiago`.
 - **Paginación**: `page` empieza en 0 y `size` debe estar entre 1 y 100 (por defecto 50 en movimientos y 20 en pagos).
 - **Reportes**: `GET /reportes/movimientos/exportar` devuelve bytes y `Content-Disposition`; guárdalos como archivo, no como JSON.
+
+### Catálogo de categorías y estados (T10a)
+
+- `GET /categorias` devuelve el catálogo completo (18 categorías) con `id`, `codigo`, `nombre`, `iconId`, `colorHex` y
+  `tipoPresupuesto`. El orden es estable: `NECESIDAD` → `DESEO` → `AHORRO` → `OTROS` y luego por nombre.
+- **Usa `codigo` como clave estable** (por ejemplo `ALIMENTACION_BASE`, `DEUDAS`, `AHORRO`). No uses `nombre` ni `id`
+  como clave de lógica: los nombres visibles pueden cambiar y el id depende del entorno.
+- Los estados de ejecución son **informativos**, nunca errores: `BAJO_EL_PLAN` (< 80 %), `CERCA_DEL_PLAN`
+  (80 % a 100 % inclusive) y `SOBRE_EL_PLAN` (> 100 %). El 100 % exacto queda en `CERCA_DEL_PLAN`. Sobreasignar
+  el ingreso tampoco es un error.
+- El **color y el tono los decide la app**; la API solo entrega `colorHex` e `iconId`. Un estado neutro no debe
+  mostrarse como alarma.
 
 ## 4. Errores: mapear por `codigo`
 
@@ -172,7 +188,10 @@ Payload de datos de la notificación:
 Con `cantidad > 1` no viene `deudaId` y el `deepLink` es `saveup://deudas` (lista). Configura el manejo del *tap* para
 navegar con `deepLink`; no interpretes el título, que puede cambiar.
 
-En dev y mientras no haya proyecto de Firebase, el backend funciona con `app.push.log-only=true`: el job "envía" y
-loguea. El **cron externo** que dispara el job llama `POST /api/v1/notificaciones/recordatorios/ejecutar` con la
+En `dev` el push está activo por defecto (`app.push.enabled=true`) con `app.push.log-only=true`: el job "envía" y
+loguea, sin Firebase. En `prod` está **PENDIENTE de activación** (`app.push.enabled=false` por defecto): la corrida es
+no-op y no persiste bitácora; se activa con `APP_PUSH_ENABLED=true` cuando existan el proyecto Firebase, las
+credenciales y el cron. El registro y la baja de tokens de dispositivo funcionan aunque la bandera esté apagada.
+El **cron externo** que dispara el job llama `POST /api/v1/notificaciones/recordatorios/ejecutar` con la
 cabecera `X-Cron-Secret` (no usa JWT) y recibe `202 {evaluados, enviados, omitidos}`.
 

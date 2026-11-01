@@ -13,6 +13,10 @@ public class Categoria {
     @Column(name = "ID_CATEGORIA")
     private Long id;
 
+    /** Código estable del catálogo (T10a). El código de la app busca por aquí, nunca por nombre. */
+    @Column(name = "CODIGO", nullable = false, unique = true, length = 40)
+    private String codigo;
+
     @Column(name = "NOMBRE", nullable = false, unique = true)
     private String nombre;
 
@@ -32,7 +36,13 @@ public class Categoria {
 
     public Categoria(Long id, String nombre, String iconId, String colorHex,
                      com.example.saveup.model.enums.TipoPresupuesto tipoPresupuesto) {
+        this(id, null, nombre, iconId, colorHex, tipoPresupuesto);
+    }
+
+    public Categoria(Long id, String codigo, String nombre, String iconId, String colorHex,
+                     com.example.saveup.model.enums.TipoPresupuesto tipoPresupuesto) {
         this.id = id;
+        this.codigo = codigo;
         this.nombre = nombre;
         this.iconId = iconId;
         this.colorHex = colorHex;

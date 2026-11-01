@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -15,10 +16,12 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.util.HashSet;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -92,6 +95,43 @@ class MigracionesPostgresTest {
         assertNotNull(actual, "Flyway no reporta versión actual");
         assertEquals(migraciones[migraciones.length - 1].getVersion(), actual.getVersion(),
                 "La versión actual no es la última migración disponible");
+    }
+
+    @Test
+    @DisplayName("A01/A03: el catálogo tiene 18 categorías con código único y los tipos finales")
+    void catalogoT10aTiene18CategoriasConCodigoUnico() {
+        assertEquals(18, jdbc.queryForObject("SELECT count(*) FROM categoria", Integer.class));
+        assertEquals(0, jdbc.queryForObject(
+                "SELECT count(*) FROM categoria WHERE codigo IS NULL", Integer.class));
+
+        List<String> codigos = jdbc.queryForList(
+                "SELECT codigo FROM categoria ORDER BY codigo", String.class);
+        assertEquals(18, new HashSet<>(codigos).size(), "Hay códigos repetidos: " + codigos);
+        assertTrue(codigos.containsAll(List.of(
+                "SUELDO", "ALIMENTACION_BASE", "TRANSPORTE_MOVILIDAD", "VIVIENDA_SUMINISTROS",
+                "SALUD_BIENESTAR", "OCIO_RECREACION", "CUIDADO_PERSONAL_VESTUARIO", "DEUDAS",
+                "AHORRO", "OTROS", "EDUCACION_FORMACION", "SEGUROS_IMPUESTOS", "MASCOTAS",
+                "HOGAR_CONSUMIBLES", "EQUIPAMIENTO_TECNOLOGIA", "SUSCRIPCIONES_DIGITAL",
+                "RESTAURANTES_SALIDAS", "REGALOS_CELEBRACIONES")),
+                "Faltan códigos del catálogo: " + codigos);
+
+        assertEquals("DESEO", jdbc.queryForObject(
+                "SELECT tipo_presupuesto FROM categoria WHERE codigo = 'CUIDADO_PERSONAL_VESTUARIO'", String.class));
+        assertEquals("NECESIDAD", jdbc.queryForObject(
+                "SELECT tipo_presupuesto FROM categoria WHERE codigo = 'DEUDAS'", String.class));
+        assertEquals("AHORRO", jdbc.queryForObject(
+                "SELECT tipo_presupuesto FROM categoria WHERE codigo = 'AHORRO'", String.class));
+        assertEquals("OTROS", jdbc.queryForObject(
+                "SELECT tipo_presupuesto FROM categoria WHERE codigo = 'OTROS'", String.class));
+    }
+
+    @Test
+    @DisplayName("A04: código repetido o en minúsculas falla por constraint")
+    void codigoRepetidoOMinusculasFalla() {
+        assertThrows(DataAccessException.class, () -> jdbc.update(
+                "INSERT INTO categoria (nombre, codigo, tipo_presupuesto) VALUES ('Duplicada', 'DEUDAS', 'NECESIDAD')"));
+        assertThrows(DataAccessException.class, () -> jdbc.update(
+                "INSERT INTO categoria (nombre, codigo, tipo_presupuesto) VALUES ('Minusculas', 'minusculas', 'NECESIDAD')"));
     }
 
     @Test

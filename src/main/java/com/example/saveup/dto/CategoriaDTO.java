@@ -9,6 +9,9 @@ public class CategoriaDTO {
     @Schema(description = "Identificador de la categoría.", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long id;
 
+    @Schema(description = "Código estable del catálogo (p. ej. ALIMENTACION_BASE).", requiredMode = Schema.RequiredMode.REQUIRED)
+    private String codigo;
+
     @Schema(description = "Nombre visible de la categoría.", requiredMode = Schema.RequiredMode.REQUIRED)
     private String nombre;
 

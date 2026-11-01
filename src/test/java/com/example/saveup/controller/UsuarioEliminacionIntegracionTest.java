@@ -213,17 +213,18 @@ class UsuarioEliminacionIntegracionTest {
         return c;
     }
 
-    /** Categoria reutilizable: el nombre es único y el re-registro no debe insertarla de nuevo. */
+    /** Categoria reutilizable: el código es único y el re-registro no debe insertarla de nuevo. */
     private Categoria categoriaReutilizable() {
-        String nombre = "CATEG_BORRADO_" + Integer.toHexString(RUT.hashCode());
-        return categoriaRepository.findByNombre(nombre)
-                .orElseGet(() -> categoriaRepository.save(nuevaCategoria(nombre)));
+        String codigo = "CATEG_BORRADO_" + Integer.toHexString(RUT.hashCode()).toUpperCase();
+        return categoriaRepository.findByCodigo(codigo)
+                .orElseGet(() -> categoriaRepository.save(nuevaCategoria(codigo)));
     }
 
-    private Categoria nuevaCategoria(String nombre) {
+    private Categoria nuevaCategoria(String codigo) {
         Categoria c = new Categoria();
-        // Valor único: el modelo exige nombre único y vive más allá del borrado (no es del usuario).
-        c.setNombre(nombre);
+        // Valor único: el catálogo exige código y nombre únicos, y vive más allá del borrado (no es del usuario).
+        c.setCodigo(codigo);
+        c.setNombre("Categoría de borrado " + codigo);
         c.setTipoPresupuesto(TipoPresupuesto.NECESIDAD);
         return c;
     }

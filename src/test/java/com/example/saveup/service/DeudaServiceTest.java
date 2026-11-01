@@ -143,7 +143,7 @@ class DeudaServiceTest {
     }
 
     private Categoria categoriaDeudas() {
-        return new Categoria(1L, "Deudas", "ic_payment", "#795548", TipoPresupuesto.NECESIDAD);
+        return new Categoria(1L, "DEUDAS", "Pago de Deudas (renombrada a mano)", "ic_payment", "#795548", TipoPresupuesto.NECESIDAD);
     }
 
     /** Construye una deuda persistida a partir de una condición del motor (para pruebas con interés). */
@@ -412,7 +412,7 @@ class DeudaServiceTest {
         pagoDTO.setDescripcion("Pago total");
 
         stubBuscarDeuda();
-        when(categoriaRepository.findByNombre("Deudas")).thenReturn(Optional.of(categoriaDeudas()));
+        when(categoriaRepository.findByCodigo("DEUDAS")).thenReturn(Optional.of(categoriaDeudas()));
         when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(BigDecimal.ZERO);
         stubGuardarPago();
         when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(proyeccion(1L,
@@ -439,7 +439,7 @@ class DeudaServiceTest {
         pagoDTO.setDescripcion("Pago parcial con centavos");
 
         stubBuscarDeuda();
-        when(categoriaRepository.findByNombre("Deudas")).thenReturn(Optional.of(categoriaDeudas()));
+        when(categoriaRepository.findByCodigo("DEUDAS")).thenReturn(Optional.of(categoriaDeudas()));
         when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(BigDecimal.ZERO);
         stubGuardarPago();
         when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(proyeccion(1L,
@@ -463,7 +463,7 @@ class DeudaServiceTest {
         pagoDTO.setDescripcion("Cuota 1");
 
         stubBuscarDeuda();
-        when(categoriaRepository.findByNombre("Deudas")).thenReturn(Optional.of(categoriaDeudas()));
+        when(categoriaRepository.findByCodigo("DEUDAS")).thenReturn(Optional.of(categoriaDeudas()));
         when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(BigDecimal.ZERO);
         stubGuardarPago();
         when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(
@@ -552,7 +552,7 @@ class DeudaServiceTest {
         pagoDTO.setModoPago(ModoPago.CUOTA_CALCULADA);
 
         stubBuscarDeuda();
-        when(categoriaRepository.findByNombre("Deudas")).thenReturn(Optional.of(categoriaDeudas()));
+        when(categoriaRepository.findByCodigo("DEUDAS")).thenReturn(Optional.of(categoriaDeudas()));
         when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(BigDecimal.ZERO);
         stubGuardarPago();
         when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(
@@ -573,7 +573,7 @@ class DeudaServiceTest {
         pagoDTO.setModoPago(ModoPago.CUOTA_CALCULADA);
 
         stubBuscarDeuda();
-        when(categoriaRepository.findByNombre("Deudas")).thenReturn(Optional.of(categoriaDeudas()));
+        when(categoriaRepository.findByCodigo("DEUDAS")).thenReturn(Optional.of(categoriaDeudas()));
         when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(new BigDecimal("-15000.00"));
         stubGuardarPago();
         when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(
@@ -597,7 +597,7 @@ class DeudaServiceTest {
         pagoDTO.setModoPago(ModoPago.CUOTA_CALCULADA);
 
         stubBuscarDeuda();
-        when(categoriaRepository.findByNombre("Deudas")).thenReturn(Optional.of(categoriaDeudas()));
+        when(categoriaRepository.findByCodigo("DEUDAS")).thenReturn(Optional.of(categoriaDeudas()));
         when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(BigDecimal.ZERO);
         stubGuardarPago();
         when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(
@@ -616,7 +616,7 @@ class DeudaServiceTest {
         pagoDTO.setModoPago(ModoPago.CUOTA_CALCULADA);
 
         stubBuscarDeuda();
-        when(categoriaRepository.findByNombre("Deudas")).thenReturn(Optional.of(categoriaDeudas()));
+        when(categoriaRepository.findByCodigo("DEUDAS")).thenReturn(Optional.of(categoriaDeudas()));
         when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(new BigDecimal("-90000.00"));
         stubGuardarPago();
         when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(proyeccion(1L,
@@ -635,7 +635,7 @@ class DeudaServiceTest {
         pagoDTO.setModoPago(ModoPago.CUOTA_CALCULADA);
 
         stubBuscarDeuda();
-        when(categoriaRepository.findByNombre("Deudas")).thenReturn(Optional.of(categoriaDeudas()));
+        when(categoriaRepository.findByCodigo("DEUDAS")).thenReturn(Optional.of(categoriaDeudas()));
         when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(BigDecimal.ZERO);
         stubGuardarPago();
         when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(
@@ -668,7 +668,7 @@ class DeudaServiceTest {
         pagoDTO.setModoPago(ModoPago.CUOTA_CALCULADA);
 
         when(deudaRepository.findById(1L)).thenReturn(Optional.of(conTasa));
-        when(categoriaRepository.findByNombre("Deudas")).thenReturn(Optional.of(categoriaDeudas()));
+        when(categoriaRepository.findByCodigo("DEUDAS")).thenReturn(Optional.of(categoriaDeudas()));
         when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(pagadoPrevio.negate());
         stubGuardarPago();
         when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(
@@ -703,7 +703,7 @@ class DeudaServiceTest {
         pagoDTO.setModoPago(ModoPago.CUOTA_CALCULADA);
 
         when(deudaRepository.findById(1L)).thenReturn(Optional.of(cuotaConocida));
-        when(categoriaRepository.findByNombre("Deudas")).thenReturn(Optional.of(categoriaDeudas()));
+        when(categoriaRepository.findByCodigo("DEUDAS")).thenReturn(Optional.of(categoriaDeudas()));
         when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(pagadoPrevio.negate());
         stubGuardarPago();
         when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(
@@ -733,7 +733,7 @@ class DeudaServiceTest {
         pagoDTO.setDescripcion("Liquidación total");
 
         when(deudaRepository.findById(1L)).thenReturn(Optional.of(conTasa));
-        when(categoriaRepository.findByNombre("Deudas")).thenReturn(Optional.of(categoriaDeudas()));
+        when(categoriaRepository.findByCodigo("DEUDAS")).thenReturn(Optional.of(categoriaDeudas()));
         when(deudaRepository.findTotalPagadoPorDeuda(1L)).thenReturn(BigDecimal.ZERO);
         stubGuardarPago();
         when(deudaRepository.findDeudaDTOById(1L)).thenReturn(Optional.of(

@@ -95,7 +95,7 @@ class PagoDeudaIntegracionTest {
         when(usuarioRepository.findById(RUT)).thenReturn(Optional.of(usuario));
         when(usuarioRepository.existsById(RUT)).thenReturn(true);
 
-        when(categoriaRepository.findByNombre("Deudas")).thenReturn(Optional.of(
+        when(categoriaRepository.findByCodigo("DEUDAS")).thenReturn(Optional.of(
                 new Categoria(1L, "Deudas", "ic_payment", "#795548", TipoPresupuesto.NECESIDAD)));
 
         when(deudaRepository.save(any(Deuda.class))).thenAnswer(inv -> {

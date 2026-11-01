@@ -160,7 +160,7 @@ class PresupuestoServiceTest {
     // ───────────────────────── Ejecución por categoría ─────────────────────────
 
     @Test
-    @DisplayName("gastado suma abs(GASTO_GENERAL + PAGO_DEUDA) de la categoría; 80% → ALERTA")
+    @DisplayName("gastado suma abs(GASTO_GENERAL + PAGO_DEUDA) de la categoría; 80% → CERCA_DEL_PLAN")
     void ejecucionCategorias_sumaGastoYPagoDeuda() {
         PresupuestoCategoria limite = new PresupuestoCategoria(1L, usuario, comida, new BigDecimal("100.00"));
         Categoria otro = new Categoria(2L, "Ocio", "ic_fun", "#00FF00", TipoPresupuesto.DESEO);
@@ -178,11 +178,11 @@ class PresupuestoServiceTest {
         assertEquals(1, resultado.size());
         assertEquals(new BigDecimal("80.00"), resultado.get(0).getGastado());
         assertEquals(new BigDecimal("80.00"), resultado.get(0).getPorcentajeUsado());
-        assertEquals(EstadoEjecucion.ALERTA, resultado.get(0).getEstado());
+        assertEquals(EstadoEjecucion.CERCA_DEL_PLAN, resultado.get(0).getEstado());
     }
 
     @Test
-    @DisplayName("Frontera 79.99% → OK y 80.00% → ALERTA en la ejecución por categoría")
+    @DisplayName("Frontera 79.99% → BAJO_EL_PLAN y 80.00% → CERCA_DEL_PLAN en la ejecución por categoría")
     void ejecucionCategorias_frontera79_99_ok_y80_alerta() {
         Categoria ocio = new Categoria(2L, "Ocio", "ic_fun", "#00FF00", TipoPresupuesto.DESEO);
         PresupuestoCategoria limiteA = new PresupuestoCategoria(1L, usuario, comida, new BigDecimal("100.00"));
@@ -197,13 +197,13 @@ class PresupuestoServiceTest {
         List<EjecucionCategoriaDTO> resultado = presupuestoService.obtenerEjecucionCategorias(RUT, 5, 2026);
 
         assertEquals(new BigDecimal("79.99"), resultado.get(0).getPorcentajeUsado());
-        assertEquals(EstadoEjecucion.OK, resultado.get(0).getEstado());
+        assertEquals(EstadoEjecucion.BAJO_EL_PLAN, resultado.get(0).getEstado());
         assertEquals(new BigDecimal("80.00"), resultado.get(1).getPorcentajeUsado());
-        assertEquals(EstadoEjecucion.ALERTA, resultado.get(1).getEstado());
+        assertEquals(EstadoEjecucion.CERCA_DEL_PLAN, resultado.get(1).getEstado());
     }
 
     @Test
-    @DisplayName("Límite 0 o nulo: gastado se calcula pero porcentajeUsado queda en 0.00 sin división por cero")
+    @DisplayName("Límite 0 o nulo: porcentaje 0.00 sin dividir por cero; estado según el gasto real")
     void ejecucionCategorias_limiteCeroONulo_noDividePorCero() {
         Categoria ocio = new Categoria(2L, "Ocio", "ic_fun", "#00FF00", TipoPresupuesto.DESEO);
         PresupuestoCategoria limiteCero = new PresupuestoCategoria(1L, usuario, comida, BigDecimal.ZERO);
@@ -218,11 +218,12 @@ class PresupuestoServiceTest {
         assertEquals(2, resultado.size());
         // El gasto sí se agrega aunque no haya límite...
         assertEquals(new BigDecimal("50.00"), resultado.get(0).getGastado());
-        // ...pero el porcentaje se protege en 0.00 (sin ArithmeticException) y el estado es OK.
+        // ...pero el porcentaje se protege en 0.00 (sin ArithmeticException).
+        // Con plan ≤ 0 no hay referencia: si hubo gasto, está sobre el plan.
         assertEquals(0, resultado.get(0).getPorcentajeUsado().compareTo(new BigDecimal("0.00")));
-        assertEquals(EstadoEjecucion.OK, resultado.get(0).getEstado());
+        assertEquals(EstadoEjecucion.SOBRE_EL_PLAN, resultado.get(0).getEstado());
         assertEquals(0, resultado.get(1).getPorcentajeUsado().compareTo(new BigDecimal("0.00")));
-        assertEquals(EstadoEjecucion.OK, resultado.get(1).getEstado());
+        assertEquals(EstadoEjecucion.BAJO_EL_PLAN, resultado.get(1).getEstado());
     }
 
     // ───────────────────────────── Historial ─────────────────────────────

@@ -1513,8 +1513,8 @@
           "required" : true
         },
         "responses" : {
-          "201" : {
-            "description" : "Dispositivo registrado",
+          "200" : {
+            "description" : "El dispositivo ya existía y se refrescó",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -1523,8 +1523,8 @@
               }
             }
           },
-          "200" : {
-            "description" : "El dispositivo ya existía y se refrescó",
+          "201" : {
+            "description" : "Dispositivo registrado",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -4320,13 +4320,17 @@
         "description" : "Edición parcial de un movimiento; los campos ausentes conservan su valor."
       },
       "CategoriaDTO" : {
-        "required" : [ "id", "nombre" ],
+        "required" : [ "codigo", "id", "nombre" ],
         "type" : "object",
         "properties" : {
           "id" : {
             "type" : "integer",
             "description" : "Identificador de la categoría.",
             "format" : "int64"
+          },
+          "codigo" : {
+            "type" : "string",
+            "description" : "Código estable del catálogo (p. ej. ALIMENTACION_BASE)."
           },
           "nombre" : {
             "type" : "string",
@@ -5431,7 +5435,7 @@
           "estado" : {
             "type" : "string",
             "description" : "Estado derivado del porcentaje usado.",
-            "enum" : [ "OK", "ALERTA", "EXCEDIDO" ]
+            "enum" : [ "BAJO_EL_PLAN", "CERCA_DEL_PLAN", "SOBRE_EL_PLAN" ]
           }
         },
         "description" : "Ejecución del límite de una categoría en un mes."

@@ -257,7 +257,7 @@ public class PresupuestoService {
                     limite.getLimiteMensual(),
                     gastado,
                     porcentaje,
-                    EstadoEjecucion.desdePorcentaje(porcentaje));
+                    EstadoEjecucion.desde(gastado, limite.getLimiteMensual()));
         }).toList();
     }
 

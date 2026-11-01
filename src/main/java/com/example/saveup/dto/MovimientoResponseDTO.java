@@ -40,6 +40,7 @@ public class MovimientoResponseDTO {
         if (movimiento.getCategoria() != null) {
             CategoriaDTO categoriaDTO = new CategoriaDTO();
             categoriaDTO.setId(movimiento.getCategoria().getId());
+            categoriaDTO.setCodigo(movimiento.getCategoria().getCodigo());
             categoriaDTO.setNombre(movimiento.getCategoria().getNombre());
             categoriaDTO.setIconId(movimiento.getCategoria().getIconId());
             categoriaDTO.setColorHex(movimiento.getCategoria().getColorHex());

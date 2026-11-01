@@ -87,7 +87,7 @@ class MovimientoFiltrosEdicionTest {
         usuario = usuarioRepository.save(nuevoUsuario(RUT_AUTENTICADO));
         ajeno = usuarioRepository.save(nuevoUsuario(RUT_AJENO));
         categoria = categoriaRepository.save(
-                new Categoria(null, "Supermercado", "ic_cart", "#FF0000", TipoPresupuesto.NECESIDAD));
+                new Categoria(null, "SUPERMERCADO_TEST", "Supermercado", "ic_cart", "#FF0000", TipoPresupuesto.NECESIDAD));
     }
 
     // ─────────────────────────── Filtros ───────────────────────────
@@ -294,7 +294,7 @@ class MovimientoFiltrosEdicionTest {
     @DisplayName("Editar un GASTO_GENERAL propio aplica SignoMovimiento y cambia categoría")
     void editarPropio_200() throws Exception {
         Categoria otra = categoriaRepository.save(
-                new Categoria(null, "Ocio", "ic_fun", "#00FF00", TipoPresupuesto.DESEO));
+                new Categoria(null, "OCIO_TEST", "Ocio", "ic_fun", "#00FF00", TipoPresupuesto.DESEO));
         Movimiento gasto = movimiento(usuario, fecha(2026, 8, 1), TipoMovimiento.GASTO_GENERAL,
                 "-1000.00", "Vieja", categoria, null);
 

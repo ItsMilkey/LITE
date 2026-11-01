@@ -172,7 +172,7 @@ public class SmartSplitProcessor {
     }
 
     private Categoria resolverCategoriaAhorro() {
-        return categoriaRepository.findByNombre("Ahorro")
+        return categoriaRepository.findByCodigo("AHORRO")
                 .orElseGet(() -> {
                     List<Categoria> savings = categoriaRepository.findByTipoPresupuesto(TipoPresupuesto.AHORRO);
                     return savings.isEmpty() ? null : savings.get(0);

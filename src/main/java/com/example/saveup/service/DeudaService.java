@@ -146,8 +146,8 @@ public class DeudaService {
             throw new ErrorNegocio(CodigoError.DEUDA_SOBREPAGO);
         }
 
-        Categoria categoriaDeudas = categoriaRepository.findByNombre("Deudas")
-                .orElseThrow(() -> new IllegalStateException("La categoría 'Deudas' no fue encontrada. Asegúrate de que exista en la base de datos."));
+        Categoria categoriaDeudas = categoriaRepository.findByCodigo("DEUDAS")
+                .orElseThrow(() -> new IllegalStateException("La categoría DEUDAS no fue encontrada. Asegúrate de que exista en el catálogo."));
 
         Movimiento pago = new Movimiento();
         pago.setUsuario(deuda.getUsuario());

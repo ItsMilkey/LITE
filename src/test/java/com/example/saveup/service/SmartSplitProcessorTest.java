@@ -69,7 +69,7 @@ class SmartSplitProcessorTest {
         meta2.setNombre("Fondo Emergencia");
         meta2.setMontoActual(new java.math.BigDecimal("100000.00"));
 
-        catAhorro = new Categoria(1L, "Ahorro", "ic_savings", "#3F51B5", TipoPresupuesto.AHORRO);
+        catAhorro = new Categoria(1L, "AHORRO", "Ahorro renombrado a mano", "ic_savings", "#3F51B5", TipoPresupuesto.AHORRO);
     }
 
     private Movimiento ingresoDe(Usuario usuario) {
@@ -95,7 +95,7 @@ class SmartSplitProcessorTest {
 
         when(configuracionPresupuestoRepository.findByUsuarioRut("12345678-9")).thenReturn(Optional.of(config));
         when(asignacionMetaPresupuestoRepository.findByConfiguracionId(1L)).thenReturn(List.of(asig1, asig2));
-        when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.of(catAhorro));
+        when(categoriaRepository.findByCodigo("AHORRO")).thenReturn(Optional.of(catAhorro));
 
         smartSplitProcessor.procesarDistribucion(ingresoDe(usuario), montoIngreso);
 
@@ -168,7 +168,7 @@ class SmartSplitProcessorTest {
 
         when(configuracionPresupuestoRepository.findByUsuarioRut("12345678-9")).thenReturn(Optional.of(config));
         when(asignacionMetaPresupuestoRepository.findByConfiguracionId(1L)).thenReturn(List.of(asig1, asig2, asig3));
-        when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.of(catAhorro));
+        when(categoriaRepository.findByCodigo("AHORRO")).thenReturn(Optional.of(catAhorro));
 
         smartSplitProcessor.procesarDistribucion(ingresoDe(usuario), montoIngreso);
 
@@ -208,7 +208,7 @@ class SmartSplitProcessorTest {
 
         when(configuracionPresupuestoRepository.findByUsuarioRut("12345678-9")).thenReturn(Optional.of(config));
         when(asignacionMetaPresupuestoRepository.findByConfiguracionId(1L)).thenReturn(List.of(asig1, asig2));
-        when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.of(catAhorro));
+        when(categoriaRepository.findByCodigo("AHORRO")).thenReturn(Optional.of(catAhorro));
 
         smartSplitProcessor.procesarDistribucion(ingresoDe(usuario), montoIngreso);
 
@@ -250,7 +250,7 @@ class SmartSplitProcessorTest {
         when(configuracionPresupuestoRepository.findByUsuarioRut("12345678-9")).thenReturn(Optional.of(config));
         when(asignacionMetaPresupuestoRepository.findByConfiguracionId(1L))
                 .thenReturn(List.of(asig1, asig2, asig3));
-        when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.of(catAhorro));
+        when(categoriaRepository.findByCodigo("AHORRO")).thenReturn(Optional.of(catAhorro));
 
         smartSplitProcessor.procesarDistribucion(ingresoDe(usuario), montoIngreso);
 
@@ -279,7 +279,7 @@ class SmartSplitProcessorTest {
 
         when(configuracionPresupuestoRepository.findByUsuarioRut("12345678-9")).thenReturn(Optional.of(config));
         when(asignacionMetaPresupuestoRepository.findByConfiguracionId(1L)).thenReturn(List.of(asig1));
-        when(categoriaRepository.findByNombre("Ahorro")).thenReturn(Optional.of(catAhorro));
+        when(categoriaRepository.findByCodigo("AHORRO")).thenReturn(Optional.of(catAhorro));
 
         Movimiento ingreso = ingresoDe(usuario);
         ingreso.setId(77L);

@@ -7,7 +7,7 @@ import java.util.Optional;
 
 @Repository
 public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
-    Optional<Categoria> findByNombre(String nombre);
+    Optional<Categoria> findByCodigo(String codigo);
 
     java.util.List<Categoria> findByTipoPresupuesto(com.example.saveup.model.enums.TipoPresupuesto tipoPresupuesto);
 }

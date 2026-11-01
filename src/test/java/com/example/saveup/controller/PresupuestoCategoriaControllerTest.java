@@ -66,7 +66,7 @@ class PresupuestoCategoriaControllerTest {
         token = jwtService.generarTokenConExpiracion(RUT, "test@example.com").token();
         usuario = usuarioRepository.save(nuevoUsuario(RUT));
         comida = categoriaRepository.save(
-                new Categoria(null, "Comida T5", "ic_fastfood", "#FFC107", TipoPresupuesto.NECESIDAD));
+                new Categoria(null, "COMIDA_T5", "Comida T5", "ic_fastfood", "#FFC107", TipoPresupuesto.NECESIDAD));
     }
 
     @Test
@@ -126,8 +126,8 @@ class PresupuestoCategoriaControllerTest {
     }
 
     @Test
-    @DisplayName("Ejecución por categoría: 80% del límite → estado ALERTA")
-    void ejecucionCategoria_alerta() throws Exception {
+    @DisplayName("Ejecución por categoría: 80% del límite → estado CERCA_DEL_PLAN")
+    void ejecucionCategoria_cercaDelPlan() throws Exception {
         mockMvc.perform(put("/api/v1/presupuestos/categorias/me")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -144,7 +144,7 @@ class PresupuestoCategoriaControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].gastado").value(80.00))
                 .andExpect(jsonPath("$[0].porcentajeUsado").value(80.00))
-                .andExpect(jsonPath("$[0].estado").value("ALERTA"));
+                .andExpect(jsonPath("$[0].estado").value("CERCA_DEL_PLAN"));
     }
 
     @Test
