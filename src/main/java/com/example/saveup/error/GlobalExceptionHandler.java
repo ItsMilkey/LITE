@@ -127,6 +127,14 @@ public class GlobalExceptionHandler {
                 request, List.of(), null);
     }
 
+    /** Parámetro de la petición inválido detectado por el dominio (p. ej. largo máximo). */
+    @ExceptionHandler(ParametroInvalidoException.class)
+    public ResponseEntity<ProblemDetail> parametroInvalidoDeDominio(ParametroInvalidoException ex,
+                                                                    HttpServletRequest request) {
+        return respuesta(CodigoError.PARAMETRO_INVALIDO, ex.getMessage(), HttpStatus.BAD_REQUEST,
+                request, List.of(), null);
+    }
+
     /**
      * El {@code detail} solo muestra mensajes escritos por el repo
      * ({@link DatosInvalidosException} y {@link CalculoFinancieroException}).

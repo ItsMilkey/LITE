@@ -10,9 +10,6 @@
     "description" : "Generated server url"
   } ],
   "tags" : [ {
-    "name" : "Categorías",
-    "description" : "Catálogo de categorías de movimientos."
-  }, {
     "name" : "Deudas",
     "description" : "Deudas, pagos, amortización e historial de pagos."
   }, {
@@ -45,6 +42,9 @@
   }, {
     "name" : "Usuarios",
     "description" : "Registro, inicio de sesión y perfil del usuario autenticado."
+  }, {
+    "name" : "Categorías",
+    "description" : "Catálogo de categorías de movimientos y sugerencias por texto."
   } ],
   "paths" : {
     "/api/v1/usuarios/me/contrasena" : {
@@ -1513,8 +1513,8 @@
           "required" : true
         },
         "responses" : {
-          "200" : {
-            "description" : "El dispositivo ya existía y se refrescó",
+          "201" : {
+            "description" : "Dispositivo registrado",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -1523,8 +1523,8 @@
               }
             }
           },
-          "201" : {
-            "description" : "Dispositivo registrado",
+          "200" : {
+            "description" : "El dispositivo ya existía y se refrescó",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -4119,6 +4119,108 @@
         } ]
       }
     },
+    "/api/v1/categorias/sugerencia" : {
+      "get" : {
+        "tags" : [ "Categorías" ],
+        "summary" : "Sugiere hasta 3 categorías para un texto libre",
+        "description" : "Devuelve hasta 3 categorías del catálogo para preseleccionar el menú al\nregistrar un gasto o una partida. No persiste nada y no registra el texto.\nTexto ausente, de más de 80 caracteres o contexto desconocido → 400\nPARAMETRO_INVALIDO. Menos de 3 caracteres normalizados → 200 con lista vacía.\n",
+        "operationId" : "sugerirCategoria",
+        "parameters" : [ {
+          "name" : "texto",
+          "in" : "query",
+          "description" : "Texto libre del usuario (máximo 80 caracteres).",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "contexto",
+          "in" : "query",
+          "description" : "GASTO (por defecto) o INGRESO.",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "GASTO",
+            "enum" : [ "GASTO", "INGRESO" ]
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SugerenciaCategoriaResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/app/version" : {
       "get" : {
         "tags" : [ "App" ],
@@ -5571,6 +5673,57 @@
           }
         },
         "description" : "Pago de deuda con su desglose de capital, interés y costos."
+      },
+      "SugerenciaCategoriaDTO" : {
+        "required" : [ "categoriaId", "codigo", "confianza", "motivo", "nombre" ],
+        "type" : "object",
+        "properties" : {
+          "categoriaId" : {
+            "type" : "integer",
+            "description" : "Identificador de la categoría sugerida.",
+            "format" : "int64"
+          },
+          "codigo" : {
+            "type" : "string",
+            "description" : "Código estable de la categoría (p. ej. RESTAURANTES_SALIDAS)."
+          },
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nombre visible de la categoría."
+          },
+          "confianza" : {
+            "type" : "number",
+            "description" : "Confianza de la sugerencia, entre 0.00 y 1.00."
+          },
+          "motivo" : {
+            "type" : "string",
+            "description" : "Motivo de la coincidencia.",
+            "enum" : [ "PALABRA_CLAVE", "PREFIJO", "APROXIMADA", "HISTORIAL" ]
+          }
+        },
+        "description" : "Categoría sugerida para un texto libre, con su confianza y motivo."
+      },
+      "SugerenciaCategoriaResponseDTO" : {
+        "required" : [ "ambigua", "sugerencias", "texto" ],
+        "type" : "object",
+        "properties" : {
+          "texto" : {
+            "type" : "string",
+            "description" : "Texto original recibido, sin recortar; la app lo usa para descartar respuestas atrasadas."
+          },
+          "sugerencias" : {
+            "type" : "array",
+            "description" : "Hasta 3 sugerencias ordenadas por confianza descendente y, en empate, por código.",
+            "items" : {
+              "$ref" : "#/components/schemas/SugerenciaCategoriaDTO"
+            }
+          },
+          "ambigua" : {
+            "type" : "boolean",
+            "description" : "Verdadero si hay al menos 2 sugerencias y la diferencia entre la primera y la segunda es menor que 0.10; la app debe pedir confirmación visible."
+          }
+        },
+        "description" : "Sugerencias de categoría para un texto libre."
       },
       "AppVersionResponseDTO" : {
         "required" : [ "actualizacionObligatoria", "actualizacionSugerida", "mensaje", "urlTienda", "versionPrivacidad", "versionTerminos" ],

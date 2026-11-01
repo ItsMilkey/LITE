@@ -26,6 +26,7 @@ Un archivo por diagrama. Todos los bloques `mermaid` están verificados: renderi
 | 13 | [Flujo: presupuesto](13-flujo-presupuesto.md) | `sequenceDiagram` | ¿Cómo se calcula 50/30/20, la ejecución y el historial? | `ConfiguracionPresupuestoController`, `PresupuestoService`, `FechasMovimiento`, `EstadoEjecucion` | `446a9f5` | — |
 | 14 | [Flujo: abono a meta](14-flujo-abono-meta.md) | `sequenceDiagram` | ¿Cómo se abona, retira y reintegra una meta? | `MetaAhorroController`, `MetaAhorroService`, `SignoMovimiento`, `MetaAhorroRepository` | `446a9f5` | — |
 | 15 | [Casos de uso](15-casos-de-uso.md) | `flowchart` | ¿Qué casos de uso cubre cada módulo? | `docs/CONTEXT.md`, `controller/**`, `docs/tareas/T0..T5`, `T1d` | `446a9f5` | — |
+| 16 | [Flujo: sugerencia de categoría](16-flujo-sugerencia-categoria.md) | `sequenceDiagram` | ¿Cómo se convierte un texto libre en hasta 3 categorías? | `CategoriaController`, `SugerenciaCategoriaService`, `SugeridorCategoria`, `DiccionarioCategorias`, `NormalizadorTexto` | T10b | — |
 
 ## Validación
 

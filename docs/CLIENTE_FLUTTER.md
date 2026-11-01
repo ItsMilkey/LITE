@@ -109,6 +109,40 @@ final dio = Dio(BaseOptions(baseUrl: 'https://lite-backend-1wn9.onrender.com/api
 - El **color y el tono los decide la app**; la API solo entrega `colorHex` e `iconId`. Un estado neutro no debe
   mostrarse como alarma.
 
+### Sugerencia de categoría por texto (T10b)
+
+`GET /categorias/sugerencia?texto=<texto>&contexto=GASTO|INGRESO` (protegido con `Authorization: Bearer <token>`).
+`contexto` es opcional y por defecto `GASTO`.
+
+- `texto` es obligatorio y se mide **después de recortar espacios**: máximo **80 caracteres**. Más de 80 o ausente →
+  `400 PARAMETRO_INVALIDO`. Menos de 3 caracteres normalizados → **200** con `sugerencias: []` (tolera que el usuario
+  escriba rápido).
+- `contexto=GASTO` excluye `SUELDO` y `AHORRO`; `contexto=INGRESO` solo devuelve `SUELDO` y `OTROS`. Un valor
+  desconocido → `400 PARAMETRO_INVALIDO`.
+- Respuesta 200:
+
+```json
+{
+  "texto": "cena aniversario",
+  "sugerencias": [
+    { "categoriaId": 17, "codigo": "REGALOS_CELEBRACIONES", "nombre": "Regalos y Celebraciones", "confianza": 0.90, "motivo": "PALABRA_CLAVE" },
+    { "categoriaId": 16, "codigo": "RESTAURANTES_SALIDAS", "nombre": "Restaurantes y Salidas", "confianza": 0.90, "motivo": "PALABRA_CLAVE" }
+  ],
+  "ambigua": true
+}
+```
+
+- `sugerencias` trae de **0 a 3** elementos ordenados por `confianza` descendente y, en empate, por `codigo`
+  alfabético. `motivo` es `PALABRA_CLAVE`, `PREFIJO`, `APROXIMADA` o `HISTORIAL` (el historial real llega en T10c).
+- **Debounce:** espera unos **400 ms** sin teclear antes de llamar. **Descarta respuestas atrasadas** comparando el
+  campo `texto` de la respuesta con el valor actual del formulario; el backend devuelve el texto original exacto
+  (incluidos espacios y mayúsculas) para que puedas hacer esa comparación.
+- **Preselección sin asignación silenciosa:** si hay sugerencias, preselecciona la primera; muestra las demás como
+  opciones rápidas. Si `ambigua=true`, pide confirmación visible antes de guardar. Si la lista viene vacía, no
+  preselecciones nada: el backend nunca devuelve `OTROS` por su cuenta.
+- El endpoint no persiste nada ni registra el texto (G9). Errores: `400 PARAMETRO_INVALIDO` por texto ausente o
+  demasiado largo o contexto desconocido; `401 NO_AUTENTICADO` si falta el token.
+
 ## 4. Errores: mapear por `codigo`
 
 Todo error usa `Content-Type: application/problem+json`:

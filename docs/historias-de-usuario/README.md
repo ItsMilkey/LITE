@@ -80,6 +80,7 @@ a su **endpoint** en [`../CONTEXT.md`](../CONTEXT.md) y a su **tarea** en [`../t
 | HU-05-08 | UC21 Definir límites por categoría | `PUT /api/v1/presupuestos/categorias/me` | T5 | implementada |
 | HU-05-09 | UC23 Ver historial mensual | `GET /api/v1/presupuestos/historial/me` | T5 | implementada |
 | HU-05-10 | (soporte UC20–UC23) Catálogo con código estable | `GET /api/v1/categorias` | T10a | implementada |
+| HU-05-11 | (soporte UC4/UC20) Sugerencia de categoría por texto | `GET /api/v1/categorias/sugerencia` | T10b | implementada |
 | HU-06-01 | UC24 Exportar movimientos | `GET /api/v1/reportes/movimientos/exportar` | base | implementada |
 | HU-06-02 | — (backlog) | (sin endpoint) | T8 | backlog |
 | HU-06-03 | UC24 Exportar movimientos | `GET /api/v1/reportes/movimientos/exportar` | base | implementada |
@@ -92,8 +93,9 @@ a su **endpoint** en [`../CONTEXT.md`](../CONTEXT.md) y a su **tarea** en [`../t
 ## Cobertura
 
 - **Casos de uso cubiertos: 24 / 24.** Cada UC1–UC24 tiene al menos una HU.
-- HU adicionales sin caso de uso propio: HU-01-04 (cerrar sesión), HU-05-06 (Smart-Split) y toda la épica **HU-07** (transversal).
-- **Total: 47 historias de usuario.**
+- HU adicionales sin caso de uso propio: HU-01-04 (cerrar sesión), HU-05-06 (Smart-Split), HU-05-10 (catálogo con
+  código estable), HU-05-11 (sugerencia de categoría) y toda la épica **HU-07** (transversal).
+- **Total: 48 historias de usuario.**
 
 ## Épicas
 

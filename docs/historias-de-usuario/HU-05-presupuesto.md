@@ -105,5 +105,24 @@ Casos de uso: **UC19–UC23** · Endpoints: `/api/v1/presupuestos` · Diagrama d
 - Acción en la app (Flutter): menú de categorías que usa `codigo` como clave y muestra `nombre`, `iconId` y `colorHex`.
 - Estado: **implementada**
 
+### HU-05-11 — Sugerencia de categoría al escribir
+**Como** usuario, **quiero** que la app me sugiera una categoría mientras escribo la descripción, **para** clasificar más rápido sin asignaciones silenciosas.
+- Criterios de aceptación:
+  - `GET /api/v1/categorias/sugerencia?texto&contexto=GASTO|INGRESO` devuelve hasta **3** categorías ordenadas por
+    `confianza` descendente y, en empate, por `codigo` alfabético, cada una con `categoriaId`, `codigo`, `nombre`,
+    `confianza` y `motivo` (`PALABRA_CLAVE`, `PREFIJO`, `APROXIMADA` o `HISTORIAL`).
+  - `texto` es obligatorio; se mide **después de recortar espacios** y no puede superar **80 caracteres** (si no →
+    **400** `PARAMETRO_INVALIDO`). Menos de 3 caracteres normalizados → **200** con lista vacía.
+  - `contexto` es opcional (`GASTO` por defecto): `GASTO` excluye `SUELDO` y `AHORRO`; `INGRESO` solo permite
+    `SUELDO` y `OTROS`. Un valor desconocido → **400** `PARAMETRO_INVALIDO`.
+  - La respuesta ecoa el `texto` original exacto para descartar respuestas atrasadas; `ambigua=true` si hay al menos
+    2 sugerencias y la diferencia entre la primera y la segunda es **estrictamente menor** que 0,10.
+  - No persiste nada, no registra el texto (G9) y nunca devuelve `OTROS` por su cuenta. La coincidencia aproximada
+    solo se evalúa cuando el texto normalizado tiene **un único token** (una frase no se “corrige”).
+- Trazabilidad: (soporte UC4/UC20) · `GET /api/v1/categorias/sugerencia` · T10b
+- Acción en la app (Flutter): debounce de ~400 ms, descartar respuestas cuyo `texto` ya no coincida, preseleccionar la
+  primera sugerencia, mostrar las demás como opciones rápidas y pedir confirmación visible si `ambigua=true`.
+- Estado: **implementada**
+
 > La categoría de `codigo` **`DEUDAS`** (`NECESIDAD`) se asigna automáticamente a los pagos de deuda; Smart-Split y los
 > abonos/retiros de metas usan `codigo` **`AHORRO`**.
