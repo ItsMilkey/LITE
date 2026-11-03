@@ -89,13 +89,22 @@ a su **endpoint** en [`../CONTEXT.md`](../CONTEXT.md) y a su **tarea** en [`../t
 | HU-07-03 | (todos los módulos) | `security/**` | base | implementada |
 | HU-07-04 | (todos los módulos) | `.agents/rules/00-*` | base | implementada |
 | HU-07-05 | — | `keep_alive.yml` | base | implementada |
+| HU-08-01 | UC25 Armar el plan del mes | `GET /api/v1/planes/{mes}` | T10c | implementada |
+| HU-08-02 | UC25 Armar el plan del mes | `PUT /api/v1/planes/{mes}/ingreso-referencia` | T10c | implementada |
+| HU-08-03 | UC25 Armar el plan del mes | `POST/PUT /api/v1/planes/{mes}/partidas[/{id}]` | T10c | implementada |
+| HU-08-04 | UC25 Armar el plan del mes | `PATCH /api/v1/planes/{mes}/montos` | T10c | implementada |
+| HU-08-05 | UC25 Armar el plan del mes | `GET /api/v1/planes/{mes}` | T10c | implementada |
+| HU-08-06 | UC25 Armar el plan del mes | `POST /api/v1/planes/{mes}/copiar-desde/{mesOrigen}` | T10c | implementada |
+| HU-08-07 | UC4 Registrar movimiento (extiende UC25) | `POST/PUT /api/v1/movimientos`, `GET .../paginados/me` | T10c | implementada |
+| HU-08-08 | UC25 Armar el plan del mes | `DELETE /api/v1/planes/{mes}/partidas/{id}` y validaciones | T10c | implementada |
 
 ## Cobertura
 
-- **Casos de uso cubiertos: 24 / 24.** Cada UC1–UC24 tiene al menos una HU.
-- HU adicionales sin caso de uso propio: HU-01-04 (cerrar sesión), HU-05-06 (Smart-Split), HU-05-10 (catálogo con
-  código estable), HU-05-11 (sugerencia de categoría) y toda la épica **HU-07** (transversal).
-- **Total: 48 historias de usuario.**
+- **Casos de uso cubiertos: 25 / 25.** Cada UC1–UC25 tiene al menos una HU.
+- HU adicionales sin caso de uso propio: HU-01-04 (cerrar sesión) y toda la épica **HU-07** (transversal).
+- HU que extienden un caso de uso: HU-05-06 (Smart-Split, UC4), HU-05-10 y HU-05-11 (soporte UC4/UC20) y
+  HU-08-07 (partida en movimientos, UC4).
+- **Total: 56 historias de usuario.**
 
 ## Épicas
 
@@ -108,6 +117,7 @@ a su **endpoint** en [`../CONTEXT.md`](../CONTEXT.md) y a su **tarea** en [`../t
 | [HU-05-presupuesto.md](HU-05-presupuesto.md) | Presupuesto | UC19–UC23 |
 | [HU-06-reportes.md](HU-06-reportes.md) | Reportes | UC24 |
 | [HU-07-transversal.md](HU-07-transversal.md) | Transversal (seguridad y calidad) | — |
+| [HU-08-plan-mensual.md](HU-08-plan-mensual.md) | Plan del mes y partidas | UC25 |
 
 ## Reglas transversales (aplican a toda HU)
 

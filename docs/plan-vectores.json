@@ -1,0 +1,1438 @@
+{
+  "version" : 1,
+  "generadoPor" : "CalculadoraPlan",
+  "casos" : [ {
+    "id" : "V01",
+    "descripcion" : "Sin plan, sin ingreso y sin movimientos",
+    "ingresoReferencia" : null,
+    "partidas" : [ ],
+    "movimientos" : [ ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 0.00,
+        "remanenteLibre" : null,
+        "margenSeguridadPct" : null,
+        "excedeIngreso" : false,
+        "ingresoReal" : 0.00,
+        "gastoRealTotal" : 0.00,
+        "disponibleReal" : 0.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 0.00,
+          "movimientos" : 0,
+          "porMotivo" : [ ]
+        }
+      },
+      "partidas" : [ ],
+      "porCategoria" : [ ]
+    }
+  }, {
+    "id" : "V02",
+    "descripcion" : "Ingreso de referencia sin partidas",
+    "ingresoReferencia" : 1000000.00,
+    "partidas" : [ ],
+    "movimientos" : [ ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 0.00,
+        "remanenteLibre" : 1000000.00,
+        "margenSeguridadPct" : 100.00,
+        "excedeIngreso" : false,
+        "ingresoReal" : 0.00,
+        "gastoRealTotal" : 0.00,
+        "disponibleReal" : 0.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 0.00,
+          "movimientos" : 0,
+          "porMotivo" : [ ]
+        }
+      },
+      "partidas" : [ ],
+      "porCategoria" : [ ]
+    }
+  }, {
+    "id" : "V03",
+    "descripcion" : "Datos de referencia: 746.000 planificados",
+    "ingresoReferencia" : 1000000.00,
+    "partidas" : [ {
+      "id" : 1,
+      "nombre" : "Arriendo",
+      "categoria" : {
+        "id" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 400000.00,
+      "orden" : 1
+    }, {
+      "id" : 2,
+      "nombre" : "Supermercado",
+      "categoria" : {
+        "id" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 250000.00,
+      "orden" : 2
+    }, {
+      "id" : 3,
+      "nombre" : "Transporte",
+      "categoria" : {
+        "id" : 3,
+        "codigo" : "TRANSPORTE_MOVILIDAD",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 80000.00,
+      "orden" : 3
+    }, {
+      "id" : 4,
+      "nombre" : "Netflix",
+      "categoria" : {
+        "id" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO"
+      },
+      "montoPlanificado" : 10000.00,
+      "orden" : 4
+    }, {
+      "id" : 5,
+      "nombre" : "Spotify",
+      "categoria" : {
+        "id" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO"
+      },
+      "montoPlanificado" : 6000.00,
+      "orden" : 5
+    } ],
+    "movimientos" : [ ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 746000.00,
+        "remanenteLibre" : 254000.00,
+        "margenSeguridadPct" : 25.40,
+        "excedeIngreso" : false,
+        "ingresoReal" : 0.00,
+        "gastoRealTotal" : 0.00,
+        "disponibleReal" : 0.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 0.00,
+          "movimientos" : 0,
+          "porMotivo" : [ ]
+        }
+      },
+      "partidas" : [ {
+        "id" : 1,
+        "nombre" : "Arriendo",
+        "real" : 0.00,
+        "diferencia" : 400000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 2,
+        "nombre" : "Supermercado",
+        "real" : 0.00,
+        "diferencia" : 250000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 3,
+        "nombre" : "Transporte",
+        "real" : 0.00,
+        "diferencia" : 80000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 4,
+        "nombre" : "Netflix",
+        "real" : 0.00,
+        "diferencia" : 10000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 5,
+        "nombre" : "Spotify",
+        "real" : 0.00,
+        "diferencia" : 6000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ],
+      "porCategoria" : [ {
+        "categoriaId" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD",
+        "planificado" : 250000.00,
+        "real" : 0.00,
+        "diferencia" : 250000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "categoriaId" : 3,
+        "codigo" : "TRANSPORTE_MOVILIDAD",
+        "tipo" : "NECESIDAD",
+        "planificado" : 80000.00,
+        "real" : 0.00,
+        "diferencia" : 80000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "categoriaId" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD",
+        "planificado" : 400000.00,
+        "real" : 0.00,
+        "diferencia" : 400000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "categoriaId" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO",
+        "planificado" : 16000.00,
+        "real" : 0.00,
+        "diferencia" : 16000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ]
+    }
+  }, {
+    "id" : "V04",
+    "descripcion" : "Supermercado sube a 300.000",
+    "ingresoReferencia" : 1000000.00,
+    "partidas" : [ {
+      "id" : 1,
+      "nombre" : "Arriendo",
+      "categoria" : {
+        "id" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 400000.00,
+      "orden" : 1
+    }, {
+      "id" : 2,
+      "nombre" : "Supermercado",
+      "categoria" : {
+        "id" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 300000.00,
+      "orden" : 2
+    }, {
+      "id" : 3,
+      "nombre" : "Transporte",
+      "categoria" : {
+        "id" : 3,
+        "codigo" : "TRANSPORTE_MOVILIDAD",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 80000.00,
+      "orden" : 3
+    }, {
+      "id" : 4,
+      "nombre" : "Netflix",
+      "categoria" : {
+        "id" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO"
+      },
+      "montoPlanificado" : 10000.00,
+      "orden" : 4
+    }, {
+      "id" : 5,
+      "nombre" : "Spotify",
+      "categoria" : {
+        "id" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO"
+      },
+      "montoPlanificado" : 6000.00,
+      "orden" : 5
+    } ],
+    "movimientos" : [ ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 796000.00,
+        "remanenteLibre" : 204000.00,
+        "margenSeguridadPct" : 20.40,
+        "excedeIngreso" : false,
+        "ingresoReal" : 0.00,
+        "gastoRealTotal" : 0.00,
+        "disponibleReal" : 0.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 0.00,
+          "movimientos" : 0,
+          "porMotivo" : [ ]
+        }
+      },
+      "partidas" : [ {
+        "id" : 1,
+        "nombre" : "Arriendo",
+        "real" : 0.00,
+        "diferencia" : 400000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 2,
+        "nombre" : "Supermercado",
+        "real" : 0.00,
+        "diferencia" : 300000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 3,
+        "nombre" : "Transporte",
+        "real" : 0.00,
+        "diferencia" : 80000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 4,
+        "nombre" : "Netflix",
+        "real" : 0.00,
+        "diferencia" : 10000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 5,
+        "nombre" : "Spotify",
+        "real" : 0.00,
+        "diferencia" : 6000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ],
+      "porCategoria" : [ {
+        "categoriaId" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD",
+        "planificado" : 300000.00,
+        "real" : 0.00,
+        "diferencia" : 300000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "categoriaId" : 3,
+        "codigo" : "TRANSPORTE_MOVILIDAD",
+        "tipo" : "NECESIDAD",
+        "planificado" : 80000.00,
+        "real" : 0.00,
+        "diferencia" : 80000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "categoriaId" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD",
+        "planificado" : 400000.00,
+        "real" : 0.00,
+        "diferencia" : 400000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "categoriaId" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO",
+        "planificado" : 16000.00,
+        "real" : 0.00,
+        "diferencia" : 16000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ]
+    }
+  }, {
+    "id" : "V05",
+    "descripcion" : "Arriendo sube a 700.000 y excede el ingreso",
+    "ingresoReferencia" : 1000000.00,
+    "partidas" : [ {
+      "id" : 1,
+      "nombre" : "Arriendo",
+      "categoria" : {
+        "id" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 700000.00,
+      "orden" : 1
+    }, {
+      "id" : 2,
+      "nombre" : "Supermercado",
+      "categoria" : {
+        "id" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 250000.00,
+      "orden" : 2
+    }, {
+      "id" : 3,
+      "nombre" : "Transporte",
+      "categoria" : {
+        "id" : 3,
+        "codigo" : "TRANSPORTE_MOVILIDAD",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 80000.00,
+      "orden" : 3
+    }, {
+      "id" : 4,
+      "nombre" : "Netflix",
+      "categoria" : {
+        "id" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO"
+      },
+      "montoPlanificado" : 10000.00,
+      "orden" : 4
+    }, {
+      "id" : 5,
+      "nombre" : "Spotify",
+      "categoria" : {
+        "id" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO"
+      },
+      "montoPlanificado" : 6000.00,
+      "orden" : 5
+    } ],
+    "movimientos" : [ ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 1046000.00,
+        "remanenteLibre" : -46000.00,
+        "margenSeguridadPct" : -4.60,
+        "excedeIngreso" : true,
+        "ingresoReal" : 0.00,
+        "gastoRealTotal" : 0.00,
+        "disponibleReal" : 0.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 0.00,
+          "movimientos" : 0,
+          "porMotivo" : [ ]
+        }
+      },
+      "partidas" : [ {
+        "id" : 1,
+        "nombre" : "Arriendo",
+        "real" : 0.00,
+        "diferencia" : 700000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 2,
+        "nombre" : "Supermercado",
+        "real" : 0.00,
+        "diferencia" : 250000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 3,
+        "nombre" : "Transporte",
+        "real" : 0.00,
+        "diferencia" : 80000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 4,
+        "nombre" : "Netflix",
+        "real" : 0.00,
+        "diferencia" : 10000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 5,
+        "nombre" : "Spotify",
+        "real" : 0.00,
+        "diferencia" : 6000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ],
+      "porCategoria" : [ {
+        "categoriaId" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD",
+        "planificado" : 250000.00,
+        "real" : 0.00,
+        "diferencia" : 250000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "categoriaId" : 3,
+        "codigo" : "TRANSPORTE_MOVILIDAD",
+        "tipo" : "NECESIDAD",
+        "planificado" : 80000.00,
+        "real" : 0.00,
+        "diferencia" : 80000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "categoriaId" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD",
+        "planificado" : 700000.00,
+        "real" : 0.00,
+        "diferencia" : 700000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "categoriaId" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO",
+        "planificado" : 16000.00,
+        "real" : 0.00,
+        "diferencia" : 16000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ]
+    }
+  }, {
+    "id" : "V06",
+    "descripcion" : "Ingreso de referencia 0 con partidas",
+    "ingresoReferencia" : 0.00,
+    "partidas" : [ {
+      "id" : 1,
+      "nombre" : "Arriendo",
+      "categoria" : {
+        "id" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 400000.00,
+      "orden" : 1
+    }, {
+      "id" : 2,
+      "nombre" : "Supermercado",
+      "categoria" : {
+        "id" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 250000.00,
+      "orden" : 2
+    } ],
+    "movimientos" : [ ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 650000.00,
+        "remanenteLibre" : -650000.00,
+        "margenSeguridadPct" : null,
+        "excedeIngreso" : true,
+        "ingresoReal" : 0.00,
+        "gastoRealTotal" : 0.00,
+        "disponibleReal" : 0.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 0.00,
+          "movimientos" : 0,
+          "porMotivo" : [ ]
+        }
+      },
+      "partidas" : [ {
+        "id" : 1,
+        "nombre" : "Arriendo",
+        "real" : 0.00,
+        "diferencia" : 400000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 2,
+        "nombre" : "Supermercado",
+        "real" : 0.00,
+        "diferencia" : 250000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ],
+      "porCategoria" : [ {
+        "categoriaId" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD",
+        "planificado" : 250000.00,
+        "real" : 0.00,
+        "diferencia" : 250000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "categoriaId" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD",
+        "planificado" : 400000.00,
+        "real" : 0.00,
+        "diferencia" : 400000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ]
+    }
+  }, {
+    "id" : "V07",
+    "descripcion" : "Sin ingreso de referencia y con partidas",
+    "ingresoReferencia" : null,
+    "partidas" : [ {
+      "id" : 1,
+      "nombre" : "Arriendo",
+      "categoria" : {
+        "id" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 400000.00,
+      "orden" : 1
+    }, {
+      "id" : 2,
+      "nombre" : "Supermercado",
+      "categoria" : {
+        "id" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 250000.00,
+      "orden" : 2
+    } ],
+    "movimientos" : [ ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 650000.00,
+        "remanenteLibre" : null,
+        "margenSeguridadPct" : null,
+        "excedeIngreso" : false,
+        "ingresoReal" : 0.00,
+        "gastoRealTotal" : 0.00,
+        "disponibleReal" : 0.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 0.00,
+          "movimientos" : 0,
+          "porMotivo" : [ ]
+        }
+      },
+      "partidas" : [ {
+        "id" : 1,
+        "nombre" : "Arriendo",
+        "real" : 0.00,
+        "diferencia" : 400000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 2,
+        "nombre" : "Supermercado",
+        "real" : 0.00,
+        "diferencia" : 250000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ],
+      "porCategoria" : [ {
+        "categoriaId" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD",
+        "planificado" : 250000.00,
+        "real" : 0.00,
+        "diferencia" : 250000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "categoriaId" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD",
+        "planificado" : 400000.00,
+        "real" : 0.00,
+        "diferencia" : 400000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ]
+    }
+  }, {
+    "id" : "V08",
+    "descripcion" : "Real 199.999 de 250.000: bajo el plan",
+    "ingresoReferencia" : 1000000.00,
+    "partidas" : [ {
+      "id" : 2,
+      "nombre" : "Supermercado",
+      "categoria" : {
+        "id" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 250000.00,
+      "orden" : 2
+    } ],
+    "movimientos" : [ {
+      "monto" : -199999.00,
+      "tipo" : "GASTO_GENERAL",
+      "partidaId" : 2,
+      "categoria" : {
+        "id" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD"
+      }
+    } ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 250000.00,
+        "remanenteLibre" : 750000.00,
+        "margenSeguridadPct" : 75.00,
+        "excedeIngreso" : false,
+        "ingresoReal" : 0.00,
+        "gastoRealTotal" : 199999.00,
+        "disponibleReal" : -199999.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 0.00,
+          "movimientos" : 0,
+          "porMotivo" : [ ]
+        }
+      },
+      "partidas" : [ {
+        "id" : 2,
+        "nombre" : "Supermercado",
+        "real" : 199999.00,
+        "diferencia" : 50001.00,
+        "porcentajeUsado" : 79.99,
+        "estado" : "BAJO_EL_PLAN"
+      } ],
+      "porCategoria" : [ {
+        "categoriaId" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD",
+        "planificado" : 250000.00,
+        "real" : 199999.00,
+        "diferencia" : 50001.00,
+        "porcentajeUsado" : 79.99,
+        "estado" : "BAJO_EL_PLAN"
+      } ]
+    }
+  }, {
+    "id" : "V09",
+    "descripcion" : "Real 200.000 de 250.000: umbral 80 por ciento",
+    "ingresoReferencia" : 1000000.00,
+    "partidas" : [ {
+      "id" : 2,
+      "nombre" : "Supermercado",
+      "categoria" : {
+        "id" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 250000.00,
+      "orden" : 2
+    } ],
+    "movimientos" : [ {
+      "monto" : -200000.00,
+      "tipo" : "GASTO_GENERAL",
+      "partidaId" : 2,
+      "categoria" : {
+        "id" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD"
+      }
+    } ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 250000.00,
+        "remanenteLibre" : 750000.00,
+        "margenSeguridadPct" : 75.00,
+        "excedeIngreso" : false,
+        "ingresoReal" : 0.00,
+        "gastoRealTotal" : 200000.00,
+        "disponibleReal" : -200000.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 0.00,
+          "movimientos" : 0,
+          "porMotivo" : [ ]
+        }
+      },
+      "partidas" : [ {
+        "id" : 2,
+        "nombre" : "Supermercado",
+        "real" : 200000.00,
+        "diferencia" : 50000.00,
+        "porcentajeUsado" : 80.00,
+        "estado" : "CERCA_DEL_PLAN"
+      } ],
+      "porCategoria" : [ {
+        "categoriaId" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD",
+        "planificado" : 250000.00,
+        "real" : 200000.00,
+        "diferencia" : 50000.00,
+        "porcentajeUsado" : 80.00,
+        "estado" : "CERCA_DEL_PLAN"
+      } ]
+    }
+  }, {
+    "id" : "V10",
+    "descripcion" : "Real 250.001 de 250.000: 100,00 truncado y sobre el plan",
+    "ingresoReferencia" : 1000000.00,
+    "partidas" : [ {
+      "id" : 2,
+      "nombre" : "Supermercado",
+      "categoria" : {
+        "id" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 250000.00,
+      "orden" : 2
+    } ],
+    "movimientos" : [ {
+      "monto" : -250001.00,
+      "tipo" : "GASTO_GENERAL",
+      "partidaId" : 2,
+      "categoria" : {
+        "id" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD"
+      }
+    } ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 250000.00,
+        "remanenteLibre" : 750000.00,
+        "margenSeguridadPct" : 75.00,
+        "excedeIngreso" : false,
+        "ingresoReal" : 0.00,
+        "gastoRealTotal" : 250001.00,
+        "disponibleReal" : -250001.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 0.00,
+          "movimientos" : 0,
+          "porMotivo" : [ ]
+        }
+      },
+      "partidas" : [ {
+        "id" : 2,
+        "nombre" : "Supermercado",
+        "real" : 250001.00,
+        "diferencia" : -1.00,
+        "porcentajeUsado" : 100.00,
+        "estado" : "SOBRE_EL_PLAN"
+      } ],
+      "porCategoria" : [ {
+        "categoriaId" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD",
+        "planificado" : 250000.00,
+        "real" : 250001.00,
+        "diferencia" : -1.00,
+        "porcentajeUsado" : 100.00,
+        "estado" : "SOBRE_EL_PLAN"
+      } ]
+    }
+  }, {
+    "id" : "V11",
+    "descripcion" : "Monto planificado 0 con real 0 y con real 1.000",
+    "ingresoReferencia" : 1000000.00,
+    "partidas" : [ {
+      "id" : 10,
+      "nombre" : "Sin gasto",
+      "categoria" : {
+        "id" : 5,
+        "codigo" : "SALUD_BIENESTAR",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 0.00,
+      "orden" : 1
+    }, {
+      "id" : 11,
+      "nombre" : "Con gasto",
+      "categoria" : {
+        "id" : 5,
+        "codigo" : "SALUD_BIENESTAR",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 0.00,
+      "orden" : 2
+    } ],
+    "movimientos" : [ {
+      "monto" : 0.00,
+      "tipo" : "GASTO_GENERAL",
+      "partidaId" : 10,
+      "categoria" : {
+        "id" : 5,
+        "codigo" : "SALUD_BIENESTAR",
+        "tipo" : "NECESIDAD"
+      }
+    }, {
+      "monto" : -1000.00,
+      "tipo" : "GASTO_GENERAL",
+      "partidaId" : 11,
+      "categoria" : {
+        "id" : 5,
+        "codigo" : "SALUD_BIENESTAR",
+        "tipo" : "NECESIDAD"
+      }
+    } ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 0.00,
+        "remanenteLibre" : 1000000.00,
+        "margenSeguridadPct" : 100.00,
+        "excedeIngreso" : false,
+        "ingresoReal" : 0.00,
+        "gastoRealTotal" : 1000.00,
+        "disponibleReal" : -1000.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 0.00,
+          "movimientos" : 0,
+          "porMotivo" : [ ]
+        }
+      },
+      "partidas" : [ {
+        "id" : 10,
+        "nombre" : "Sin gasto",
+        "real" : 0.00,
+        "diferencia" : 0.00,
+        "porcentajeUsado" : null,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 11,
+        "nombre" : "Con gasto",
+        "real" : 1000.00,
+        "diferencia" : -1000.00,
+        "porcentajeUsado" : null,
+        "estado" : "SOBRE_EL_PLAN"
+      } ],
+      "porCategoria" : [ {
+        "categoriaId" : 5,
+        "codigo" : "SALUD_BIENESTAR",
+        "tipo" : "NECESIDAD",
+        "planificado" : 0.00,
+        "real" : 1000.00,
+        "diferencia" : -1000.00,
+        "porcentajeUsado" : null,
+        "estado" : "SOBRE_EL_PLAN"
+      } ]
+    }
+  }, {
+    "id" : "V12",
+    "descripcion" : "Partida explícita frente a dos de la misma categoría",
+    "ingresoReferencia" : 1000000.00,
+    "partidas" : [ {
+      "id" : 4,
+      "nombre" : "Netflix",
+      "categoria" : {
+        "id" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO"
+      },
+      "montoPlanificado" : 10000.00,
+      "orden" : 4
+    }, {
+      "id" : 5,
+      "nombre" : "Spotify",
+      "categoria" : {
+        "id" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO"
+      },
+      "montoPlanificado" : 6000.00,
+      "orden" : 5
+    } ],
+    "movimientos" : [ {
+      "monto" : -10000.00,
+      "tipo" : "GASTO_GENERAL",
+      "partidaId" : 4,
+      "categoria" : {
+        "id" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO"
+      }
+    } ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 16000.00,
+        "remanenteLibre" : 984000.00,
+        "margenSeguridadPct" : 98.40,
+        "excedeIngreso" : false,
+        "ingresoReal" : 0.00,
+        "gastoRealTotal" : 10000.00,
+        "disponibleReal" : -10000.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 0.00,
+          "movimientos" : 0,
+          "porMotivo" : [ ]
+        }
+      },
+      "partidas" : [ {
+        "id" : 4,
+        "nombre" : "Netflix",
+        "real" : 10000.00,
+        "diferencia" : 0.00,
+        "porcentajeUsado" : 100.00,
+        "estado" : "CERCA_DEL_PLAN"
+      }, {
+        "id" : 5,
+        "nombre" : "Spotify",
+        "real" : 0.00,
+        "diferencia" : 6000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ],
+      "porCategoria" : [ {
+        "categoriaId" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO",
+        "planificado" : 16000.00,
+        "real" : 10000.00,
+        "diferencia" : 6000.00,
+        "porcentajeUsado" : 62.50,
+        "estado" : "BAJO_EL_PLAN"
+      } ]
+    }
+  }, {
+    "id" : "V13",
+    "descripcion" : "Categoría con dos partidas y movimiento sin partida: ambigua",
+    "ingresoReferencia" : 1000000.00,
+    "partidas" : [ {
+      "id" : 4,
+      "nombre" : "Netflix",
+      "categoria" : {
+        "id" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO"
+      },
+      "montoPlanificado" : 10000.00,
+      "orden" : 4
+    }, {
+      "id" : 5,
+      "nombre" : "Spotify",
+      "categoria" : {
+        "id" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO"
+      },
+      "montoPlanificado" : 6000.00,
+      "orden" : 5
+    } ],
+    "movimientos" : [ {
+      "monto" : -10000.00,
+      "tipo" : "GASTO_GENERAL",
+      "partidaId" : null,
+      "categoria" : {
+        "id" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO"
+      }
+    } ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 16000.00,
+        "remanenteLibre" : 984000.00,
+        "margenSeguridadPct" : 98.40,
+        "excedeIngreso" : false,
+        "ingresoReal" : 0.00,
+        "gastoRealTotal" : 10000.00,
+        "disponibleReal" : -10000.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 10000.00,
+          "movimientos" : 1,
+          "porMotivo" : [ {
+            "motivo" : "CATEGORIA_AMBIGUA",
+            "monto" : 10000.00,
+            "movimientos" : 1
+          } ]
+        }
+      },
+      "partidas" : [ {
+        "id" : 4,
+        "nombre" : "Netflix",
+        "real" : 0.00,
+        "diferencia" : 10000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 5,
+        "nombre" : "Spotify",
+        "real" : 0.00,
+        "diferencia" : 6000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ],
+      "porCategoria" : [ {
+        "categoriaId" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO",
+        "planificado" : 16000.00,
+        "real" : 10000.00,
+        "diferencia" : 6000.00,
+        "porcentajeUsado" : 62.50,
+        "estado" : "BAJO_EL_PLAN"
+      } ]
+    }
+  }, {
+    "id" : "V14",
+    "descripcion" : "Categoría sin partidas: sin partida",
+    "ingresoReferencia" : 1000000.00,
+    "partidas" : [ {
+      "id" : 1,
+      "nombre" : "Arriendo",
+      "categoria" : {
+        "id" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 400000.00,
+      "orden" : 1
+    } ],
+    "movimientos" : [ {
+      "monto" : -12000.00,
+      "tipo" : "GASTO_GENERAL",
+      "partidaId" : null,
+      "categoria" : {
+        "id" : 5,
+        "codigo" : "SALUD_BIENESTAR",
+        "tipo" : "NECESIDAD"
+      }
+    } ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 400000.00,
+        "remanenteLibre" : 600000.00,
+        "margenSeguridadPct" : 60.00,
+        "excedeIngreso" : false,
+        "ingresoReal" : 0.00,
+        "gastoRealTotal" : 12000.00,
+        "disponibleReal" : -12000.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 12000.00,
+          "movimientos" : 1,
+          "porMotivo" : [ {
+            "motivo" : "SIN_PARTIDA",
+            "monto" : 12000.00,
+            "movimientos" : 1
+          } ]
+        }
+      },
+      "partidas" : [ {
+        "id" : 1,
+        "nombre" : "Arriendo",
+        "real" : 0.00,
+        "diferencia" : 400000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ],
+      "porCategoria" : [ {
+        "categoriaId" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD",
+        "planificado" : 400000.00,
+        "real" : 0.00,
+        "diferencia" : 400000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "categoriaId" : 5,
+        "codigo" : "SALUD_BIENESTAR",
+        "tipo" : "NECESIDAD",
+        "planificado" : 0.00,
+        "real" : 12000.00,
+        "diferencia" : -12000.00,
+        "porcentajeUsado" : null,
+        "estado" : "SOBRE_EL_PLAN"
+      } ]
+    }
+  }, {
+    "id" : "V15",
+    "descripcion" : "Pago de deuda imputado a una partida de DEUDAS",
+    "ingresoReferencia" : 1000000.00,
+    "partidas" : [ {
+      "id" : 20,
+      "nombre" : "Cuota crédito",
+      "categoria" : {
+        "id" : 9,
+        "codigo" : "DEUDAS",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 50000.00,
+      "orden" : 1
+    } ],
+    "movimientos" : [ {
+      "monto" : -50000.00,
+      "tipo" : "PAGO_DEUDA",
+      "partidaId" : 20,
+      "categoria" : {
+        "id" : 9,
+        "codigo" : "DEUDAS",
+        "tipo" : "NECESIDAD"
+      }
+    } ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 50000.00,
+        "remanenteLibre" : 950000.00,
+        "margenSeguridadPct" : 95.00,
+        "excedeIngreso" : false,
+        "ingresoReal" : 0.00,
+        "gastoRealTotal" : 50000.00,
+        "disponibleReal" : -50000.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 0.00,
+          "movimientos" : 0,
+          "porMotivo" : [ ]
+        }
+      },
+      "partidas" : [ {
+        "id" : 20,
+        "nombre" : "Cuota crédito",
+        "real" : 50000.00,
+        "diferencia" : 0.00,
+        "porcentajeUsado" : 100.00,
+        "estado" : "CERCA_DEL_PLAN"
+      } ],
+      "porCategoria" : [ {
+        "categoriaId" : 9,
+        "codigo" : "DEUDAS",
+        "tipo" : "NECESIDAD",
+        "planificado" : 50000.00,
+        "real" : 50000.00,
+        "diferencia" : 0.00,
+        "porcentajeUsado" : 100.00,
+        "estado" : "CERCA_DEL_PLAN"
+      } ]
+    }
+  }, {
+    "id" : "V16",
+    "descripcion" : "Ingreso, abono y retiro de meta no se imputan",
+    "ingresoReferencia" : 1000000.00,
+    "partidas" : [ {
+      "id" : 1,
+      "nombre" : "Arriendo",
+      "categoria" : {
+        "id" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 400000.00,
+      "orden" : 1
+    } ],
+    "movimientos" : [ {
+      "monto" : 900000.00,
+      "tipo" : "INGRESO_GENERAL",
+      "partidaId" : null,
+      "categoria" : null
+    }, {
+      "monto" : -80000.00,
+      "tipo" : "ABONO_META",
+      "partidaId" : null,
+      "categoria" : null
+    }, {
+      "monto" : 30000.00,
+      "tipo" : "RETIRO_META",
+      "partidaId" : null,
+      "categoria" : null
+    } ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 400000.00,
+        "remanenteLibre" : 600000.00,
+        "margenSeguridadPct" : 60.00,
+        "excedeIngreso" : false,
+        "ingresoReal" : 900000.00,
+        "gastoRealTotal" : 0.00,
+        "disponibleReal" : 900000.00,
+        "ahorroRegistrado" : 80000.00,
+        "sinPlanificar" : {
+          "monto" : 0.00,
+          "movimientos" : 0,
+          "porMotivo" : [ ]
+        }
+      },
+      "partidas" : [ {
+        "id" : 1,
+        "nombre" : "Arriendo",
+        "real" : 0.00,
+        "diferencia" : 400000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ],
+      "porCategoria" : [ {
+        "categoriaId" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD",
+        "planificado" : 400000.00,
+        "real" : 0.00,
+        "diferencia" : 400000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ]
+    }
+  }, {
+    "id" : "V17",
+    "descripcion" : "Dos partidas de Suscripciones suman en porCategoria",
+    "ingresoReferencia" : 1000000.00,
+    "partidas" : [ {
+      "id" : 4,
+      "nombre" : "Netflix",
+      "categoria" : {
+        "id" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO"
+      },
+      "montoPlanificado" : 10000.00,
+      "orden" : 4
+    }, {
+      "id" : 5,
+      "nombre" : "Spotify",
+      "categoria" : {
+        "id" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO"
+      },
+      "montoPlanificado" : 6000.00,
+      "orden" : 5
+    } ],
+    "movimientos" : [ {
+      "monto" : -10000.00,
+      "tipo" : "GASTO_GENERAL",
+      "partidaId" : 4,
+      "categoria" : {
+        "id" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO"
+      }
+    } ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 16000.00,
+        "remanenteLibre" : 984000.00,
+        "margenSeguridadPct" : 98.40,
+        "excedeIngreso" : false,
+        "ingresoReal" : 0.00,
+        "gastoRealTotal" : 10000.00,
+        "disponibleReal" : -10000.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 0.00,
+          "movimientos" : 0,
+          "porMotivo" : [ ]
+        }
+      },
+      "partidas" : [ {
+        "id" : 4,
+        "nombre" : "Netflix",
+        "real" : 10000.00,
+        "diferencia" : 0.00,
+        "porcentajeUsado" : 100.00,
+        "estado" : "CERCA_DEL_PLAN"
+      }, {
+        "id" : 5,
+        "nombre" : "Spotify",
+        "real" : 0.00,
+        "diferencia" : 6000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ],
+      "porCategoria" : [ {
+        "categoriaId" : 8,
+        "codigo" : "SUSCRIPCIONES_DIGITAL",
+        "tipo" : "DESEO",
+        "planificado" : 16000.00,
+        "real" : 10000.00,
+        "diferencia" : 6000.00,
+        "porcentajeUsado" : 62.50,
+        "estado" : "BAJO_EL_PLAN"
+      } ]
+    }
+  }, {
+    "id" : "V18",
+    "descripcion" : "El ingreso real no altera el plan de referencia",
+    "ingresoReferencia" : 1000000.00,
+    "partidas" : [ {
+      "id" : 1,
+      "nombre" : "Arriendo",
+      "categoria" : {
+        "id" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 400000.00,
+      "orden" : 1
+    }, {
+      "id" : 2,
+      "nombre" : "Supermercado",
+      "categoria" : {
+        "id" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD"
+      },
+      "montoPlanificado" : 250000.00,
+      "orden" : 2
+    } ],
+    "movimientos" : [ {
+      "monto" : 900000.00,
+      "tipo" : "INGRESO_GENERAL",
+      "partidaId" : null,
+      "categoria" : null
+    }, {
+      "monto" : -100000.00,
+      "tipo" : "GASTO_GENERAL",
+      "partidaId" : null,
+      "categoria" : {
+        "id" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD"
+      }
+    } ],
+    "esperado" : {
+      "resumen" : {
+        "planificadoTotal" : 650000.00,
+        "remanenteLibre" : 350000.00,
+        "margenSeguridadPct" : 35.00,
+        "excedeIngreso" : false,
+        "ingresoReal" : 900000.00,
+        "gastoRealTotal" : 100000.00,
+        "disponibleReal" : 800000.00,
+        "ahorroRegistrado" : 0.00,
+        "sinPlanificar" : {
+          "monto" : 0.00,
+          "movimientos" : 0,
+          "porMotivo" : [ ]
+        }
+      },
+      "partidas" : [ {
+        "id" : 1,
+        "nombre" : "Arriendo",
+        "real" : 100000.00,
+        "diferencia" : 300000.00,
+        "porcentajeUsado" : 25.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "id" : 2,
+        "nombre" : "Supermercado",
+        "real" : 0.00,
+        "diferencia" : 250000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ],
+      "porCategoria" : [ {
+        "categoriaId" : 2,
+        "codigo" : "ALIMENTACION_BASE",
+        "tipo" : "NECESIDAD",
+        "planificado" : 250000.00,
+        "real" : 0.00,
+        "diferencia" : 250000.00,
+        "porcentajeUsado" : 0.00,
+        "estado" : "BAJO_EL_PLAN"
+      }, {
+        "categoriaId" : 4,
+        "codigo" : "VIVIENDA_SUMINISTROS",
+        "tipo" : "NECESIDAD",
+        "planificado" : 400000.00,
+        "real" : 100000.00,
+        "diferencia" : 300000.00,
+        "porcentajeUsado" : 25.00,
+        "estado" : "BAJO_EL_PLAN"
+      } ]
+    }
+  } ]
+}

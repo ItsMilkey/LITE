@@ -52,6 +52,9 @@ public final class MovimientoSpecifications {
                 if (filtro.getCategoriaId() != null) {
                     predicados.add(cb.equal(root.get("categoria").get("id"), filtro.getCategoriaId()));
                 }
+                if (filtro.getPartidaId() != null) {
+                    predicados.add(cb.equal(root.get("partida").get("id"), filtro.getPartidaId()));
+                }
                 if (filtro.getMontoMin() != null) {
                     predicados.add(cb.greaterThanOrEqualTo(cb.abs(root.get("monto")), filtro.getMontoMin()));
                 }

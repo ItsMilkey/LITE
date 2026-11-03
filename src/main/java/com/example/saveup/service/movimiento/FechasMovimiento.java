@@ -71,6 +71,14 @@ public final class FechasMovimiento {
         return YearMonth.now(ZONA);
     }
 
+    /**
+     * Mes de calendario del negocio al que pertenece un instante. Se usa para
+     * validar que un movimiento solo se impute a una partida de su mes (DC16).
+     */
+    public static YearMonth mesDe(Date instante) {
+        return YearMonth.from(instante.toInstant().atZone(ZONA));
+    }
+
     /** Zona fijada (expuesta para tests y diagnóstico). */
     public static ZoneId zona() {
         return ZONA;

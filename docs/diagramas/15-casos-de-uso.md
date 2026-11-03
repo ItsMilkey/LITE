@@ -8,7 +8,7 @@ Los casos de uso cubiertos por el backend, agrupados por módulo y ligados al ac
 ## Fuentes
 - `docs/CONTEXT.md` (§Endpoints)
 - `src/main/java/com/example/saveup/controller/**`
-- `docs/tareas/T0..T5`, `T1d` y `BACKLOG.md`
+- `docs/tareas/T0..T5`, `T1d`, `T10a..T10c` y `BACKLOG.md`
 
 ## Diagrama
 
@@ -58,12 +58,17 @@ flowchart LR
         UC24["Exportar movimientos CSV o PDF"]
     end
 
+    subgraph plan["Plan del mes"]
+        UC25["Armar el plan del mes y partidas"]
+    end
+
     U --> cuenta
     U --> mov
     U --> metas
     U --> deudas
     U --> presu
     U --> rep
+    U --> plan
 ```
 
 ## Detalle por caso de uso (trazabilidad)
@@ -94,8 +99,9 @@ flowchart LR
 | Ver ejecución por categoría | `GET /api/v1/presupuestos/categorias/ejecucion/me` | T5 |
 | Ver historial mensual | `GET /api/v1/presupuestos/historial/me` | T5 |
 | Exportar movimientos | `GET /api/v1/reportes/movimientos/exportar` | base |
+| Armar el plan del mes y partidas | `GET/PUT /api/v1/planes/{mes}`, `.../partidas`, `.../montos`, `.../copiar-desde/{mesOrigen}` | T10c |
 
 ## Notas y "por confirmar"
 - El `flowchart` conecta al actor con **cada módulo** (subgraph) para mantener la legibilidad; el detalle caso→endpoint está en la tabla.
-- La **trazabilidad a historias de usuario** vive en [`../historias-de-usuario/README.md`](../historias-de-usuario/README.md) (24 / 24 casos de uso cubiertos).
+- La **trazabilidad a historias de usuario** vive en [`../historias-de-usuario/README.md`](../historias-de-usuario/README.md) (25 / 25 casos de uso cubiertos).
 - Casos no cubiertos aquí como flujo de secuencia propio: los reportes y la verificación de propiedad anti-IDOR se describen en [`03-componentes.md`](03-componentes.md) y [`09-flujo-auth.md`](09-flujo-auth.md).

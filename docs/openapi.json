@@ -19,17 +19,11 @@
     "name" : "Movimientos",
     "description" : "Registro, historial, filtros, edición y borrado de movimientos."
   }, {
-    "name" : "Metas de ahorro",
-    "description" : "Metas, abonos, retiros y edición."
-  }, {
     "name" : "Saldos",
     "description" : "Saldo actual del usuario autenticado."
   }, {
     "name" : "App",
     "description" : "Política de versiones soportadas de la app móvil (endpoint público)."
-  }, {
-    "name" : "Notificaciones",
-    "description" : "Dispositivos para recordatorios push de vencimiento."
   }, {
     "name" : "Presupuestos",
     "description" : "Configuración 50/30/20, límites por categoría, ejecución e historial."
@@ -42,6 +36,15 @@
   }, {
     "name" : "Usuarios",
     "description" : "Registro, inicio de sesión y perfil del usuario autenticado."
+  }, {
+    "name" : "Planes",
+    "description" : "Plan del mes, partidas, ingreso de referencia, montos y copia entre meses."
+  }, {
+    "name" : "Metas de ahorro",
+    "description" : "Metas, abonos, retiros y edición."
+  }, {
+    "name" : "Notificaciones",
+    "description" : "Dispositivos para recordatorios push de vencimiento."
   }, {
     "name" : "Categorías",
     "description" : "Catálogo de categorías de movimientos y sugerencias por texto."
@@ -248,6 +251,303 @@
                   "items" : {
                     "$ref" : "#/components/schemas/PresupuestoCategoriaDTO"
                   }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/planes/{mes}/partidas/{id}" : {
+      "put" : {
+        "tags" : [ "Planes" ],
+        "summary" : "Edita una partida del plan",
+        "operationId" : "editarPartidaPlan",
+        "parameters" : [ {
+          "name" : "mes",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PartidaEdicionDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanMensualResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "delete" : {
+        "tags" : [ "Planes" ],
+        "summary" : "Elimina una partida del plan",
+        "operationId" : "eliminarPartidaPlan",
+        "parameters" : [ {
+          "name" : "mes",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/planes/{mes}/ingreso-referencia" : {
+      "put" : {
+        "tags" : [ "Planes" ],
+        "summary" : "Actualiza el ingreso de referencia",
+        "operationId" : "actualizarIngresoReferenciaPlan",
+        "parameters" : [ {
+          "name" : "mes",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/IngresoReferenciaDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanMensualResponseDTO"
                 }
               }
             }
@@ -1327,6 +1627,203 @@
         } ]
       }
     },
+    "/api/v1/planes/{mes}/partidas" : {
+      "post" : {
+        "tags" : [ "Planes" ],
+        "summary" : "Crea una partida del plan",
+        "operationId" : "crearPartidaPlan",
+        "parameters" : [ {
+          "name" : "mes",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PartidaCreacionDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanMensualResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/planes/{mes}/copiar-desde/{mesOrigen}" : {
+      "post" : {
+        "tags" : [ "Planes" ],
+        "summary" : "Copia el plan de otro mes",
+        "operationId" : "copiarPlanMensual",
+        "parameters" : [ {
+          "name" : "mes",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "mesOrigen",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanMensualResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/notificaciones/recordatorios/ejecutar" : {
       "post" : {
         "tags" : [ "Notificaciones" ],
@@ -1513,8 +2010,8 @@
           "required" : true
         },
         "responses" : {
-          "201" : {
-            "description" : "Dispositivo registrado",
+          "200" : {
+            "description" : "El dispositivo ya existía y se refrescó",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -1523,8 +2020,8 @@
               }
             }
           },
-          "200" : {
-            "description" : "El dispositivo ya existía y se refrescó",
+          "201" : {
+            "description" : "Dispositivo registrado",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -2621,6 +3118,106 @@
         }
       }
     },
+    "/api/v1/planes/{mes}/montos" : {
+      "patch" : {
+        "tags" : [ "Planes" ],
+        "summary" : "Actualiza montos planificados por lote",
+        "operationId" : "actualizarMontosPlan",
+        "parameters" : [ {
+          "name" : "mes",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CambiosMontosDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanMensualResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/deudas/{deudaId}/cancelar" : {
       "patch" : {
         "tags" : [ "Deudas" ],
@@ -3389,6 +3986,96 @@
                   "items" : {
                     "$ref" : "#/components/schemas/EjecucionCategoriaDTO"
                   }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/planes/{mes}" : {
+      "get" : {
+        "tags" : [ "Planes" ],
+        "summary" : "Obtiene el plan de un mes",
+        "operationId" : "obtenerPlanMensual",
+        "parameters" : [ {
+          "name" : "mes",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanMensualResponseDTO"
                 }
               }
             }
@@ -4400,6 +5087,253 @@
         },
         "description" : "Límite mensual configurado para una categoría."
       },
+      "PartidaEdicionDTO" : {
+        "type" : "object",
+        "properties" : {
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nuevo nombre libre de la partida."
+          },
+          "categoriaId" : {
+            "type" : "integer",
+            "description" : "Nueva categoría del catálogo.",
+            "format" : "int64"
+          }
+        },
+        "description" : "Edición parcial de una partida; al menos un campo es obligatorio."
+      },
+      "CategoriaPlanDTO" : {
+        "required" : [ "categoriaId", "codigo", "diferencia", "estado", "planificado", "real" ],
+        "type" : "object",
+        "properties" : {
+          "categoriaId" : {
+            "type" : "integer",
+            "description" : "ID de la categoría.",
+            "format" : "int64"
+          },
+          "codigo" : {
+            "type" : "string",
+            "description" : "Código estable de la categoría."
+          },
+          "tipo" : {
+            "type" : "string",
+            "description" : "Tipo por defecto de la categoría (NECESIDAD, DESEO, AHORRO u OTROS).",
+            "enum" : [ "NECESIDAD", "DESEO", "AHORRO", "OTROS" ]
+          },
+          "planificado" : {
+            "type" : "number",
+            "description" : "Suma de las partidas de la categoría."
+          },
+          "real" : {
+            "type" : "number",
+            "description" : "Gasto real de la categoría en el mes, con o sin partida."
+          },
+          "diferencia" : {
+            "type" : "number",
+            "description" : "planificado − real; negativo si se pasó."
+          },
+          "porcentajeUsado" : {
+            "type" : "number",
+            "description" : "real × 100 ÷ planificado, truncado; null si el plan es 0."
+          },
+          "estado" : {
+            "type" : "string",
+            "description" : "Estado informativo de la categoría.",
+            "enum" : [ "BAJO_EL_PLAN", "CERCA_DEL_PLAN", "SOBRE_EL_PLAN" ]
+          }
+        },
+        "description" : "Ejecución de una categoría dentro del plan del mes."
+      },
+      "MotivoSinPlanificarDTO" : {
+        "required" : [ "monto", "motivo", "movimientos" ],
+        "type" : "object",
+        "properties" : {
+          "motivo" : {
+            "type" : "string",
+            "description" : "Motivo por el que el gasto no se imputó a una partida.",
+            "enum" : [ "CATEGORIA_AMBIGUA", "SIN_PARTIDA" ]
+          },
+          "monto" : {
+            "type" : "number",
+            "description" : "Monto sin planificar con ese motivo, en valor absoluto."
+          },
+          "movimientos" : {
+            "type" : "integer",
+            "description" : "Cantidad de movimientos con ese motivo.",
+            "format" : "int32"
+          }
+        },
+        "description" : "Monto y cantidad de movimientos sin planificar por motivo."
+      },
+      "PartidaPlanDTO" : {
+        "required" : [ "actualizadoEn", "categoriaCodigo", "categoriaId", "diferencia", "estado", "id", "montoPlanificado", "nombre", "orden", "real" ],
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "description" : "Identificador de la partida.",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nombre libre de la partida."
+          },
+          "categoriaId" : {
+            "type" : "integer",
+            "description" : "ID de la categoría del catálogo.",
+            "format" : "int64"
+          },
+          "categoriaCodigo" : {
+            "type" : "string",
+            "description" : "Código estable de la categoría."
+          },
+          "montoPlanificado" : {
+            "type" : "number",
+            "description" : "Monto planificado con escala 2."
+          },
+          "real" : {
+            "type" : "number",
+            "description" : "Gasto real imputado en valor absoluto."
+          },
+          "diferencia" : {
+            "type" : "number",
+            "description" : "montoPlanificado − real; negativo si se pasó."
+          },
+          "porcentajeUsado" : {
+            "type" : "number",
+            "description" : "real × 100 ÷ montoPlanificado, truncado; null si el plan es 0."
+          },
+          "estado" : {
+            "type" : "string",
+            "description" : "Estado informativo del plan.",
+            "enum" : [ "BAJO_EL_PLAN", "CERCA_DEL_PLAN", "SOBRE_EL_PLAN" ]
+          },
+          "orden" : {
+            "type" : "integer",
+            "description" : "Posición de la partida dentro del plan.",
+            "format" : "int32"
+          },
+          "actualizadoEn" : {
+            "type" : "string",
+            "description" : "Última modificación de la partida, en ISO-8601 UTC.",
+            "format" : "date-time"
+          }
+        },
+        "description" : "Partida del plan y su gasto real del mes."
+      },
+      "PlanMensualResponseDTO" : {
+        "required" : [ "existe", "mes", "partidas", "porCategoria", "resumen" ],
+        "type" : "object",
+        "properties" : {
+          "mes" : {
+            "type" : "string",
+            "description" : "Mes en formato yyyy-MM."
+          },
+          "existe" : {
+            "type" : "boolean",
+            "description" : "false si el usuario todavía no creó un plan para ese mes."
+          },
+          "ingresoReferencia" : {
+            "type" : "number",
+            "description" : "Ingreso de referencia del mes; null si no se definió."
+          },
+          "resumen" : {
+            "$ref" : "#/components/schemas/ResumenPlanDTO"
+          },
+          "partidas" : {
+            "type" : "array",
+            "description" : "Partidas del plan, en orden de presentación.",
+            "items" : {
+              "$ref" : "#/components/schemas/PartidaPlanDTO"
+            }
+          },
+          "porCategoria" : {
+            "type" : "array",
+            "description" : "Ejecución de las categorías con partidas o gasto real en el mes.",
+            "items" : {
+              "$ref" : "#/components/schemas/CategoriaPlanDTO"
+            }
+          }
+        },
+        "description" : "Plan del mes con su resumen, partidas y ejecución por categoría."
+      },
+      "ResumenPlanDTO" : {
+        "required" : [ "ahorroRegistrado", "disponibleReal", "excedeIngreso", "gastoRealTotal", "ingresoReal", "planificadoTotal", "sinPlanificar" ],
+        "type" : "object",
+        "properties" : {
+          "planificadoTotal" : {
+            "type" : "number",
+            "description" : "Suma de los montos planificados de las partidas."
+          },
+          "remanenteLibre" : {
+            "type" : "number",
+            "description" : "ingresoReferencia − planificadoTotal; null si no hay ingreso."
+          },
+          "margenSeguridadPct" : {
+            "type" : "number",
+            "description" : "Porcentaje del ingreso que queda libre; null sin ingreso o si es 0."
+          },
+          "excedeIngreso" : {
+            "type" : "boolean",
+            "description" : "Indica si el plan supera el ingreso de referencia (informativo)."
+          },
+          "ingresoReal" : {
+            "type" : "number",
+            "description" : "Suma de los INGRESO_GENERAL del mes."
+          },
+          "gastoRealTotal" : {
+            "type" : "number",
+            "description" : "Suma en valor absoluto de GASTO_GENERAL y PAGO_DEUDA del mes."
+          },
+          "disponibleReal" : {
+            "type" : "number",
+            "description" : "ingresoReal − gastoRealTotal."
+          },
+          "ahorroRegistrado" : {
+            "type" : "number",
+            "description" : "Suma en valor absoluto de los ABONO_META del mes (informativo)."
+          },
+          "sinPlanificar" : {
+            "$ref" : "#/components/schemas/SinPlanificarDTO"
+          }
+        },
+        "description" : "Resumen del plan frente al gasto real del mes."
+      },
+      "SinPlanificarDTO" : {
+        "required" : [ "monto", "movimientos", "porMotivo" ],
+        "type" : "object",
+        "properties" : {
+          "monto" : {
+            "type" : "number",
+            "description" : "Monto total sin planificar en valor absoluto."
+          },
+          "movimientos" : {
+            "type" : "integer",
+            "description" : "Cantidad de movimientos sin planificar.",
+            "format" : "int32"
+          },
+          "porMotivo" : {
+            "type" : "array",
+            "description" : "Desglose por motivo.",
+            "items" : {
+              "$ref" : "#/components/schemas/MotivoSinPlanificarDTO"
+            }
+          }
+        },
+        "description" : "Gasto del mes que quedó fuera de las partidas, con su motivo."
+      },
+      "IngresoReferenciaDTO" : {
+        "type" : "object",
+        "properties" : {
+          "monto" : {
+            "minimum" : 0,
+            "exclusiveMinimum" : false,
+            "type" : "number",
+            "description" : "Monto del ingreso de referencia, o null para quitarlo."
+          }
+        },
+        "description" : "Ingreso de referencia del plan; null para limpiarlo."
+      },
       "MovimientoEdicionDTO" : {
         "type" : "object",
         "properties" : {
@@ -4417,6 +5351,15 @@
             "type" : "integer",
             "description" : "Nueva categoría del movimiento.",
             "format" : "int64"
+          },
+          "partidaId" : {
+            "type" : "integer",
+            "description" : "Partida del plan a la que se imputa el gasto (T10c).",
+            "format" : "int64"
+          },
+          "desvincularPartida" : {
+            "type" : "boolean",
+            "description" : "true para quitar la partida actual del movimiento."
           }
         },
         "description" : "Edición parcial de un movimiento; los campos ausentes conservan su valor."
@@ -4483,6 +5426,11 @@
           },
           "categoria" : {
             "$ref" : "#/components/schemas/CategoriaDTO"
+          },
+          "partidaId" : {
+            "type" : "integer",
+            "description" : "Partida del plan a la que se imputa el gasto; null si no tiene.",
+            "format" : "int64"
           }
         },
         "description" : "Movimiento registrado. El signo del monto refleja si suma o resta al saldo."
@@ -5213,6 +6161,28 @@
         },
         "description" : "Configuración 50/30/20 guardada por el usuario."
       },
+      "PartidaCreacionDTO" : {
+        "required" : [ "categoriaId", "montoPlanificado", "nombre" ],
+        "type" : "object",
+        "properties" : {
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nombre libre de la partida (1 a 80 caracteres)."
+          },
+          "categoriaId" : {
+            "type" : "integer",
+            "description" : "ID de la categoría del catálogo (distinta de SUELDO y AHORRO).",
+            "format" : "int64"
+          },
+          "montoPlanificado" : {
+            "minimum" : 0,
+            "exclusiveMinimum" : false,
+            "type" : "number",
+            "description" : "Monto planificado con escala 2."
+          }
+        },
+        "description" : "Datos para crear una partida del plan."
+      },
       "ResultadoRecordatoriosDTO" : {
         "required" : [ "enviados", "evaluados", "omitidos" ],
         "type" : "object",
@@ -5315,6 +6285,11 @@
             "description" : "ID de la categoría seleccionada.",
             "format" : "int64"
           },
+          "partidaId" : {
+            "type" : "integer",
+            "description" : "ID de la partida del plan del mes a la que se imputa el gasto (T10c).",
+            "format" : "int64"
+          },
           "aplicarPresupuesto" : {
             "type" : "boolean",
             "description" : "Si es true, aplica Smart-Split al ingreso.",
@@ -5398,6 +6373,40 @@
           }
         },
         "description" : "Solicitud de recuperación de contraseña."
+      },
+      "CambioMontoDTO" : {
+        "required" : [ "monto", "partidaId" ],
+        "type" : "object",
+        "properties" : {
+          "partidaId" : {
+            "type" : "integer",
+            "description" : "ID de la partida a actualizar.",
+            "format" : "int64"
+          },
+          "monto" : {
+            "minimum" : 0,
+            "exclusiveMinimum" : false,
+            "type" : "number",
+            "description" : "Monto absoluto (no incremento)."
+          }
+        },
+        "description" : "Nuevo monto planificado de una partida."
+      },
+      "CambiosMontosDTO" : {
+        "required" : [ "cambios" ],
+        "type" : "object",
+        "properties" : {
+          "cambios" : {
+            "maxItems" : 100,
+            "minItems" : 1,
+            "type" : "array",
+            "description" : "Cambios de monto, sin partidaId repetido.",
+            "items" : {
+              "$ref" : "#/components/schemas/CambioMontoDTO"
+            }
+          }
+        },
+        "description" : "Lote de 1 a 100 cambios de monto; todo o nada."
       },
       "UsuarioResponseDTO" : {
         "required" : [ "apellido", "email", "fechaRegistro", "nombre", "rut" ],
@@ -5563,6 +6572,11 @@
           "categoriaId" : {
             "type" : "integer",
             "description" : "ID de categoría a filtrar.",
+            "format" : "int64"
+          },
+          "partidaId" : {
+            "type" : "integer",
+            "description" : "ID de partida del plan a filtrar (T10c).",
             "format" : "int64"
           },
           "montoMin" : {

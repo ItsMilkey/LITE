@@ -7,6 +7,8 @@ import com.example.saveup.repository.ConfiguracionPresupuestoRepository;
 import com.example.saveup.repository.DeudaRepository;
 import com.example.saveup.repository.MetaAhorroRepository;
 import com.example.saveup.repository.MovimientoRepository;
+import com.example.saveup.repository.PartidaPlanRepository;
+import com.example.saveup.repository.PlanMensualRepository;
 import com.example.saveup.repository.PresupuestoCategoriaRepository;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +23,8 @@ import org.springframework.stereotype.Service;
  * <li>presupuesto_categoria (límites por categoría)</li>
  * <li>configuración_presupuesto (50/30/20)</li>
  * <li>movimiento (incluido el historial de pagos de deuda y abonos a metas)</li>
+ * <li>partida_plan (T10c: los movimientos ya no la referencian)</li>
+ * <li>plan_mensual (T10c: padre de las partidas)</li>
  * <li>meta_ahorro</li>
  * <li>deuda</li>
  * <li>auth_refresh_token (sesiones: borra en lugar de revocar; la fila no
@@ -36,6 +40,8 @@ public class EliminacionDeCuentaService {
     private final PresupuestoCategoriaRepository presupuestoCategoriaRepository;
     private final ConfiguracionPresupuestoRepository configuracionPresupuestoRepository;
     private final MovimientoRepository movimientoRepository;
+    private final PartidaPlanRepository partidaPlanRepository;
+    private final PlanMensualRepository planMensualRepository;
     private final MetaAhorroRepository metaAhorroRepository;
     private final DeudaRepository deudaRepository;
     private final AuthRefreshTokenRepository authRefreshTokenRepository;
@@ -45,6 +51,8 @@ public class EliminacionDeCuentaService {
             PresupuestoCategoriaRepository presupuestoCategoriaRepository,
             ConfiguracionPresupuestoRepository configuracionPresupuestoRepository,
             MovimientoRepository movimientoRepository,
+            PartidaPlanRepository partidaPlanRepository,
+            PlanMensualRepository planMensualRepository,
             MetaAhorroRepository metaAhorroRepository,
             DeudaRepository deudaRepository,
             AuthRefreshTokenRepository authRefreshTokenRepository) {
@@ -52,6 +60,8 @@ public class EliminacionDeCuentaService {
         this.presupuestoCategoriaRepository = presupuestoCategoriaRepository;
         this.configuracionPresupuestoRepository = configuracionPresupuestoRepository;
         this.movimientoRepository = movimientoRepository;
+        this.partidaPlanRepository = partidaPlanRepository;
+        this.planMensualRepository = planMensualRepository;
         this.metaAhorroRepository = metaAhorroRepository;
         this.deudaRepository = deudaRepository;
         this.authRefreshTokenRepository = authRefreshTokenRepository;
@@ -67,6 +77,8 @@ public class EliminacionDeCuentaService {
         presupuestoCategoriaRepository.deleteByUsuarioRut(rut);
         configuracionPresupuestoRepository.deleteByUsuarioRut(rut);
         movimientoRepository.deleteByUsuarioRut(rut);
+        partidaPlanRepository.deleteByPlanUsuarioRut(rut);
+        planMensualRepository.deleteByUsuarioRut(rut);
         metaAhorroRepository.deleteByUsuarioRut(rut);
         deudaRepository.deleteByUsuarioRut(rut);
         authRefreshTokenRepository.deleteByUsuario_Rut(rut);

@@ -7,10 +7,12 @@ import org.springframework.data.domain.Page; // <-- ¡CAMBIO!
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -55,4 +57,28 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long>,
      * editar ni borrar.
      */
     boolean existsByMovimientoOrigenId(Long movimientoOrigenId);
+
+    /**
+     * Movimientos del mes con su categoría cargada (T10c). Se usa una sola
+     * consulta para el plan: el resumen y la imputación se calculan en memoria.
+     */
+    @Query("""
+            SELECT m FROM Movimiento m
+            LEFT JOIN FETCH m.categoria
+            LEFT JOIN FETCH m.partida
+            WHERE m.usuario.rut = :rut
+              AND m.fecha >= :desde
+              AND m.fecha < :hastaExclusivo
+            """)
+    List<Movimiento> findDelMesConCategoria(@Param("rut") String rut,
+                                            @Param("desde") Date desde,
+                                            @Param("hastaExclusivo") Date hastaExclusivo);
+
+    /** ¿La partida tiene movimientos vinculados? (T10c: bloquea cambiar la categoría). */
+    long countByPartidaId(Long partidaId);
+
+    /** Borrar una partida deja sus movimientos sin partida (SET NULL). */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE Movimiento m SET m.partida = NULL WHERE m.partida.id = :partidaId")
+    int desvincularPartida(@Param("partidaId") Long partidaId);
 }

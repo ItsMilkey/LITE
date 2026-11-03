@@ -133,7 +133,9 @@ final dio = Dio(BaseOptions(baseUrl: 'https://lite-backend-1wn9.onrender.com/api
 ```
 
 - `sugerencias` trae de **0 a 3** elementos ordenados por `confianza` descendente y, en empate, por `codigo`
-  alfabético. `motivo` es `PALABRA_CLAVE`, `PREFIJO`, `APROXIMADA` o `HISTORIAL` (el historial real llega en T10c).
+  alfabético. `motivo` es `PALABRA_CLAVE`, `PREFIJO`, `APROXIMADA` o `HISTORIAL`. Desde T10c, `HISTORIAL` (confianza
+  0,95) usa las partidas reales del usuario: si ya usó esa descripción en una partida, esa categoría sube al primer
+  lugar.
 - **Debounce:** espera unos **400 ms** sin teclear antes de llamar. **Descarta respuestas atrasadas** comparando el
   campo `texto` de la respuesta con el valor actual del formulario; el backend devuelve el texto original exacto
   (incluidos espacios y mayúsculas) para que puedas hacer esa comparación.
@@ -142,6 +144,102 @@ final dio = Dio(BaseOptions(baseUrl: 'https://lite-backend-1wn9.onrender.com/api
   preselecciones nada: el backend nunca devuelve `OTROS` por su cuenta.
 - El endpoint no persiste nada ni registra el texto (G9). Errores: `400 PARAMETRO_INVALIDO` por texto ausente o
   demasiado largo o contexto desconocido; `401 NO_AUTENTICADO` si falta el token.
+
+### Plan del mes y partidas (T10c)
+
+El plan es **por mes de calendario**: `mes` se escribe `yyyy-MM` (por ejemplo `2026-11`) y debe caer entre
+`2000-01` y `2100-12`. Cualquier otro formato o fuera de rango → `400 PARAMETRO_INVALIDO`. Todos los meses son
+editables y no hay cierre de mes.
+
+| Método | Ruta | Cuerpo | Respuesta |
+|---|---|---|---|
+| `GET` | `/planes/{mes}` | — | `200` plan completo (`existe:false` si no hay plan) |
+| `PUT` | `/planes/{mes}/ingreso-referencia` | `{ "monto": 1000000.00 }` o `{ "monto": null }` | `200` plan completo |
+| `POST` | `/planes/{mes}/partidas` | `{ "nombre": "Arriendo", "categoriaId": 4, "montoPlanificado": 400000.00 }` | `201` plan completo |
+| `PUT` | `/planes/{mes}/partidas/{id}` | `{ "nombre": "...", "categoriaId": 4 }` (al menos uno) | `200` plan completo |
+| `DELETE` | `/planes/{mes}/partidas/{id}` | — | `204` |
+| `PATCH` | `/planes/{mes}/montos` | `{ "cambios": [ { "partidaId": 1, "monto": 420000.00 } ] }` | `200` plan completo |
+| `POST` | `/planes/{mes}/copiar-desde/{mesOrigen}` | — | `201` plan completo |
+
+Todas las rutas llevan `Authorization: Bearer <token>`. Toda modificación devuelve el **plan completo recalculado**:
+reemplaza tu estado local con esa respuesta en lugar de parchear el objeto a mano.
+
+- **`GET /planes/{mes}` de un mes sin plan** responde `200` con `existe:false`, `ingresoReferencia:null`,
+  `partidas:[]`, `planificadoTotal:0` y el gasto real del mes entero en `sinPlanificar` (motivo `SIN_PARTIDA`).
+  Nunca es un 404: la pantalla se muestra vacía y lista para empezar.
+- **Forma de la respuesta** (siempre: `mes`, `existe`, `ingresoReferencia`, `resumen`, `partidas`, `porCategoria`):
+
+```json
+{
+  "mes": "2026-11",
+  "existe": true,
+  "ingresoReferencia": 1000000.00,
+  "resumen": {
+    "planificadoTotal": 746000.00,
+    "remanenteLibre": 254000.00,
+    "margenSeguridadPct": 25.40,
+    "excedeIngreso": false,
+    "ingresoReal": 900000.00,
+    "gastoRealTotal": 210000.00,
+    "disponibleReal": 690000.00,
+    "ahorroRegistrado": 80000.00,
+    "sinPlanificar": {
+      "monto": 12000.00,
+      "movimientos": 1,
+      "porMotivo": [ { "motivo": "SIN_PARTIDA", "monto": 12000.00, "movimientos": 1 } ]
+    }
+  },
+  "partidas": [
+    { "id": 1, "nombre": "Arriendo", "categoriaId": 4, "categoriaCodigo": "VIVIENDA_SUMINISTROS",
+      "montoPlanificado": 400000.00, "real": 400000.00, "diferencia": 0.00,
+      "porcentajeUsado": 100.00, "estado": "CERCA_DEL_PLAN", "orden": 1,
+      "actualizadoEn": "2026-11-02T03:00:00.000Z" }
+  ],
+  "porCategoria": [
+    { "categoriaId": 4, "codigo": "VIVIENDA_SUMINISTROS", "tipo": "NECESIDAD",
+      "planificado": 400000.00, "real": 400000.00, "diferencia": 0.00,
+      "porcentajeUsado": 100.00, "estado": "CERCA_DEL_PLAN" }
+  ]
+}
+```
+
+- `resumen.remanenteLibre` y `margenSeguridadPct` pueden ser `null` (sin ingreso de referencia; el margen también
+  si el ingreso es 0). `excedeIngreso` es **informativo**: planificar más que el ingreso se acepta, solo avisa.
+  La sección de fórmulas y vectores de prueba está en [`PLAN_FORMULAS.md`](PLAN_FORMULAS.md).
+- **Reglas de validación de una partida:** nombre de 1 a 80 caracteres tras `trim`, sin caracteres de control ni
+  saltos de línea y único dentro del plan (comparando sin tildes ni mayúsculas: "Súper" y "super" chocan); monto
+  ≥ 0 con 2 decimales y hasta 13 enteros; categoría del catálogo distinta de `SUELDO` y `AHORRO`; máximo 100
+  partidas por plan. Nombre vacío o demasiado largo → `400 VALIDACION_FALLIDA` con `errores[]`; nombre duplicado o
+  plan lleno → `409 CONFLICTO_REGLA_NEGOCIO`; categoría `SUELDO`/`AHORRO` → `400 DATOS_INVALIDOS`.
+- **`PUT` de una partida vacío** (`{}`) → `400 VALIDACION_FALLIDA`. Cambiar la **categoría** de una partida que ya
+  tiene movimientos vinculados → `409 CONFLICTO_REGLA_NEGOCIO`. Cambiar solo el nombre siempre se permite.
+- **`DELETE` de una partida** deja sus movimientos con `partidaId = null`; al volver a leer el plan se reimputan por
+  categoría. No borra ningún movimiento.
+- **`PATCH /montos` es atómico**: los montos son absolutos (no incrementos). Si el mes no tiene plan (`404`), una
+  partida no pertenece al plan (`404`/`403` si es de otro usuario), un monto es inválido, hay un `partidaId` repetido,
+  la lista está vacía o supera 100 cambios, no se aplica **ninguno**. Reenviar el mismo lote no cambia
+  `actualizadoEn` de las partidas cuyo monto no cambió.
+- **Copiar un mes:** el origen debe tener al menos una partida (`404 NO_ENCONTRADO`), el destino no debe tener
+  partidas (`409 CONFLICTO_REGLA_NEGOCIO`) y los meses deben ser distintos (`400 PARAMETRO_INVALIDO`). Copia nombre,
+  categoría, monto y orden; el ingreso de referencia solo si el destino no tenía uno.
+- **Sliders:** el máximo sugerido de cada slider es `monto actual + máx(remanenteLibre, 0)` y se recalcula localmente
+  al mover otras partidas. Si el usuario teclea más, acéptalo con un aviso: sobreasignar es válido. Guarda al soltar
+  el slider o al confirmar el teclado, acumulando los cambios en un solo `PATCH`; tras la respuesta, reemplaza el
+  estado local por el plan devuelto.
+
+**Partida en los movimientos (T10c).** `MovimientoRegistroDTO`, `MovimientoEdicionDTO`, `MovimientoResponseDTO` y el
+filtro añaden `partidaId`:
+
+- En `POST /movimientos`, `partidaId` es opcional para `GASTO_GENERAL` y `PAGO_DEUDA`. La partida debe ser del
+  **mes actual** y, si viene, su categoría deriva la del movimiento (si envías también `categoriaId`, debe
+  coincidir). `INGRESO_GENERAL` con `partidaId` → `400 DATOS_INVALIDOS`. En `PAGO_DEUDA` la partida debe ser de
+  categoría `DEUDAS`.
+- En `PUT /movimientos/{id}`: envía `partidaId` para asignar/cambiar (la partida debe ser del **mes de la fecha del
+  movimiento**), `desvincularPartida:true` para quitarla. Enviar ambos → `400`. Ninguno de los dos conserva la
+  partida actual. Si el movimiento tiene partida, cambia la partida o desvincúlala antes de cambiar la categoría.
+- `GET /movimientos/paginados/me?partidaId=<id>` filtra por partida.
+- `ABONO_META` y `RETIRO_META` no admiten partida. La imputación por categoría de los movimientos sin `partidaId`
+  se calcula al leer el plan y **no** se guarda en el movimiento.
 
 ## 4. Errores: mapear por `codigo`
 

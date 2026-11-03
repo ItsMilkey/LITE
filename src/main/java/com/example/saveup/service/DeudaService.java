@@ -14,6 +14,7 @@ import com.example.saveup.error.ErrorNegocio;
 import com.example.saveup.model.Categoria;
 import com.example.saveup.model.Deuda;
 import com.example.saveup.model.Movimiento;
+import com.example.saveup.model.PartidaPlan;
 import com.example.saveup.model.Usuario;
 import com.example.saveup.model.enums.EstadoDeuda;
 import com.example.saveup.model.enums.ModalidadCalculo;
@@ -34,6 +35,8 @@ import com.example.saveup.service.finanzas.MotorFinanciero;
 import com.example.saveup.service.finanzas.ResolutorCondiciones;
 import com.example.saveup.service.finanzas.ResultadoCalculo;
 import com.example.saveup.service.movimiento.SignoMovimiento;
+import com.example.saveup.service.movimiento.FechasMovimiento;
+import com.example.saveup.service.plan.ValidadorPartidaMovimiento;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,16 +72,19 @@ public class DeudaService {
     private final CategoriaRepository categoriaRepository;
     private final SecurityUtils securityUtils;
     private final MotorFinanciero motorFinanciero;
+    private final ValidadorPartidaMovimiento validadorPartidaMovimiento;
 
     public DeudaService(DeudaRepository deudaRepository, UsuarioRepository usuarioRepository,
                         MovimientoRepository movimientoRepository, CategoriaRepository categoriaRepository,
-                        SecurityUtils securityUtils, MotorFinanciero motorFinanciero) {
+                        SecurityUtils securityUtils, MotorFinanciero motorFinanciero,
+                        ValidadorPartidaMovimiento validadorPartidaMovimiento) {
         this.deudaRepository = deudaRepository;
         this.usuarioRepository = usuarioRepository;
         this.movimientoRepository = movimientoRepository;
         this.categoriaRepository = categoriaRepository;
         this.securityUtils = securityUtils;
         this.motorFinanciero = motorFinanciero;
+        this.validadorPartidaMovimiento = validadorPartidaMovimiento;
     }
 
     /** Resultado de registrar un pago: la deuda resultante y el movimiento que la registra. */
@@ -120,6 +126,17 @@ public class DeudaService {
      */
     @Transactional
     public ResultadoPago registrarPago(Long deudaId, PagoDeudaDTO pagoDTO) {
+        return registrarPago(deudaId, pagoDTO, null);
+    }
+
+    /**
+     * Igual que {@link #registrarPago(Long, PagoDeudaDTO)} pero permite
+     * imputar el pago a una partida del plan del mes en curso (T10c). La
+     * partida debe ser de la categoría DEUDAS; el endpoint
+     * {@code /deudas/{id}/pagar} sigue usando la variante sin partida.
+     */
+    @Transactional
+    public ResultadoPago registrarPago(Long deudaId, PagoDeudaDTO pagoDTO, Long partidaId) {
         Deuda deuda = deudaRepository.findById(deudaId)
                 .orElseThrow(() -> new EntityNotFoundException("Deuda no encontrada con ID: " + deudaId));
 
@@ -146,8 +163,16 @@ public class DeudaService {
             throw new ErrorNegocio(CodigoError.DEUDA_SOBREPAGO);
         }
 
-        Categoria categoriaDeudas = categoriaRepository.findByCodigo("DEUDAS")
-                .orElseThrow(() -> new IllegalStateException("La categoría DEUDAS no fue encontrada. Asegúrate de que exista en el catálogo."));
+        PartidaPlan partida = null;
+        Categoria categoriaDeudas;
+        if (partidaId != null) {
+            partida = validadorPartidaMovimiento.resolverPagoDeuda(
+                    partidaId, FechasMovimiento.mesActual());
+            categoriaDeudas = partida.getCategoria();
+        } else {
+            categoriaDeudas = categoriaRepository.findByCodigo("DEUDAS")
+                    .orElseThrow(() -> new IllegalStateException("La categoría DEUDAS no fue encontrada. Asegúrate de que exista en el catálogo."));
+        }
 
         Movimiento pago = new Movimiento();
         pago.setUsuario(deuda.getUsuario());
@@ -156,6 +181,7 @@ public class DeudaService {
         pago.setDescripcion(pagoDTO.getDescripcion());
         pago.setTipoMovimiento(TipoMovimiento.PAGO_DEUDA);
         pago.setCategoria(categoriaDeudas);
+        pago.setPartida(partida);
         Movimiento pagoGuardado = movimientoRepository.save(pago);
 
         BigDecimal pagadoConEstePago = pagosReales.add(montoPagadoPrevio(deuda)).add(montoPago);

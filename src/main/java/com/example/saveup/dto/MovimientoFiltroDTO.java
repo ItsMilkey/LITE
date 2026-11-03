@@ -34,6 +34,9 @@ public class MovimientoFiltroDTO {
     @Schema(description = "ID de categoría a filtrar.")
     private Long categoriaId;
 
+    @Schema(description = "ID de partida del plan a filtrar (T10c).")
+    private Long partidaId;
+
     @Schema(description = "Monto mínimo comparado contra el valor absoluto.")
     private BigDecimal montoMin;
 

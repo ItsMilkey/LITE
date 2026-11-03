@@ -10,7 +10,10 @@ public interface FuenteHistorialCategoria {
 
     /**
      * @param rut              usuario autenticado
-     * @param textoNormalizado texto del usuario normalizado y sin palabras vacías
+     * @param textoNormalizado texto del usuario normalizado con la regla de
+     *                         {@code NombrePartida} (minúsculas, sin tildes y
+     *                         con espacios colapsados; conserva palabras vacías
+     *                         y puntuación)
      * @return código de la categoría usada históricamente para ese texto, si existe
      */
     Optional<String> codigoPara(String rut, String textoNormalizado);

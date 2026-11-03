@@ -7,6 +7,8 @@ import com.example.saveup.repository.ConfiguracionPresupuestoRepository;
 import com.example.saveup.repository.DeudaRepository;
 import com.example.saveup.repository.MetaAhorroRepository;
 import com.example.saveup.repository.MovimientoRepository;
+import com.example.saveup.repository.PartidaPlanRepository;
+import com.example.saveup.repository.PlanMensualRepository;
 import com.example.saveup.repository.PresupuestoCategoriaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -41,6 +43,12 @@ class EliminacionDeCuentaServiceTest {
     private MovimientoRepository movimientoRepository;
 
     @Mock
+    private PartidaPlanRepository partidaPlanRepository;
+
+    @Mock
+    private PlanMensualRepository planMensualRepository;
+
+    @Mock
     private MetaAhorroRepository metaAhorroRepository;
 
     @Mock
@@ -55,8 +63,8 @@ class EliminacionDeCuentaServiceTest {
     void setUp() {
         servicio = new EliminacionDeCuentaService(asignacionMetaPresupuestoRepository,
                 presupuestoCategoriaRepository, configuracionPresupuestoRepository,
-                movimientoRepository, metaAhorroRepository, deudaRepository,
-                authRefreshTokenRepository);
+                movimientoRepository, partidaPlanRepository, planMensualRepository,
+                metaAhorroRepository, deudaRepository, authRefreshTokenRepository);
     }
 
     @Test
@@ -68,13 +76,16 @@ class EliminacionDeCuentaServiceTest {
         servicio.eliminarTodo(usuario);
 
         InOrder orden = inOrder(asignacionMetaPresupuestoRepository, presupuestoCategoriaRepository,
-                configuracionPresupuestoRepository, movimientoRepository, metaAhorroRepository,
-                deudaRepository, authRefreshTokenRepository);
+                configuracionPresupuestoRepository, movimientoRepository, partidaPlanRepository,
+                planMensualRepository, metaAhorroRepository, deudaRepository,
+                authRefreshTokenRepository);
 
         orden.verify(asignacionMetaPresupuestoRepository).deleteByMeta_Usuario_Rut(RUT);
         orden.verify(presupuestoCategoriaRepository).deleteByUsuarioRut(RUT);
         orden.verify(configuracionPresupuestoRepository).deleteByUsuarioRut(RUT);
         orden.verify(movimientoRepository).deleteByUsuarioRut(RUT);
+        orden.verify(partidaPlanRepository).deleteByPlanUsuarioRut(RUT);
+        orden.verify(planMensualRepository).deleteByUsuarioRut(RUT);
         orden.verify(metaAhorroRepository).deleteByUsuarioRut(RUT);
         orden.verify(deudaRepository).deleteByUsuarioRut(RUT);
         orden.verify(authRefreshTokenRepository).deleteByUsuario_Rut(RUT);

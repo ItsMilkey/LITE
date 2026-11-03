@@ -28,6 +28,9 @@ public class MovimientoResponseDTO {
     @Schema(description = "Categoría asociada; puede ser null en movimientos históricos.")
     private CategoriaDTO categoria;
 
+    @Schema(description = "Partida del plan a la que se imputa el gasto; null si no tiene.")
+    private Long partidaId;
+
     /** Construye el DTO a partir de la entidad guardada (compartido por todos los productores de movimientos). */
     public static MovimientoResponseDTO from(Movimiento movimiento) {
         MovimientoResponseDTO dto = new MovimientoResponseDTO();
@@ -36,6 +39,7 @@ public class MovimientoResponseDTO {
         dto.setDescripcion(movimiento.getDescripcion());
         dto.setFecha(movimiento.getFecha());
         dto.setTipoMovimiento(movimiento.getTipoMovimiento());
+        dto.setPartidaId(movimiento.getPartida() == null ? null : movimiento.getPartida().getId());
 
         if (movimiento.getCategoria() != null) {
             CategoriaDTO categoriaDTO = new CategoriaDTO();

@@ -12,6 +12,7 @@ import com.example.saveup.error.DatosInvalidosException;
 import com.example.saveup.error.ErrorNegocio;
 import com.example.saveup.model.Categoria;
 import com.example.saveup.model.Movimiento;
+import com.example.saveup.model.PartidaPlan;
 import com.example.saveup.model.Usuario;
 import com.example.saveup.model.enums.ModoPago;
 import com.example.saveup.model.enums.TipoMovimiento;
@@ -21,7 +22,9 @@ import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.MovimientoSpecifications;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.SecurityUtils;
+import com.example.saveup.service.movimiento.FechasMovimiento;
 import com.example.saveup.service.movimiento.SignoMovimiento;
+import com.example.saveup.service.plan.ValidadorPartidaMovimiento;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -69,15 +72,19 @@ public class MovimientoService {
 
     private final DeudaService deudaService;
 
+    private final ValidadorPartidaMovimiento validadorPartidaMovimiento;
+
     public MovimientoService(MovimientoRepository movimientoRepository, UsuarioRepository usuarioRepository,
                              CategoriaRepository categoriaRepository, SmartSplitProcessor smartSplitProcessor,
-                             SecurityUtils securityUtils, DeudaService deudaService) {
+                             SecurityUtils securityUtils, DeudaService deudaService,
+                             ValidadorPartidaMovimiento validadorPartidaMovimiento) {
         this.movimientoRepository = movimientoRepository;
         this.usuarioRepository = usuarioRepository;
         this.categoriaRepository = categoriaRepository;
         this.smartSplitProcessor = smartSplitProcessor;
         this.securityUtils = securityUtils;
         this.deudaService = deudaService;
+        this.validadorPartidaMovimiento = validadorPartidaMovimiento;
     }
 
     @Transactional
@@ -107,8 +114,13 @@ public class MovimientoService {
         movimiento.setTipoMovimiento(dto.getTipoMovimiento());
         // La fecha se establece automáticamente gracias a @PrePersist.
 
-        // ASOCIACIÓN DE CATEGORÍA
-        if (dto.getCategoriaId() != null) {
+        // ASOCIACIÓN DE CATEGORÍA O PARTIDA (T10c).
+        PartidaPlan partida = resolverPartidaDeAlta(dto.getTipoMovimiento(), dto.getPartidaId(),
+                dto.getCategoriaId());
+        if (partida != null) {
+            movimiento.setPartida(partida);
+            movimiento.setCategoria(partida.getCategoria());
+        } else if (dto.getCategoriaId() != null) {
             Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
                     .orElseThrow(() -> new EntityNotFoundException(
                             "Categoría no encontrada con ID: " + dto.getCategoriaId()));
@@ -148,7 +160,25 @@ public class MovimientoService {
         pago.setDescripcion(dto.getDescripcion());
         pago.setModoPago(ModoPago.MONTO_PERSONALIZADO);
 
-        return deudaService.registrarPago(dto.getDeudaId(), pago).movimiento();
+        return deudaService.registrarPago(dto.getDeudaId(), pago, dto.getPartidaId()).movimiento();
+    }
+
+    /**
+     * Resuelve la partida de un alta. Solo GASTO_GENERAL llega aquí con
+     * partida: PAGO_DEUDA se delega antes en DeudaService y los ingresos no
+     * admiten partida (T10c, sección 8).
+     */
+    private PartidaPlan resolverPartidaDeAlta(TipoMovimiento tipo, Long partidaId, Long categoriaId) {
+        if (partidaId == null) {
+            return null;
+        }
+        if (tipo != TipoMovimiento.GASTO_GENERAL) {
+            throw new DatosInvalidosException(
+                    "Solo los gastos generales y los pagos de deuda pueden imputarse a una partida.");
+        }
+        PartidaPlan partida = validadorPartidaMovimiento.resolver(partidaId, FechasMovimiento.mesActual());
+        validadorPartidaMovimiento.validarCategoriaCoincide(partida, categoriaId);
+        return partida;
     }
 
     /**
@@ -233,6 +263,39 @@ public class MovimientoService {
         Movimiento movimiento = buscarPropioOAccesoDenegado(id);
         validarEditable(movimiento);
 
+        boolean desvincular = Boolean.TRUE.equals(dto.getDesvincularPartida());
+        if (desvincular && dto.getPartidaId() != null) {
+            throw new DatosInvalidosException(
+                    "No puedes indicar partidaId y desvincularPartida en la misma edición.");
+        }
+
+        PartidaPlan partidaActual = movimiento.getPartida();
+        PartidaPlan partidaObjetivo = partidaActual;
+        if (desvincular) {
+            partidaObjetivo = null;
+        } else if (dto.getPartidaId() != null) {
+            if (movimiento.getTipoMovimiento() != TipoMovimiento.GASTO_GENERAL) {
+                throw new DatosInvalidosException(
+                        "Solo los gastos generales pueden imputarse a una partida.");
+            }
+            partidaObjetivo = validadorPartidaMovimiento.resolver(
+                    dto.getPartidaId(), FechasMovimiento.mesDe(movimiento.getFecha()));
+            validadorPartidaMovimiento.validarCategoriaCoincide(partidaObjetivo, dto.getCategoriaId());
+        }
+
+        if (dto.getCategoriaId() != null) {
+            // Con partida vigente, cambiar la categoría exige quitarla antes
+            // (el PUT parcial no distingue "null" de "no enviado").
+            if (partidaActual != null && !desvincular && dto.getPartidaId() == null
+                    && !dto.getCategoriaId().equals(partidaActual.getCategoria().getId())) {
+                throw new DatosInvalidosException(
+                        "Cambia la partida o desvincula el gasto antes de cambiar la categoría.");
+            }
+            if (partidaObjetivo != null) {
+                validadorPartidaMovimiento.validarCategoriaCoincide(partidaObjetivo, dto.getCategoriaId());
+            }
+        }
+
         // Edición parcial (T4): solo se tocan los campos que el cliente envía.
         if (dto.getDescripcion() != null) {
             movimiento.setDescripcion(dto.getDescripcion());
@@ -241,7 +304,17 @@ public class MovimientoService {
             movimiento.setMonto(SignoMovimiento.aplicar(movimiento.getTipoMovimiento(), dto.getMonto()));
         }
         if (dto.getCategoriaId() != null) {
-            movimiento.setCategoria(resolverCategoria(dto.getCategoriaId()));
+            if (partidaObjetivo != null) {
+                movimiento.setCategoria(partidaObjetivo.getCategoria());
+            } else {
+                movimiento.setCategoria(resolverCategoria(dto.getCategoriaId()));
+            }
+        }
+        if (desvincular) {
+            movimiento.setPartida(null);
+        } else if (dto.getPartidaId() != null && partidaObjetivo != null) {
+            movimiento.setPartida(partidaObjetivo);
+            movimiento.setCategoria(partidaObjetivo.getCategoria());
         }
 
         return convertirAEntidadResponseDTO(movimientoRepository.save(movimiento));

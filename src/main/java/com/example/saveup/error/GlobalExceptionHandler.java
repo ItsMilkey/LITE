@@ -135,6 +135,14 @@ public class GlobalExceptionHandler {
                 request, List.of(), null);
     }
 
+    /** Validación de cuerpo detectada en el servicio (nombre, lote, duplicados). */
+    @ExceptionHandler(ValidacionFallidaException.class)
+    public ResponseEntity<ProblemDetail> validacionFallidaDeDominio(ValidacionFallidaException ex,
+                                                                    HttpServletRequest request) {
+        return respuesta(CodigoError.VALIDACION_FALLIDA, null, HttpStatus.BAD_REQUEST,
+                request, ex.getErrores(), null);
+    }
+
     /**
      * El {@code detail} solo muestra mensajes escritos por el repo
      * ({@link DatosInvalidosException} y {@link CalculoFinancieroException}).

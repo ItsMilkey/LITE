@@ -24,6 +24,7 @@ import com.example.saveup.repository.DeudaRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.SecurityUtils;
+import com.example.saveup.service.plan.ValidadorPartidaMovimiento;
 import com.example.saveup.service.finanzas.CondicionesCredito;
 import com.example.saveup.service.finanzas.CuotaAmortizacion;
 import com.example.saveup.service.finanzas.ImputacionPagos;
@@ -64,6 +65,8 @@ class DeudaServiceTest {
     private CategoriaRepository categoriaRepository;
     @Mock
     private SecurityUtils securityUtils;
+    @Mock
+    private ValidadorPartidaMovimiento validadorPartidaMovimiento;
 
     private DeudaService deudaService;
 
@@ -73,7 +76,7 @@ class DeudaServiceTest {
     @BeforeEach
     void setUp() {
         deudaService = new DeudaService(deudaRepository, usuarioRepository, movimientoRepository,
-                categoriaRepository, securityUtils, new MotorFinanciero());
+                categoriaRepository, securityUtils, new MotorFinanciero(), validadorPartidaMovimiento);
 
         usuario = new Usuario();
         usuario.setRut(RUT);

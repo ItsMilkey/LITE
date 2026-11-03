@@ -30,4 +30,14 @@ public class MovimientoEdicionDTO {
 
     @Schema(description = "Nueva categoría del movimiento.")
     private Long categoriaId;
+
+    @Schema(description = "Partida del plan a la que se imputa el gasto (T10c).")
+    private Long partidaId;
+
+    /**
+     * El PUT es parcial y los nulos significan "no enviado": para quitar la
+     * partida hay que mandar {@code true} explícitamente (T10c).
+     */
+    @Schema(description = "true para quitar la partida actual del movimiento.")
+    private Boolean desvincularPartida;
 }

@@ -5,6 +5,7 @@ import com.example.saveup.dto.SugerenciaCategoriaResponseDTO;
 import com.example.saveup.model.Categoria;
 import com.example.saveup.model.enums.ContextoSugerencia;
 import com.example.saveup.model.enums.MotivoSugerencia;
+import com.example.saveup.service.plan.NombrePartida;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -71,7 +72,9 @@ public class SugeridorCategoria {
         }
 
         if (historial != null && rut != null) {
-            historial.codigoPara(rut, NormalizadorTexto.normalizarTokens(texto))
+            // T10c: el historial usa la normalización de partidas (sin quitar
+            // palabras vacías ni puntuación), no la del diccionario.
+            historial.codigoPara(rut, NombrePartida.normalizar(texto))
                     .filter(permitidas::containsKey)
                     .ifPresent(codigo -> mejores.merge(codigo,
                             new Puntaje(CONFIANZA_HISTORIAL, MotivoSugerencia.HISTORIAL),

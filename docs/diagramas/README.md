@@ -27,6 +27,7 @@ Un archivo por diagrama. Todos los bloques `mermaid` están verificados: renderi
 | 14 | [Flujo: abono a meta](14-flujo-abono-meta.md) | `sequenceDiagram` | ¿Cómo se abona, retira y reintegra una meta? | `MetaAhorroController`, `MetaAhorroService`, `SignoMovimiento`, `MetaAhorroRepository` | `446a9f5` | — |
 | 15 | [Casos de uso](15-casos-de-uso.md) | `flowchart` | ¿Qué casos de uso cubre cada módulo? | `docs/CONTEXT.md`, `controller/**`, `docs/tareas/T0..T5`, `T1d` | `446a9f5` | — |
 | 16 | [Flujo: sugerencia de categoría](16-flujo-sugerencia-categoria.md) | `sequenceDiagram` | ¿Cómo se convierte un texto libre en hasta 3 categorías? | `CategoriaController`, `SugerenciaCategoriaService`, `SugeridorCategoria`, `DiccionarioCategorias`, `NormalizadorTexto` | T10b | — |
+| 17 | [Flujo: plan del mes](17-flujo-plan-mensual.md) | `sequenceDiagram` | ¿Cómo se arma el plan, se guardan partidas y montos, se copia un mes y se vincula un movimiento? | `PlanController`, `PlanService`, `CalculadoraPlan`, `MesPlan`, `ValidadorPartidaMovimiento`, `MovimientoRepository` | T10c | — |
 
 ## Validación
 
@@ -90,6 +91,6 @@ Si el código contradice a un doc, gana el código y se anota abajo.
 
 ## Historias de usuario
 
-- Catálogo en [`../historias-de-usuario/README.md`](../historias-de-usuario/README.md): **24 / 24** casos de uso
-  cubiertos (UC1–UC24), con trazabilidad HU ↔ caso de uso ↔ endpoint ↔ tarea y marca de estado
+- Catálogo en [`../historias-de-usuario/README.md`](../historias-de-usuario/README.md): **25 / 25** casos de uso
+  cubiertos (UC1–UC25), con trazabilidad HU ↔ caso de uso ↔ endpoint ↔ tarea y marca de estado
   (**implementada / parcial / backlog**).

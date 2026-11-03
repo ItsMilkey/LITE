@@ -38,6 +38,9 @@ public class MovimientoRegistroDTO {
     @Schema(description = "ID de la categoría seleccionada.")
     private Long categoriaId; // ID de la categoría seleccionada
 
+    @Schema(description = "ID de la partida del plan del mes a la que se imputa el gasto (T10c).")
+    private Long partidaId; // Opcional: solo GASTO_GENERAL y PAGO_DEUDA
+
     @Schema(description = "Si es true, aplica Smart-Split al ingreso.", defaultValue = "false")
     private Boolean aplicarPresupuesto = false; // Nuevo campo para Smart-Split
 }

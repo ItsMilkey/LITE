@@ -32,6 +32,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -279,7 +280,7 @@ class MovimientoServiceTest {
         dto.setDeudaId(7L);
 
         when(securityUtils.getAuthenticatedRut()).thenReturn("12345678-9");
-        when(deudaService.registrarPago(eq(7L), any(PagoDeudaDTO.class)))
+        when(deudaService.registrarPago(eq(7L), any(PagoDeudaDTO.class), isNull()))
                 .thenReturn(new DeudaService.ResultadoPago(null, movimientoPago(-20000L)));
 
         MovimientoResponseDTO response = movimientoService.registrarMovimiento(dto);
@@ -288,7 +289,7 @@ class MovimientoServiceTest {
                 "El movimiento lo crea DeudaService con el signo canónico");
 
         ArgumentCaptor<PagoDeudaDTO> captor = ArgumentCaptor.forClass(PagoDeudaDTO.class);
-        verify(deudaService).registrarPago(eq(7L), captor.capture());
+        verify(deudaService).registrarPago(eq(7L), captor.capture(), isNull());
         assertEquals(0, new java.math.BigDecimal("20000.00").compareTo(captor.getValue().getMonto()),
                 "El monto viaja en positivo: el signo lo impone el servicio de deudas");
         assertEquals(ModoPago.MONTO_PERSONALIZADO, captor.getValue().getModoPago());
@@ -307,13 +308,13 @@ class MovimientoServiceTest {
         dto.setDeudaId(7L);
 
         when(securityUtils.getAuthenticatedRut()).thenReturn("12345678-9");
-        when(deudaService.registrarPago(eq(7L), any(PagoDeudaDTO.class)))
+        when(deudaService.registrarPago(eq(7L), any(PagoDeudaDTO.class), isNull()))
                 .thenReturn(new DeudaService.ResultadoPago(null, movimientoPago(-20000L)));
 
         movimientoService.registrarMovimiento(dto);
 
         ArgumentCaptor<PagoDeudaDTO> captor = ArgumentCaptor.forClass(PagoDeudaDTO.class);
-        verify(deudaService).registrarPago(eq(7L), captor.capture());
+        verify(deudaService).registrarPago(eq(7L), captor.capture(), isNull());
         assertEquals(0, new java.math.BigDecimal("20000.00").compareTo(captor.getValue().getMonto()),
                 "abs(): las dos rutas de entrada producen el mismo pago");
     }

@@ -52,6 +52,15 @@ public class Movimiento {
     private MetaAhorro metaAhorro;
 
     /**
+     * Partida del plan del mes a la que se imputa este gasto (T10c). Es
+     * opcional: si falta, el gasto se imputa por categoría o queda "sin
+     * planificar". Solo los gastos y pagos de deuda pueden llevarla.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "PARTIDA_ID")
+    private PartidaPlan partida;
+
+    /**
      * Movimiento que originó a este (T4). Smart-Split deja aquí el
      * INGRESO_GENERAL cuyos abonos automáticos son este movimiento. Es null en
      * todo movimiento que no provenga de Smart-Split, incluido el histórico.
