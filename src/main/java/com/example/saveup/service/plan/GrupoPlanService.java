@@ -28,7 +28,6 @@ import java.util.regex.Pattern;
 public class GrupoPlanService {
 
     static final int MAX_GRUPOS = 20;
-    static final int MAX_CARACTERES_NOMBRE = 60;
     private static final Pattern CARACTERES_CONTROL = Pattern.compile("\\p{Cntrl}");
     private static final String MENSAJE_DUPLICADO =
             "Ya tienes un grupo con ese nombre.";
@@ -118,7 +117,7 @@ public class GrupoPlanService {
         return grupo;
     }
 
-    /** Recorta y valida el nombre (1 a 60, sin caracteres de control). */
+    /** Recorta el nombre y rechaza caracteres de control; el formato lo valida el DTO. */
     static String validarNombre(String nombre) {
         if (nombre == null) {
             throw new ValidacionFallidaException("nombre", "El nombre del grupo es obligatorio.");
@@ -126,10 +125,6 @@ public class GrupoPlanService {
         String recortado = nombre.trim();
         if (recortado.isEmpty()) {
             throw new ValidacionFallidaException("nombre", "El nombre del grupo es obligatorio.");
-        }
-        if (recortado.length() > MAX_CARACTERES_NOMBRE) {
-            throw new ValidacionFallidaException("nombre",
-                    "El nombre del grupo no puede superar los " + MAX_CARACTERES_NOMBRE + " caracteres.");
         }
         if (CARACTERES_CONTROL.matcher(recortado).find()) {
             throw new ValidacionFallidaException("nombre",

@@ -633,6 +633,17 @@ class PlanIntegracionTest {
                                 + ",\"partidaId\":" + partidaAlimentacion + "}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
+
+        // Partida DEUDAS con categoriaId explícita de otra categoría: también 400.
+        mockMvc.perform(post("/api/v1/movimientos")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"monto\":10000,\"descripcion\":\"Cuota\","
+                                + "\"tipoMovimiento\":\"PAGO_DEUDA\",\"deudaId\":" + deuda.getId()
+                                + ",\"partidaId\":" + partidaDeudas
+                                + ",\"categoriaId\":" + alimentacion.getId() + "}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
     }
 
     @Test

@@ -2,10 +2,12 @@ package com.example.saveup.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.util.Date;
 
 /**
  * Plan de un mes de calendario (T10c). Un usuario tiene como máximo un plan
@@ -14,6 +16,11 @@ import java.util.Date;
  *
  * <p>{@code mes} siempre es el día 1; el CHECK {@code chk_plan_mes_dia1} de la
  * migración V14 lo garantiza.
+ *
+ * <p>Los timestamps son {@link Instant} y se guardan en columnas
+ * {@code TIMESTAMP} en UTC ({@code hibernate.jdbc.time_zone=UTC}), igual que el
+ * resto de la base: la entidad no mezcla {@code java.util.Date} con
+ * {@code java.time} (regla 20-java-spring).
  */
 @Entity
 @Table(name = "PLAN_MENSUAL",
@@ -39,13 +46,13 @@ public class PlanMensual {
     @Column(name = "INGRESO_REFERENCIA", precision = 19, scale = 2)
     private BigDecimal ingresoReferencia;
 
+    @JdbcTypeCode(SqlTypes.TIMESTAMP)
     @Column(name = "CREADO_EN", nullable = false, updatable = false)
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date creadoEn;
+    private Instant creadoEn;
 
+    @JdbcTypeCode(SqlTypes.TIMESTAMP)
     @Column(name = "ACTUALIZADO_EN", nullable = false)
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date actualizadoEn;
+    private Instant actualizadoEn;
 
     /** Constructor sin argumentos requerido por JPA/Hibernate. */
     public PlanMensual() {
@@ -53,7 +60,7 @@ public class PlanMensual {
 
     @PrePersist
     protected void onCreate() {
-        Date ahora = new Date();
+        Instant ahora = Instant.now();
         if (this.creadoEn == null) {
             this.creadoEn = ahora;
         }
@@ -64,6 +71,6 @@ public class PlanMensual {
 
     @PreUpdate
     protected void onUpdate() {
-        this.actualizadoEn = new Date();
+        this.actualizadoEn = Instant.now();
     }
 }

@@ -3,15 +3,19 @@ package com.example.saveup.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.math.BigDecimal;
 
-/** Creación de una partida (T10c). El nombre se valida en el servicio tras recortarlo. */
+/** Creación de una partida (T10c). El nombre se recorta en el servicio. */
 @Data
 @Schema(description = "Datos para crear una partida del plan.")
 public class PartidaCreacionDTO {
 
+    @NotBlank(message = "El nombre de la partida es obligatorio")
+    @Size(max = 80, message = "El nombre no puede superar los 80 caracteres")
     @Schema(description = "Nombre libre de la partida (1 a 80 caracteres).",
             requiredMode = Schema.RequiredMode.REQUIRED)
     private String nombre;

@@ -96,7 +96,7 @@ sequenceDiagram
     C-->>U: 200 (existe:false si el mes no tiene plan; guia:null sin configuracion)
 
     Note over U,P: Crear o editar una partida
-    U->>C: POST o PUT /api/v1/planes/{mes}/partidas (grupoId? / deudaId? / quitarGrupo?)
+    U->>C: POST /partidas (grupoId? / deudaId?) o PUT /partidas/{id} (grupoId? / quitarGrupo?)
     C->>P: crearPartida o editarPartida
     P->>MP: parsear(mes)
     opt deudaId llega

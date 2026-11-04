@@ -5,6 +5,7 @@ import com.example.saveup.dto.MetaAhorroCreacionDTO;
 import com.example.saveup.dto.MetaAhorroResponseDTO;
 import com.example.saveup.error.CodigoError;
 import com.example.saveup.error.ErrorNegocio;
+import com.example.saveup.model.CodigoCategoria;
 import com.example.saveup.model.MetaAhorro;
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.Usuario;
@@ -88,7 +89,7 @@ public class MetaAhorroService {
         abono.setDescripcion(dto.getDescripcion());
 
         // ASIGNAR CATEGORÍA AHORRO
-        categoriaRepository.findByCodigo("AHORRO").ifPresent(abono::setCategoria);
+        categoriaRepository.findByCodigo(CodigoCategoria.AHORRO).ifPresent(abono::setCategoria);
 
         movimientoRepository.save(abono);
 
@@ -126,7 +127,7 @@ public class MetaAhorroService {
         retiro.setDescripcion(dto.getDescripcion());
 
         // ASIGNAR CATEGORÍA AHORRO
-        categoriaRepository.findByCodigo("AHORRO").ifPresent(retiro::setCategoria);
+        categoriaRepository.findByCodigo(CodigoCategoria.AHORRO).ifPresent(retiro::setCategoria);
 
         movimientoRepository.save(retiro);
 

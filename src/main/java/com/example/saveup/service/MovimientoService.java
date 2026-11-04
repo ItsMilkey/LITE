@@ -160,7 +160,16 @@ public class MovimientoService {
         pago.setDescripcion(dto.getDescripcion());
         pago.setModoPago(ModoPago.MONTO_PERSONALIZADO);
 
-        return deudaService.registrarPago(dto.getDeudaId(), pago, dto.getPartidaId()).movimiento();
+        Long partidaId = dto.getPartidaId();
+        if (partidaId != null) {
+            // T10c §8: si el cliente manda categoría junto con la partida, debe
+            // coincidir con la de la partida; DeudaService revalida el vínculo.
+            PartidaPlan partida = validadorPartidaMovimiento.resolverPagoDeuda(
+                    partidaId, FechasMovimiento.mesActual());
+            validadorPartidaMovimiento.validarCategoriaCoincide(partida, dto.getCategoriaId());
+        }
+
+        return deudaService.registrarPago(dto.getDeudaId(), pago, partidaId).movimiento();
     }
 
     /**

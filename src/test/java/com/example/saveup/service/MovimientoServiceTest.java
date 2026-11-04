@@ -3,8 +3,10 @@ package com.example.saveup.service;
 import com.example.saveup.dto.MovimientoRegistroDTO;
 import com.example.saveup.dto.MovimientoResponseDTO;
 import com.example.saveup.dto.PagoDeudaDTO;
+import com.example.saveup.error.DatosInvalidosException;
 import com.example.saveup.model.Categoria;
 import com.example.saveup.model.Movimiento;
+import com.example.saveup.model.PartidaPlan;
 import com.example.saveup.model.Usuario;
 import com.example.saveup.model.enums.ModoPago;
 import com.example.saveup.model.enums.TipoMovimiento;
@@ -13,6 +15,7 @@ import com.example.saveup.repository.CategoriaRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.SecurityUtils;
+import com.example.saveup.service.plan.ValidadorPartidaMovimiento;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.time.Instant;
 import java.util.Date;
@@ -55,6 +59,9 @@ class MovimientoServiceTest {
 
     @Mock
     private DeudaService deudaService;
+
+    @Mock
+    private ValidadorPartidaMovimiento validadorPartidaMovimiento;
 
     @InjectMocks
     private MovimientoService movimientoService;
@@ -331,6 +338,30 @@ class MovimientoServiceTest {
 
         assertThrows(IllegalArgumentException.class, () -> movimientoService.registrarMovimiento(dto));
         verifyNoInteractions(movimientoRepository, deudaService);
+    }
+
+    @Test
+    @DisplayName("T10c: PAGO_DEUDA con partidaId y categoriaId distinta → 400 antes de delegar")
+    void registrarMovimiento_pagoDeudaConCategoriaIncoherente_rechazado() {
+        MovimientoRegistroDTO dto = new MovimientoRegistroDTO();
+        dto.setMonto(new java.math.BigDecimal("20000.00"));
+        dto.setDescripcion("Cuota");
+        dto.setTipoMovimiento(TipoMovimiento.PAGO_DEUDA);
+        dto.setDeudaId(7L);
+        dto.setPartidaId(5L);
+        dto.setCategoriaId(9L);
+
+        PartidaPlan partida = new PartidaPlan();
+        partida.setCategoria(new Categoria(8L, "DEUDAS", "Pago de Deudas", "ic_payment", "#795548",
+                TipoPresupuesto.NECESIDAD));
+        when(securityUtils.getAuthenticatedRut()).thenReturn("12345678-9");
+        when(validadorPartidaMovimiento.resolverPagoDeuda(eq(5L), any(YearMonth.class)))
+                .thenReturn(partida);
+        doThrow(new DatosInvalidosException("La categoría no coincide con la de la partida."))
+                .when(validadorPartidaMovimiento).validarCategoriaCoincide(partida, 9L);
+
+        assertThrows(DatosInvalidosException.class, () -> movimientoService.registrarMovimiento(dto));
+        verifyNoInteractions(deudaService);
     }
 
     private MovimientoResponseDTO movimientoPago(long monto) {

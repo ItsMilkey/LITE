@@ -1,5 +1,7 @@
 package com.example.saveup.model.enums;
 
+import com.example.saveup.model.CodigoCategoria;
+
 /**
  * Contexto de una sugerencia de categoría (T10b).
  *
@@ -19,8 +21,10 @@ public enum ContextoSugerencia {
             return false;
         }
         return switch (this) {
-            case GASTO -> !"SUELDO".equals(codigo) && !"AHORRO".equals(codigo);
-            case INGRESO -> "SUELDO".equals(codigo) || "OTROS".equals(codigo);
+            case GASTO -> !CodigoCategoria.SUELDO.equals(codigo)
+                    && !CodigoCategoria.AHORRO.equals(codigo);
+            case INGRESO -> CodigoCategoria.SUELDO.equals(codigo)
+                    || CodigoCategoria.OTROS.equals(codigo);
         };
     }
 }

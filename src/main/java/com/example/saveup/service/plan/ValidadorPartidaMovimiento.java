@@ -1,6 +1,7 @@
 package com.example.saveup.service.plan;
 
 import com.example.saveup.error.DatosInvalidosException;
+import com.example.saveup.model.CodigoCategoria;
 import com.example.saveup.model.PartidaPlan;
 import com.example.saveup.repository.PartidaPlanRepository;
 import com.example.saveup.security.SecurityUtils;
@@ -47,7 +48,7 @@ public class ValidadorPartidaMovimiento {
     /** Igual que {@link #resolver}, pero exige que la partida sea de la categoría DEUDAS. */
     public PartidaPlan resolverPagoDeuda(Long partidaId, YearMonth mes) {
         PartidaPlan partida = resolver(partidaId, mes);
-        if (!"DEUDAS".equals(partida.getCategoria().getCodigo())) {
+        if (!CodigoCategoria.DEUDAS.equals(partida.getCategoria().getCodigo())) {
             throw new DatosInvalidosException(
                     "Un pago de deuda solo puede imputarse a una partida de la categoría Pago de Deudas.");
         }

@@ -2,6 +2,7 @@ package com.example.saveup.service;
 
 import com.example.saveup.model.AsignacionMetaPresupuesto;
 import com.example.saveup.model.Categoria;
+import com.example.saveup.model.CodigoCategoria;
 import com.example.saveup.model.ConfiguracionPresupuesto;
 import com.example.saveup.model.MetaAhorro;
 import com.example.saveup.model.Movimiento;
@@ -172,7 +173,7 @@ public class SmartSplitProcessor {
     }
 
     private Categoria resolverCategoriaAhorro() {
-        return categoriaRepository.findByCodigo("AHORRO")
+        return categoriaRepository.findByCodigo(CodigoCategoria.AHORRO)
                 .orElseGet(() -> {
                     List<Categoria> savings = categoriaRepository.findByTipoPresupuesto(TipoPresupuesto.AHORRO);
                     return savings.isEmpty() ? null : savings.get(0);

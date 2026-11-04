@@ -35,6 +35,12 @@ public class SugeridorRegla {
     private static final BigDecimal CINCO = new BigDecimal("5");
     private static final BigDecimal CERO = BigDecimal.ZERO;
 
+    /** Divisor para promediar los dos valores centrales de una mediana par. */
+    private static final BigDecimal DOS = new BigDecimal("2");
+
+    /** Pasos de 5 puntos que suman 100 (100 / 5). */
+    private static final int PASOS_TOTALES = 20;
+
     /** Serie de un mes cerrado ya agregada; porcentajes y medias los calcula esta clase. */
     public record MesSerie(String mes, BigDecimal ingresoReal,
                            BigDecimal gastoNecesidades, BigDecimal gastoDeseos) {
@@ -124,7 +130,7 @@ public class SugeridorRegla {
             return porcentajes.get(centro);
         }
         return porcentajes.get(centro - 1).add(porcentajes.get(centro))
-                .divide(new BigDecimal("2"), DECIMALES_INTERNOS, RoundingMode.HALF_UP);
+                .divide(DOS, DECIMALES_INTERNOS, RoundingMode.HALF_UP);
     }
 
     /**
@@ -143,7 +149,7 @@ public class SugeridorRegla {
             totalPasos = totalPasos.add(pasosValor);
             restos[i] = valores[i].subtract(pasosValor.multiply(CINCO)); // fracción de paso, en 0..5
         }
-        int pasosQueFaltan = 20 - totalPasos.intValueExact();
+        int pasosQueFaltan = PASOS_TOTALES - totalPasos.intValueExact();
         for (int i = 0; i < pasosQueFaltan; i++) {
             int elegido = indiceMayorResto(restos);
             pasos[elegido] = pasos[elegido].add(BigDecimal.ONE);

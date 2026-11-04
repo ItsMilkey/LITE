@@ -108,6 +108,25 @@ class ReferenciaPlanIntegracionTest {
     }
 
     @Test
+    @DisplayName("D49b: un gasto del 31-oct 23:30 en Santiago cuenta en octubre para la referencia")
+    void referenciaLimiteDeMesEnSantiago() throws Exception {
+        crearPartida(MES, "Supermercado", "250000.00");
+        gasto(LocalDate.of(2026, 9, 10), "-100000.00");
+        gasto(LocalDate.of(2026, 10, 10), "-50000.00");
+        // 2026-11-01T02:30Z = 2026-10-31T23:30 en America/Santiago: sigue siendo octubre.
+        gasto(Date.from(LocalDate.of(2026, 10, 31).atTime(23, 30)
+                .atZone(FechasMovimiento.zona()).toInstant()), "-70000.00");
+
+        mockMvc.perform(get("/api/v1/planes/{mes}", MES)
+                        .param("incluirReferencias", "true")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.porCategoria.length()").value(1))
+                .andExpect(jsonPath("$.porCategoria[0].referencia.mesAnterior").value(120000.00))
+                .andExpect(jsonPath("$.porCategoria[0].referencia.promedio3Meses").value(110000.00));
+    }
+
+    @Test
     @DisplayName("D48: un usuario cuyo primer movimiento es este mes no recibe referencia")
     void d48_primerMovimientoEsteMes() throws Exception {
         YearMonth mesActual = FechasMovimiento.mesActual();
@@ -138,10 +157,14 @@ class ReferenciaPlanIntegracionTest {
     }
 
     private void gasto(LocalDate fecha, String monto) {
+        gasto(Date.from(fecha.atTime(12, 0)
+                .atZone(ZoneId.of("America/Santiago")).toInstant()), monto);
+    }
+
+    private void gasto(Date fecha, String monto) {
         Movimiento movimiento = new Movimiento();
         movimiento.setUsuario(usuario);
-        movimiento.setFecha(Date.from(fecha.atTime(12, 0)
-                .atZone(ZoneId.of("America/Santiago")).toInstant()));
+        movimiento.setFecha(fecha);
         movimiento.setTipoMovimiento(TipoMovimiento.GASTO_GENERAL);
         movimiento.setMonto(new BigDecimal(monto));
         movimiento.setCategoria(alimentacion);

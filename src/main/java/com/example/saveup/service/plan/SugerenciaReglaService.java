@@ -2,7 +2,10 @@ package com.example.saveup.service.plan;
 
 import com.example.saveup.dto.PorcentajesReglaDTO;
 import com.example.saveup.dto.SugerenciaReglaResponseDTO;
+import com.example.saveup.model.Categoria;
 import com.example.saveup.model.ConfiguracionPresupuesto;
+import com.example.saveup.model.Movimiento;
+import com.example.saveup.model.enums.TipoMovimiento;
 import com.example.saveup.model.enums.TipoPresupuesto;
 import com.example.saveup.repository.ConfiguracionPresupuestoRepository;
 import com.example.saveup.repository.MovimientoRepository;
@@ -15,8 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,8 +34,9 @@ import java.util.Map;
  * curso (zona America/Santiago) con {@code ingresoReal > 0}; el recorrido se
  * detiene a los 24 meses. Un mes sin ingresos no aporta: ni entra a la serie.
  *
- * <p>Consultas: las preferencias se cargan una vez; por cada mes con ingresos
- * van dos consultas agregadas (ingreso real y gasto por categoría).
+ * <p>Consultas: las preferencias se cargan una vez y los movimientos de la
+ * ventana se traen en una sola consulta; la agrupación por mes se hace en
+ * memoria con {@link FechasMovimiento#mesDe}, que usa America/Santiago.
  */
 @Service
 public class SugerenciaReglaService {
@@ -77,43 +83,69 @@ public class SugerenciaReglaService {
     /** Serie: hasta 3 meses cerrados con ingresos, recorriendo hasta 24 meses atrás. */
     private List<MesSerie> serie(String rut, Map<Long, TipoPresupuesto> preferencias) {
         YearMonth actual = FechasMovimiento.mesActual();
+        YearMonth desde = actual.minusMonths(MESES_RECORRIDO_MAXIMO);
+        List<Movimiento> movimientos = movimientoRepository.movimientosDelRango(
+                rut, FechasMovimiento.inicioDeMes(desde), FechasMovimiento.inicioDeMes(actual));
+
+        Map<YearMonth, AcumuladoMes> porMes = new HashMap<>();
+        for (Movimiento movimiento : movimientos) {
+            YearMonth mes = FechasMovimiento.mesDe(movimiento.getFecha());
+            AcumuladoMes acumulado = porMes.computeIfAbsent(mes, clave -> new AcumuladoMes());
+            switch (movimiento.getTipoMovimiento()) {
+                case INGRESO_GENERAL -> acumulado.sumarIngreso(movimiento.getMonto());
+                case GASTO_GENERAL, PAGO_DEUDA -> acumulado.sumarGasto(
+                        movimiento.getMonto(), movimiento.getCategoria(), preferencias);
+                default -> {
+                    // ABONO_META y RETIRO_META no participan de la sugerencia (DC14).
+                }
+            }
+        }
+
         List<MesSerie> serie = new ArrayList<>(MESES_OBJETIVO);
         for (int i = 1; i <= MESES_RECORRIDO_MAXIMO && serie.size() < MESES_OBJETIVO; i++) {
             YearMonth mes = actual.minusMonths(i);
-            BigDecimal ingresoReal = movimientoRepository.ingresoRealDelMes(
-                    rut,
-                    FechasMovimiento.inicioDeMes(mes),
-                    FechasMovimiento.inicioDeMesSiguiente(mes));
-            if (ingresoReal == null || ingresoReal.signum() <= 0) {
+            AcumuladoMes acumulado = porMes.get(mes);
+            if (acumulado == null || acumulado.ingreso.signum() <= 0) {
                 continue;
             }
             serie.add(new MesSerie(
                     mes.toString(),
-                    ingresoReal,
-                    gastoDelTipo(rut, mes, TipoPresupuesto.NECESIDAD, preferencias),
-                    gastoDelTipo(rut, mes, TipoPresupuesto.DESEO, preferencias)));
+                    dinero(acumulado.ingreso),
+                    dinero(acumulado.necesidades),
+                    dinero(acumulado.deseos)));
         }
         return serie;
     }
 
-    /** Gasto en el mes del tipo efectivo pedido; OTROS no se cuenta (criterio de T5). */
-    private BigDecimal gastoDelTipo(String rut, YearMonth mes, TipoPresupuesto tipoBuscado,
-                                    Map<Long, TipoPresupuesto> preferencias) {
-        List<Object[]> filas = movimientoRepository.gastoPorCategoriaDelMes(
-                rut,
-                FechasMovimiento.inicioDeMes(mes),
-                FechasMovimiento.inicioDeMesSiguiente(mes));
-        BigDecimal total = BigDecimal.ZERO;
-        for (Object[] fila : filas) {
-            Long categoriaId = (Long) fila[0];
-            TipoPresupuesto tipoPorDefecto = (TipoPresupuesto) fila[1];
-            BigDecimal monto = (BigDecimal) fila[2];
-            TipoPresupuesto efectivo = preferencias.getOrDefault(categoriaId, tipoPorDefecto);
-            if (efectivo == tipoBuscado) {
-                total = total.add(monto);
+    /** Acumulado de un mes; el tipo efectivo se resuelve al recorrer cada gasto. */
+    private static final class AcumuladoMes {
+        private BigDecimal ingreso = BigDecimal.ZERO;
+        private BigDecimal necesidades = BigDecimal.ZERO;
+        private BigDecimal deseos = BigDecimal.ZERO;
+
+        private void sumarIngreso(BigDecimal monto) {
+            if (monto != null && monto.signum() > 0) {
+                ingreso = ingreso.add(monto);
             }
         }
-        return total;
+
+        private void sumarGasto(BigDecimal monto, Categoria categoria,
+                                Map<Long, TipoPresupuesto> preferencias) {
+            if (monto == null || categoria == null) {
+                return;
+            }
+            TipoPresupuesto efectivo = PreferenciaTipoService.tipoEfectivo(preferencias, categoria);
+            BigDecimal gasto = monto.abs();
+            if (efectivo == TipoPresupuesto.NECESIDAD) {
+                necesidades = necesidades.add(gasto);
+            } else if (efectivo == TipoPresupuesto.DESEO) {
+                deseos = deseos.add(gasto);
+            }
+        }
+    }
+
+    private static BigDecimal dinero(BigDecimal valor) {
+        return valor.setScale(2, RoundingMode.HALF_UP);
     }
 
     private static SugerenciaReglaResponseDTO aDTO(Resultado resultado) {

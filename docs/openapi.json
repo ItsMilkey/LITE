@@ -2555,8 +2555,8 @@
           "required" : true
         },
         "responses" : {
-          "200" : {
-            "description" : "El dispositivo ya existía y se refrescó",
+          "201" : {
+            "description" : "Dispositivo registrado",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -2565,8 +2565,8 @@
               }
             }
           },
-          "201" : {
-            "description" : "Dispositivo registrado",
+          "200" : {
+            "description" : "El dispositivo ya existía y se refrescó",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -5813,6 +5813,8 @@
         "type" : "object",
         "properties" : {
           "nombre" : {
+            "maxLength" : 80,
+            "minLength" : 0,
             "type" : "string",
             "description" : "Nuevo nombre libre de la partida."
           },
@@ -5829,11 +5831,6 @@
           "quitarGrupo" : {
             "type" : "boolean",
             "description" : "true quita el grupo de la partida. Prohibido junto con grupoId."
-          },
-          "deudaId" : {
-            "type" : "integer",
-            "description" : "ID de la deuda a vincular. Solo si la partida aún no tiene deuda.",
-            "format" : "int64"
           }
         },
         "description" : "Edición parcial de una partida; al menos un campo es obligatorio."
@@ -6255,10 +6252,13 @@
         "type" : "object",
         "properties" : {
           "nombre" : {
+            "maxLength" : 60,
+            "minLength" : 0,
             "type" : "string",
             "description" : "Nuevo nombre del grupo."
           },
           "orden" : {
+            "minimum" : 0,
             "type" : "integer",
             "description" : "Nuevo orden de presentación.",
             "format" : "int32"
@@ -7174,6 +7174,8 @@
         "type" : "object",
         "properties" : {
           "nombre" : {
+            "maxLength" : 80,
+            "minLength" : 0,
             "type" : "string",
             "description" : "Nombre libre de la partida (1 a 80 caracteres)."
           },
@@ -7206,10 +7208,13 @@
         "type" : "object",
         "properties" : {
           "nombre" : {
+            "maxLength" : 60,
+            "minLength" : 0,
             "type" : "string",
             "description" : "Nombre del grupo (1 a 60 caracteres)."
           },
           "orden" : {
+            "minimum" : 0,
             "type" : "integer",
             "description" : "Orden de presentación; si se omite usa 0.",
             "format" : "int32"

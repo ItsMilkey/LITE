@@ -12,6 +12,7 @@ import com.example.saveup.error.CodigoError;
 import com.example.saveup.error.DatosInvalidosException;
 import com.example.saveup.error.ErrorNegocio;
 import com.example.saveup.model.Categoria;
+import com.example.saveup.model.CodigoCategoria;
 import com.example.saveup.model.Deuda;
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.PartidaPlan;
@@ -170,8 +171,8 @@ public class DeudaService {
                     partidaId, FechasMovimiento.mesActual());
             categoriaDeudas = partida.getCategoria();
         } else {
-            categoriaDeudas = categoriaRepository.findByCodigo("DEUDAS")
-                    .orElseThrow(() -> new IllegalStateException("La categoría DEUDAS no fue encontrada. Asegúrate de que exista en el catálogo."));
+            categoriaDeudas = categoriaRepository.findByCodigo(CodigoCategoria.DEUDAS)
+                    .orElseThrow(() -> new IllegalStateException("La categoría " + CodigoCategoria.DEUDAS + " no fue encontrada. Asegúrate de que exista en el catálogo."));
         }
 
         Movimiento pago = new Movimiento();

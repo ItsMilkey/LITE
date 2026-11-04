@@ -11,7 +11,6 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.math.BigDecimal;
 import org.springframework.stereotype.Repository;
 
 import java.util.Date;
@@ -85,62 +84,28 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long>,
     @Query("UPDATE Movimiento m SET m.partida = NULL WHERE m.partida.id = :partidaId")
     int desvincularPartida(@Param("partidaId") Long partidaId);
 
-    /**
-     * Ingreso real de un mes (T10d): suma de INGRESO_GENERAL positivo, con el
-     * mismo criterio que T5 usa para totalIncome. Una consulta por mes.
-     */
-    @Query("""
-            SELECT COALESCE(SUM(m.monto), 0) FROM Movimiento m
-            WHERE m.usuario.rut = :rut
-              AND m.tipoMovimiento = com.example.saveup.model.enums.TipoMovimiento.INGRESO_GENERAL
-              AND m.monto > 0
-              AND m.fecha >= :desde
-              AND m.fecha < :hastaExclusivo
-            """)
-    BigDecimal ingresoRealDelMes(@Param("rut") String rut,
-                                 @Param("desde") Date desde,
-                                 @Param("hastaExclusivo") Date hastaExclusivo);
-
-    /**
-     * Gasto por categoría de un mes (T10d): Σ |monto| de GASTO_GENERAL y
-     * PAGO_DEUDA agrupado por categoría con su tipo por defecto. El tipo
-     * efectivo se resuelve en memoria con las preferencias. Una consulta.
-     */
-    @Query("""
-            SELECT c.id, c.tipoPresupuesto, SUM(ABS(m.monto)) FROM Movimiento m
-            JOIN m.categoria c
-            WHERE m.usuario.rut = :rut
-              AND (m.tipoMovimiento = com.example.saveup.model.enums.TipoMovimiento.GASTO_GENERAL
-                   OR m.tipoMovimiento = com.example.saveup.model.enums.TipoMovimiento.PAGO_DEUDA)
-              AND m.fecha >= :desde
-              AND m.fecha < :hastaExclusivo
-            GROUP BY c.id, c.tipoPresupuesto
-            """)
-    List<Object[]> gastoPorCategoriaDelMes(@Param("rut") String rut,
-                                           @Param("desde") Date desde,
-                                           @Param("hastaExclusivo") Date hastaExclusivo);
-
     /** Fecha del primer movimiento del usuario; null si todavía no tiene ninguno. */
     @Query("SELECT MIN(m.fecha) FROM Movimiento m WHERE m.usuario.rut = :rut")
     Date primerMovimiento(@Param("rut") String rut);
 
     /**
-     * Gasto real por categoría y mes para las referencias históricas (T10d,
-     * sección 8): Σ |monto| de GASTO_GENERAL y PAGO_DEUDA. Una sola consulta
-     * agregada por categoría y mes sobre la ventana pedida.
+     * Movimientos de los tipos que participan en el plan y en la sugerencia
+     * (T10d), con su categoría cargada, en una ventana semiabierta. La
+     * agrupación por mes se hace en Java con {@code FechasMovimiento} para
+     * respetar la zona America/Santiago: agrupar por {@code EXTRACT(MONTH ...)}
+     * en SQL usaría el mes UTC y movería los gastos de fin de mes (T10d §8).
      */
-    @Query(value = """
-            SELECT c.id_categoria, EXTRACT(YEAR FROM m.fecha), EXTRACT(MONTH FROM m.fecha),
-                   SUM(ABS(m.monto))
-            FROM movimiento m
-            JOIN categoria c ON c.id_categoria = m.categoria_id
-            WHERE m.usuario_id = :rut
-              AND m.tipo_movimiento IN ('GASTO_GENERAL', 'PAGO_DEUDA')
+    @Query("""
+            SELECT m FROM Movimiento m
+            LEFT JOIN FETCH m.categoria
+            WHERE m.usuario.rut = :rut
+              AND (m.tipoMovimiento = com.example.saveup.model.enums.TipoMovimiento.INGRESO_GENERAL
+                   OR m.tipoMovimiento = com.example.saveup.model.enums.TipoMovimiento.GASTO_GENERAL
+                   OR m.tipoMovimiento = com.example.saveup.model.enums.TipoMovimiento.PAGO_DEUDA)
               AND m.fecha >= :desde
               AND m.fecha < :hastaExclusivo
-            GROUP BY c.id_categoria, EXTRACT(YEAR FROM m.fecha), EXTRACT(MONTH FROM m.fecha)
-            """, nativeQuery = true)
-    List<Object[]> gastoPorCategoriaYMes(@Param("rut") String rut,
+            """)
+    List<Movimiento> movimientosDelRango(@Param("rut") String rut,
                                          @Param("desde") Date desde,
                                          @Param("hastaExclusivo") Date hastaExclusivo);
 }

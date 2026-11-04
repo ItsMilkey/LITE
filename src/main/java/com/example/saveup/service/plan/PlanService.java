@@ -21,6 +21,7 @@ import com.example.saveup.error.DatosInvalidosException;
 import com.example.saveup.error.ErrorNegocio;
 import com.example.saveup.error.ValidacionFallidaException;
 import com.example.saveup.model.Categoria;
+import com.example.saveup.model.CodigoCategoria;
 import com.example.saveup.model.ConfiguracionPresupuesto;
 import com.example.saveup.model.Deuda;
 import com.example.saveup.model.GrupoPlan;
@@ -29,6 +30,7 @@ import com.example.saveup.model.PartidaPlan;
 import com.example.saveup.model.PlanMensual;
 import com.example.saveup.model.Usuario;
 import com.example.saveup.model.enums.EstadoDeuda;
+import com.example.saveup.model.enums.TipoMovimiento;
 import com.example.saveup.repository.CategoriaRepository;
 import com.example.saveup.repository.ConfiguracionPresupuestoRepository;
 import com.example.saveup.repository.DeudaRepository;
@@ -58,6 +60,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Date;
@@ -78,7 +81,6 @@ import com.example.saveup.model.enums.TipoPresupuesto;
 public class PlanService {
 
     static final int MAX_PARTIDAS = 100;
-    static final int MAX_CARACTERES_NOMBRE = 80;
     private static final int ESCALA_DINERO = 2;
     private static final RoundingMode REDONDEO = RoundingMode.HALF_UP;
     private static final Pattern CARACTERES_CONTROL = Pattern.compile("\\p{Cntrl}");
@@ -160,7 +162,7 @@ public class PlanService {
             plan = nuevoPlan(rut, mes);
         }
         plan.setIngresoReferencia(dto.getMonto() == null ? null : dinero(dto.getMonto()));
-        plan.setActualizadoEn(new Date());
+        plan.setActualizadoEn(Instant.now());
         plan = planMensualRepository.save(plan);
         return armarPlan(rut, mes, plan);
     }
@@ -238,12 +240,12 @@ public class PlanService {
         partida.setOrden(orden);
         partidaPlanRepository.save(partida);
 
-        plan.setActualizadoEn(new Date());
+        plan.setActualizadoEn(Instant.now());
         planMensualRepository.save(plan);
         return armarPlan(rut, mes, plan);
     }
 
-    /** Cambia nombre, categoría, grupo y/o deuda; las reglas de vínculo son 409. */
+    /** Cambia nombre, categoría y grupo; el vínculo con una deuda solo se crea al crear la partida. */
     @Transactional
     public PlanMensualResponseDTO editarPartida(String mesTexto, Long partidaId, PartidaEdicionDTO dto) {
         YearMonth mes = MesPlan.parsear(mesTexto);
@@ -256,10 +258,10 @@ public class PlanService {
                     "No puedes enviar grupoId y quitarGrupo al mismo tiempo.");
         }
         if (dto.getNombre() == null && dto.getCategoriaId() == null
-                && dto.getGrupoId() == null && dto.getDeudaId() == null && !quitarGrupo) {
+                && dto.getGrupoId() == null && !quitarGrupo) {
             throw new ValidacionFallidaException("partida",
-                    "Debes enviar al menos uno de los campos: nombre, categoriaId, grupoId, "
-                            + "quitarGrupo o deudaId.");
+                    "Debes enviar al menos uno de los campos: nombre, categoriaId, grupoId "
+                            + "o quitarGrupo.");
         }
 
         boolean cambio = false;
@@ -273,32 +275,6 @@ public class PlanService {
             if (!nombre.equals(partida.getNombre())) {
                 partida.setNombre(nombre);
                 partida.setNombreNormalizado(normalizado);
-                cambio = true;
-            }
-        }
-
-        if (dto.getDeudaId() != null) {
-            Deuda actual = partida.getDeuda();
-            if (actual != null && !dto.getDeudaId().equals(actual.getId())) {
-                throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
-                        "No puedes cambiar la deuda de una partida vinculada. "
-                                + "Borra la partida y vuelve a crearla.");
-            }
-            if (dto.getCategoriaId() != null
-                    && !dto.getCategoriaId().equals(categoriaDeudas().getId())) {
-                throw new DatosInvalidosException(
-                        "Una partida vinculada a una deuda siempre es de la categoría Pago de Deudas.");
-            }
-            if (actual == null) {
-                Deuda deuda = resolverDeuda(dto.getDeudaId());
-                if (partidaPlanRepository.existsByPlanIdAndDeudaIdAndIdNot(
-                        partida.getPlan().getId(), deuda.getId(), partida.getId())) {
-                    throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
-                            "Ya existe una partida para esta deuda en este mes.");
-                }
-                partida.setDeuda(deuda);
-                partida.setCategoria(categoriaDeudas());
-                partida.setMontoPlanificado(cuotaDelMes(deuda, mes));
                 cambio = true;
             }
         }
@@ -384,18 +360,18 @@ public class PlanService {
             objetivos.add(partida);
         }
 
-        Date ahora = new Date();
+        Date ahoraPartida = new Date();
         for (int i = 0; i < cambios.size(); i++) {
             PartidaPlan partida = objetivos.get(i);
             BigDecimal nuevo = dinero(cambios.get(i).getMonto());
             if (partida.getMontoPlanificado().compareTo(nuevo) != 0) {
                 partida.setMontoPlanificado(nuevo);
-                partida.setActualizadoEn(ahora);
+                partida.setActualizadoEn(ahoraPartida);
                 partidaPlanRepository.save(partida);
             }
             // Si el monto no cambia no se toca actualizadoEn (T10c, C42).
         }
-        plan.setActualizadoEn(ahora);
+        plan.setActualizadoEn(Instant.now());
         planMensualRepository.save(plan);
         return armarPlan(rut, mes, plan);
     }
@@ -449,8 +425,7 @@ public class PlanService {
         if (planDestino.getIngresoReferencia() == null) {
             planDestino.setIngresoReferencia(planOrigen.getIngresoReferencia());
         }
-        Date ahora = new Date();
-        planDestino.setActualizadoEn(ahora);
+        planDestino.setActualizadoEn(Instant.now());
         planDestino = planMensualRepository.save(planDestino);
 
         // T10d: las partidas vinculadas solo se copian si la deuda tiene una
@@ -609,7 +584,9 @@ public class PlanService {
 
     /**
      * Series de gasto por categoría y mes para las referencias (T10d, sección
-     * 8). Una sola consulta agregada sobre [max(primerMes, mes−3), mes).
+     * 8): una consulta al rango [max(primerMes, mes−3), mes) y agrupación en
+     * memoria por mes del negocio. La consulta de {@code primerMovimiento}
+     * fija el inicio de la ventana.
      */
     private Map<Long, Referencia> cargarReferencias(String rut, YearMonth mes,
                                                     List<CategoriaResultado> categorias) {
@@ -626,19 +603,22 @@ public class PlanService {
         if (desde.isBefore(primerMes)) {
             desde = primerMes;
         }
-        List<Object[]> filas = movimientoRepository.gastoPorCategoriaYMes(
+        List<Movimiento> movimientos = movimientoRepository.movimientosDelRango(
                 rut, FechasMovimiento.inicioDeMes(desde), FechasMovimiento.inicioDeMes(mes));
 
+        // Agrupación en memoria: EXTRACT(MONTH ...) en SQL usaría el mes UTC y
+        // movería al mes siguiente los gastos de las últimas horas del mes en
+        // America/Santiago (T10d, sección 8).
         Map<Long, Map<YearMonth, BigDecimal>> series = new HashMap<>();
-        for (Object[] fila : filas) {
-            Long categoriaId = ((Number) fila[0]).longValue();
-            int anio = ((Number) fila[1]).intValue();
-            int numeroMes = ((Number) fila[2]).intValue();
-            BigDecimal monto = fila[3] instanceof BigDecimal valor
-                    ? valor
-                    : new BigDecimal(fila[3].toString());
-            series.computeIfAbsent(categoriaId, id -> new HashMap<>())
-                    .put(YearMonth.of(anio, numeroMes), monto);
+        for (Movimiento movimiento : movimientos) {
+            if (movimiento.getCategoria() == null
+                    || (movimiento.getTipoMovimiento() != TipoMovimiento.GASTO_GENERAL
+                    && movimiento.getTipoMovimiento() != TipoMovimiento.PAGO_DEUDA)) {
+                continue;
+            }
+            YearMonth mesMovimiento = FechasMovimiento.mesDe(movimiento.getFecha());
+            series.computeIfAbsent(movimiento.getCategoria().getId(), id -> new HashMap<>())
+                    .merge(mesMovimiento, movimiento.getMonto().abs(), BigDecimal::add);
         }
 
         Map<Long, Referencia> referencias = new HashMap<>();
@@ -806,9 +786,9 @@ public class PlanService {
     }
 
     private Categoria categoriaDeudas() {
-        return categoriaRepository.findByCodigo("DEUDAS")
+        return categoriaRepository.findByCodigo(CodigoCategoria.DEUDAS)
                 .orElseThrow(() -> new IllegalStateException(
-                        "La categoría DEUDAS no fue encontrada."));
+                        "La categoría " + CodigoCategoria.DEUDAS + " no fue encontrada."));
     }
 
     private BigDecimal cuotaDelMes(Deuda deuda, YearMonth mes) {
@@ -821,13 +801,13 @@ public class PlanService {
     /** SUELDO y AHORRO no se usan en partidas (DC14/DC15). */
     private void validarCategoriaDePartida(Categoria categoria) {
         String codigo = categoria.getCodigo();
-        if ("SUELDO".equals(codigo) || "AHORRO".equals(codigo)) {
+        if (CodigoCategoria.SUELDO.equals(codigo) || CodigoCategoria.AHORRO.equals(codigo)) {
             throw new DatosInvalidosException(
                     "La categoría " + categoria.getNombre() + " no se puede usar en una partida.");
         }
     }
 
-    /** Recorta y valida el nombre (1 a 80, sin caracteres de control). */
+    /** Recorta el nombre y rechaza caracteres de control; el formato lo valida el DTO. */
     private String validarNombre(String nombre) {
         if (nombre == null) {
             throw new ValidacionFallidaException("nombre", "El nombre de la partida es obligatorio.");
@@ -835,10 +815,6 @@ public class PlanService {
         String recortado = nombre.trim();
         if (recortado.isEmpty()) {
             throw new ValidacionFallidaException("nombre", "El nombre de la partida es obligatorio.");
-        }
-        if (recortado.length() > MAX_CARACTERES_NOMBRE) {
-            throw new ValidacionFallidaException("nombre",
-                    "El nombre no puede superar los " + MAX_CARACTERES_NOMBRE + " caracteres.");
         }
         if (CARACTERES_CONTROL.matcher(recortado).find()) {
             throw new ValidacionFallidaException("nombre",
@@ -848,7 +824,7 @@ public class PlanService {
     }
 
     private void marcarPlanActualizado(PlanMensual plan) {
-        plan.setActualizadoEn(new Date());
+        plan.setActualizadoEn(Instant.now());
         planMensualRepository.save(plan);
     }
 
