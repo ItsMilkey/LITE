@@ -21,6 +21,8 @@ public interface PartidaPlanRepository extends JpaRepository<PartidaPlan, Long> 
     @Query("""
             SELECT p FROM PartidaPlan p
             JOIN FETCH p.categoria
+            LEFT JOIN FETCH p.grupo
+            LEFT JOIN FETCH p.deuda
             WHERE p.plan.id = :planId
             ORDER BY p.orden ASC, p.id ASC
             """)
@@ -33,6 +35,8 @@ public interface PartidaPlanRepository extends JpaRepository<PartidaPlan, Long> 
     @Query("""
             SELECT p FROM PartidaPlan p
             JOIN FETCH p.categoria
+            LEFT JOIN FETCH p.grupo
+            LEFT JOIN FETCH p.deuda
             JOIN FETCH p.plan pl
             JOIN FETCH pl.usuario
             WHERE p.id = :id
@@ -44,6 +48,16 @@ public interface PartidaPlanRepository extends JpaRepository<PartidaPlan, Long> 
     boolean existsByPlanIdAndNombreNormalizado(Long planId, String nombreNormalizado);
 
     boolean existsByPlanIdAndNombreNormalizadoAndIdNot(Long planId, String nombreNormalizado, Long id);
+
+    /** T10d: una sola partida por deuda dentro del mismo plan. */
+    boolean existsByPlanIdAndDeudaId(Long planId, Long deudaId);
+
+    boolean existsByPlanIdAndDeudaIdAndIdNot(Long planId, Long deudaId, Long id);
+
+    /** Borrar un grupo deja sus partidas sin grupo (ON DELETE SET NULL). */
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE PartidaPlan p SET p.grupo = NULL WHERE p.grupo.id = :grupoId")
+    int desvincularGrupo(@Param("grupoId") Long grupoId);
 
     @Query("SELECT COALESCE(MAX(p.orden), 0) FROM PartidaPlan p WHERE p.plan.id = :planId")
     int maxOrden(@Param("planId") Long planId);

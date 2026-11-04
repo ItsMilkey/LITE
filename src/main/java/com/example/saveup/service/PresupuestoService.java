@@ -27,6 +27,7 @@ import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.PresupuestoCategoriaRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.SecurityUtils;
+import com.example.saveup.service.categoria.PreferenciaTipoService;
 import com.example.saveup.service.movimiento.FechasMovimiento;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import java.util.Set;
 
@@ -75,6 +77,7 @@ public class PresupuestoService {
     private final UsuarioRepository usuarioRepository;
     private final AsignacionMetaPresupuestoRepository asignacionMetaPresupuestoRepository;
     private final MetaAhorroRepository metaAhorroRepository;
+    private final PreferenciaTipoService preferenciaTipoService;
     private final SecurityUtils securityUtils;
 
     public PresupuestoService(PresupuestoCategoriaRepository presupuestoCategoriaRepository,
@@ -84,6 +87,7 @@ public class PresupuestoService {
                               UsuarioRepository usuarioRepository,
                               AsignacionMetaPresupuestoRepository asignacionMetaPresupuestoRepository,
                               MetaAhorroRepository metaAhorroRepository,
+                              PreferenciaTipoService preferenciaTipoService,
                               SecurityUtils securityUtils) {
         this.presupuestoCategoriaRepository = presupuestoCategoriaRepository;
         this.categoriaRepository = categoriaRepository;
@@ -92,6 +96,7 @@ public class PresupuestoService {
         this.usuarioRepository = usuarioRepository;
         this.asignacionMetaPresupuestoRepository = asignacionMetaPresupuestoRepository;
         this.metaAhorroRepository = metaAhorroRepository;
+        this.preferenciaTipoService = preferenciaTipoService;
         this.securityUtils = securityUtils;
     }
 
@@ -266,10 +271,17 @@ public class PresupuestoService {
     /**
      * Ejecución general 50/30/20 de un mes. Es el método reutilizable: lo usan
      * /ejecucion/me y, mes a mes, /historial/me. Un mes sin ingresos devuelve
-     * ceros sin dividir por cero.
+     * ceros sin dividir por cero. El tipo de la categoría es el efectivo del
+     * usuario (T10d): preferencia si existe, si no el tipo del catálogo.
      */
     @Transactional(readOnly = true)
     public EjecucionPresupuestoDTO calcularEjecucionGeneral(String rut, YearMonth mes) {
+        return ejecucionGeneral(rut, mes, preferenciaTipoService.cargarPreferencias(rut));
+    }
+
+    /** Igual que {@link #calcularEjecucionGeneral(String, YearMonth, Map)} con preferencias ya cargadas. */
+    private EjecucionPresupuestoDTO ejecucionGeneral(String rut, YearMonth mes,
+                                                     Map<Long, TipoPresupuesto> preferencias) {
         ConfiguracionPresupuesto config = configuracionPresupuestoRepository.findByUsuarioRut(rut)
                 .orElseGet(ConfiguracionPresupuesto::new);
 
@@ -287,7 +299,7 @@ public class PresupuestoService {
 
         for (Movimiento mv : movs) {
             if (esGastoPresupuestable(mv) && mv.getCategoria() != null) {
-                TipoPresupuesto tp = mv.getCategoria().getTipoPresupuesto();
+                TipoPresupuesto tp = PreferenciaTipoService.tipoEfectivo(preferencias, mv.getCategoria());
                 if (tp == TipoPresupuesto.NECESIDAD) {
                     gastoNecesidad = gastoNecesidad.add(mv.getMonto().abs());
                 } else if (tp == TipoPresupuesto.DESEO) {
@@ -351,12 +363,14 @@ public class PresupuestoService {
                             + cantidadMeses + ".");
         }
 
+        // Las preferencias se cargan una sola vez por solicitud (T10d).
+        Map<Long, TipoPresupuesto> preferencias = preferenciaTipoService.cargarPreferencias(rut);
         List<HistorialPresupuestoDTO> historial = new ArrayList<>();
         for (YearMonth mes = inicio; !mes.isAfter(fin); mes = mes.plusMonths(1)) {
             historial.add(new HistorialPresupuestoDTO(
                     mes.getYear(),
                     mes.getMonthValue(),
-                    calcularEjecucionGeneral(rut, mes)));
+                    ejecucionGeneral(rut, mes, preferencias)));
         }
         return historial;
     }

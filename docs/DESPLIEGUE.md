@@ -116,8 +116,8 @@ desplegar.
 Comandos equivalentes en local (requiere Docker para el segundo):
 
 ```powershell
-.\mvnw.cmd test                                    # suite H2, sin Docker (421 tests)
-.\mvnw.cmd test -Ppostgres -Dtest=MigracionesPostgresTest   # Flyway + validate sobre PostgreSQL 16
+.\mvnw.cmd test                                    # suite H2, sin Docker (641 tests)
+.\mvnw.cmd test -Ppostgres "-Dtest=*PostgresTest"  # Flyway, V16 y constraints sobre PostgreSQL 16
 ```
 
 El test de migraciones está etiquetado `postgres` y excluido de `mvn test`; el perfil `-Ppostgres`

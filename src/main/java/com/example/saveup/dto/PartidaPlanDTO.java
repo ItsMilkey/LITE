@@ -1,5 +1,6 @@
 package com.example.saveup.dto;
 
+import com.example.saveup.model.enums.EstadoCuota;
 import com.example.saveup.model.enums.EstadoEjecucion;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -41,6 +42,18 @@ public class PartidaPlanDTO {
 
     @Schema(description = "Estado informativo del plan.", requiredMode = Schema.RequiredMode.REQUIRED)
     private EstadoEjecucion estado;
+
+    @Schema(description = "Estado del pago de la cuota; solo para partidas vinculadas a una deuda.")
+    private EstadoCuota estadoCuota;
+
+    @Schema(description = "ID del grupo de presentación; null si no tiene grupo.")
+    private Long grupoId;
+
+    @Schema(description = "ID de la deuda vinculada; null si la partida es normal.")
+    private Long deudaId;
+
+    @Schema(description = "true si la cuota ya no se puede recalcular y se muestra el último monto guardado.")
+    private Boolean vinculoDesactualizado;
 
     @Schema(description = "Posición de la partida dentro del plan.",
             requiredMode = Schema.RequiredMode.REQUIRED)

@@ -35,6 +35,23 @@ public class PartidaPlan {
     @JoinColumn(name = "CATEGORIA_ID", nullable = false)
     private Categoria categoria;
 
+    /**
+     * Grupo de presentación (T10d). Es opcional y no cambia el cálculo.
+     * ON DELETE SET NULL: borrar el grupo deja la partida sin grupo.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "GRUPO_ID")
+    private GrupoPlan grupo;
+
+    /**
+     * Deuda vinculada (T10d): si está presente, el monto planificado se toma
+     * de la cuota del mes y no se puede editar por PATCH.
+     * ON DELETE SET NULL: si la deuda desaparece, la partida queda normal.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "DEUDA_ID")
+    private Deuda deuda;
+
     @Column(name = "NOMBRE", nullable = false, length = 80)
     private String nombre;
 

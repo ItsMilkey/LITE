@@ -42,7 +42,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * T10c — C56: el plan completo se arma con un número fijo de consultas. Con
- * 100 partidas y 500 movimientos no debe haber N+1: como máximo 5 consultas.
+ * 100 partidas y 500 movimientos no debe haber N+1: como máximo 6 consultas
+ * (5 de T10c + la de grupos que agrega T10d).
  */
 @SpringBootTest(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
 @AutoConfigureMockMvc
@@ -130,7 +131,7 @@ class PlanConsultasTest {
     }
 
     @Test
-    @DisplayName("C56: 100 partidas y 500 movimientos se leen con un máximo de 5 consultas")
+    @DisplayName("C56: 100 partidas y 500 movimientos se leen con un máximo de 6 consultas")
     void c56_numeroDeConsultasFijo() throws Exception {
         Statistics estadisticas = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
         estadisticas.clear();
@@ -143,8 +144,8 @@ class PlanConsultasTest {
                 .andExpect(jsonPath("$.resumen.sinPlanificar.movimientos").value(500));
 
         long consultas = estadisticas.getPrepareStatementCount();
-        assertTrue(consultas <= 5,
-                "El plan debe armarse con un máximo de 5 consultas, pero se ejecutaron " + consultas);
+        assertTrue(consultas <= 6,
+                "El plan debe armarse con un máximo de 6 consultas, pero se ejecutaron " + consultas);
     }
 
     private static Date fecha(int dia) {

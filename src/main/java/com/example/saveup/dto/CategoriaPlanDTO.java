@@ -2,6 +2,7 @@ package com.example.saveup.dto;
 
 import com.example.saveup.model.enums.EstadoEjecucion;
 import com.example.saveup.model.enums.TipoPresupuesto;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -42,4 +43,8 @@ public class CategoriaPlanDTO {
     @Schema(description = "Estado informativo de la categoría.",
             requiredMode = Schema.RequiredMode.REQUIRED)
     private EstadoEjecucion estado;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(description = "Gasto histórico de referencia; solo con incluirReferencias=true.")
+    private ReferenciaCategoriaDTO referencia;
 }

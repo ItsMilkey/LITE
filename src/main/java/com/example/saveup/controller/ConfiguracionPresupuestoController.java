@@ -7,8 +7,10 @@ import com.example.saveup.dto.EjecucionPresupuestoDTO;
 import com.example.saveup.dto.HistorialPresupuestoDTO;
 import com.example.saveup.dto.PresupuestoCategoriaDTO;
 import com.example.saveup.dto.PresupuestoCategoriaRequestDTO;
+import com.example.saveup.dto.SugerenciaReglaResponseDTO;
 import com.example.saveup.security.SecurityUtils;
 import com.example.saveup.service.PresupuestoService;
+import com.example.saveup.service.plan.SugerenciaReglaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,12 +31,14 @@ import java.util.List;
 public class ConfiguracionPresupuestoController {
 
     private final PresupuestoService presupuestoService;
-
+    private final SugerenciaReglaService sugerenciaReglaService;
     private final SecurityUtils securityUtils;
 
     public ConfiguracionPresupuestoController(PresupuestoService presupuestoService,
+                                              SugerenciaReglaService sugerenciaReglaService,
                                               SecurityUtils securityUtils) {
         this.presupuestoService = presupuestoService;
+        this.sugerenciaReglaService = sugerenciaReglaService;
         this.securityUtils = securityUtils;
     }
 
@@ -108,5 +112,27 @@ public class ConfiguracionPresupuestoController {
             @RequestParam String hasta) {
         String rut = securityUtils.getAuthenticatedRut();
         return ResponseEntity.ok(presupuestoService.obtenerHistorial(rut, desde, hasta));
+    }
+
+    /**
+     * Sugerencia de regla desde el comportamiento real (T10d, sección 5). Solo
+     * lectura: analiza hasta los 3 meses cerrados más recientes con ingresos y
+     * devuelve la mediana y la sugerencia. Con menos de 2 meses válidos responde
+     * 200 con sugerencia nula y motivo DATOS_INSUFICIENTES.
+     */
+    @GetMapping("/sugerencia-regla")
+    @Operation(summary = "Sugiere una regla 50/30/20 desde el comportamiento real",
+            description = """
+                    Analiza hasta los 3 meses cerrados más recientes anteriores al mes en
+                    curso (America/Santiago) que tengan ingresos. Mediana del % de gasto en
+                    necesidades y deseos sobre el ingreso real; si el gasto supera el
+                    ingreso, la sugerencia se escala para sumar 100 y ahorro queda en 0.
+                    Sugerencia redondeada a múltiplos de 5. Informativa y de solo lectura:
+                    para aceptarla, el cliente usa POST /api/v1/presupuestos/me.
+                    """,
+            operationId = "obtenerSugerenciaRegla")
+    public ResponseEntity<SugerenciaReglaResponseDTO> obtenerSugerenciaRegla() {
+        String rut = securityUtils.getAuthenticatedRut();
+        return ResponseEntity.ok(sugerenciaReglaService.sugerir(rut));
     }
 }

@@ -30,7 +30,8 @@ Cosas que una app móvil publicada necesita y que el backend aún no tiene:
   implementado.
 - **[HECHO en T9.5]** Protección de login contra fuerza bruta: `LoginRateLimiterService` (paquete `security`, caché
   Caffeine en memoria, ventana de 15 min re-expirada por cada fallo) cuenta intentos fallidos por la clave
-  `email.toLowerCase() + ":" + IP` (IP resuelta desde la primera dirección de `X-Forwarded-For` o `getRemoteAddr()`).
+  `email.toLowerCase() + ":" + IP` (IP resuelta desde la primera dirección de `X-Forwarded-For` solo con
+  `app.behind-proxy=true`; si no, `getRemoteAddr()`).
   El 5º fallo bloquea el par: `POST /usuarios/login` responde **429 INTENTOS_LOGIN_EXCEDIDOS** antes de consultar la BD;
   cada 401 suma un intento (también con correo inexistente) y un login exitoso resetea el contador. Documentado en el
   contrato con la respuesta 429 (customizer de OpenApiConfig por `operationId`). Nota: el contador vive en memoria del

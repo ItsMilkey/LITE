@@ -5,10 +5,12 @@ import com.example.saveup.repository.AsignacionMetaPresupuestoRepository;
 import com.example.saveup.repository.AuthRefreshTokenRepository;
 import com.example.saveup.repository.ConfiguracionPresupuestoRepository;
 import com.example.saveup.repository.DeudaRepository;
+import com.example.saveup.repository.GrupoPlanRepository;
 import com.example.saveup.repository.MetaAhorroRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.PartidaPlanRepository;
 import com.example.saveup.repository.PlanMensualRepository;
+import com.example.saveup.repository.PreferenciaCategoriaUsuarioRepository;
 import com.example.saveup.repository.PresupuestoCategoriaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,6 +42,9 @@ class EliminacionDeCuentaServiceTest {
     private ConfiguracionPresupuestoRepository configuracionPresupuestoRepository;
 
     @Mock
+    private PreferenciaCategoriaUsuarioRepository preferenciaCategoriaUsuarioRepository;
+
+    @Mock
     private MovimientoRepository movimientoRepository;
 
     @Mock
@@ -47,6 +52,9 @@ class EliminacionDeCuentaServiceTest {
 
     @Mock
     private PlanMensualRepository planMensualRepository;
+
+    @Mock
+    private GrupoPlanRepository grupoPlanRepository;
 
     @Mock
     private MetaAhorroRepository metaAhorroRepository;
@@ -63,8 +71,10 @@ class EliminacionDeCuentaServiceTest {
     void setUp() {
         servicio = new EliminacionDeCuentaService(asignacionMetaPresupuestoRepository,
                 presupuestoCategoriaRepository, configuracionPresupuestoRepository,
+                preferenciaCategoriaUsuarioRepository,
                 movimientoRepository, partidaPlanRepository, planMensualRepository,
-                metaAhorroRepository, deudaRepository, authRefreshTokenRepository);
+                grupoPlanRepository, metaAhorroRepository, deudaRepository,
+                authRefreshTokenRepository);
     }
 
     @Test
@@ -76,15 +86,18 @@ class EliminacionDeCuentaServiceTest {
         servicio.eliminarTodo(usuario);
 
         InOrder orden = inOrder(asignacionMetaPresupuestoRepository, presupuestoCategoriaRepository,
-                configuracionPresupuestoRepository, movimientoRepository, partidaPlanRepository,
-                planMensualRepository, metaAhorroRepository, deudaRepository,
+                configuracionPresupuestoRepository, preferenciaCategoriaUsuarioRepository,
+                movimientoRepository, partidaPlanRepository,
+                planMensualRepository, grupoPlanRepository, metaAhorroRepository, deudaRepository,
                 authRefreshTokenRepository);
 
         orden.verify(asignacionMetaPresupuestoRepository).deleteByMeta_Usuario_Rut(RUT);
         orden.verify(presupuestoCategoriaRepository).deleteByUsuarioRut(RUT);
         orden.verify(configuracionPresupuestoRepository).deleteByUsuarioRut(RUT);
+        orden.verify(preferenciaCategoriaUsuarioRepository).deleteByUsuarioRut(RUT);
         orden.verify(movimientoRepository).deleteByUsuarioRut(RUT);
         orden.verify(partidaPlanRepository).deleteByPlanUsuarioRut(RUT);
+        orden.verify(grupoPlanRepository).deleteByUsuarioRut(RUT);
         orden.verify(planMensualRepository).deleteByUsuarioRut(RUT);
         orden.verify(metaAhorroRepository).deleteByUsuarioRut(RUT);
         orden.verify(deudaRepository).deleteByUsuarioRut(RUT);

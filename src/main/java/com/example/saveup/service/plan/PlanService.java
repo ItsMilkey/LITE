@@ -1,14 +1,19 @@
 package com.example.saveup.service.plan;
 
+import com.example.saveup.dto.AvisoPlanDTO;
 import com.example.saveup.dto.CambioMontoDTO;
 import com.example.saveup.dto.CambiosMontosDTO;
 import com.example.saveup.dto.CategoriaPlanDTO;
+import com.example.saveup.dto.GuiaDTO;
+import com.example.saveup.dto.GrupoPlanResumenDTO;
 import com.example.saveup.dto.IngresoReferenciaDTO;
 import com.example.saveup.dto.MotivoSinPlanificarDTO;
 import com.example.saveup.dto.PartidaCreacionDTO;
 import com.example.saveup.dto.PartidaEdicionDTO;
 import com.example.saveup.dto.PartidaPlanDTO;
 import com.example.saveup.dto.PlanMensualResponseDTO;
+import com.example.saveup.dto.ReferenciaCategoriaDTO;
+import com.example.saveup.dto.RepartoTipoDTO;
 import com.example.saveup.dto.ResumenPlanDTO;
 import com.example.saveup.dto.SinPlanificarDTO;
 import com.example.saveup.error.CodigoError;
@@ -16,24 +21,37 @@ import com.example.saveup.error.DatosInvalidosException;
 import com.example.saveup.error.ErrorNegocio;
 import com.example.saveup.error.ValidacionFallidaException;
 import com.example.saveup.model.Categoria;
+import com.example.saveup.model.ConfiguracionPresupuesto;
+import com.example.saveup.model.Deuda;
+import com.example.saveup.model.GrupoPlan;
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.PartidaPlan;
 import com.example.saveup.model.PlanMensual;
 import com.example.saveup.model.Usuario;
+import com.example.saveup.model.enums.EstadoDeuda;
 import com.example.saveup.repository.CategoriaRepository;
+import com.example.saveup.repository.ConfiguracionPresupuestoRepository;
+import com.example.saveup.repository.DeudaRepository;
+import com.example.saveup.repository.GrupoPlanRepository;
 import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.PartidaPlanRepository;
 import com.example.saveup.repository.PlanMensualRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.SecurityUtils;
+import com.example.saveup.service.categoria.PreferenciaTipoService;
 import com.example.saveup.service.movimiento.FechasMovimiento;
 import com.example.saveup.service.plan.CalculadoraPlan.CategoriaRef;
 import com.example.saveup.service.plan.CalculadoraPlan.CategoriaResultado;
+import com.example.saveup.service.plan.CalculadoraPlan.GrupoCalculo;
+import com.example.saveup.service.plan.CalculadoraPlan.GrupoResultado;
+import com.example.saveup.service.plan.CalculadoraPlan.GuiaCalculo;
 import com.example.saveup.service.plan.CalculadoraPlan.MotivoCalculado;
 import com.example.saveup.service.plan.CalculadoraPlan.MovimientoCalculo;
 import com.example.saveup.service.plan.CalculadoraPlan.PartidaCalculo;
 import com.example.saveup.service.plan.CalculadoraPlan.PartidaResultado;
 import com.example.saveup.service.plan.CalculadoraPlan.Resultado;
+import com.example.saveup.service.plan.CuotasMesService.CuotaDelMes;
+import com.example.saveup.service.plan.ReferenciasHistoricas.Referencia;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +67,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import com.example.saveup.model.enums.TipoPresupuesto;
 
 /**
  * Servicio del plan mensual (T10c): valida propiedad y reglas de negocio,
@@ -71,6 +90,11 @@ public class PlanService {
     private final MovimientoRepository movimientoRepository;
     private final CategoriaRepository categoriaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final ConfiguracionPresupuestoRepository configuracionPresupuestoRepository;
+    private final GrupoPlanRepository grupoPlanRepository;
+    private final DeudaRepository deudaRepository;
+    private final PreferenciaTipoService preferenciaTipoService;
+    private final CuotasMesService cuotasMesService;
     private final SecurityUtils securityUtils;
     private final CalculadoraPlan calculadora = new CalculadoraPlan();
 
@@ -79,24 +103,43 @@ public class PlanService {
                        MovimientoRepository movimientoRepository,
                        CategoriaRepository categoriaRepository,
                        UsuarioRepository usuarioRepository,
+                       ConfiguracionPresupuestoRepository configuracionPresupuestoRepository,
+                       GrupoPlanRepository grupoPlanRepository,
+                       DeudaRepository deudaRepository,
+                       PreferenciaTipoService preferenciaTipoService,
+                       CuotasMesService cuotasMesService,
                        SecurityUtils securityUtils) {
         this.planMensualRepository = planMensualRepository;
         this.partidaPlanRepository = partidaPlanRepository;
         this.movimientoRepository = movimientoRepository;
         this.categoriaRepository = categoriaRepository;
         this.usuarioRepository = usuarioRepository;
+        this.configuracionPresupuestoRepository = configuracionPresupuestoRepository;
+        this.grupoPlanRepository = grupoPlanRepository;
+        this.deudaRepository = deudaRepository;
+        this.preferenciaTipoService = preferenciaTipoService;
+        this.cuotasMesService = cuotasMesService;
         this.securityUtils = securityUtils;
     }
 
     /** Plan completo del mes; si no existe responde {@code existe: false} (200). */
     @Transactional(readOnly = true)
     public PlanMensualResponseDTO obtener(String mesTexto) {
+        return obtener(mesTexto, false);
+    }
+
+    /**
+     * Plan completo del mes. Con {@code incluirReferencias=true} agrega a cada
+     * categoría su gasto histórico de referencia (T10d, sección 8).
+     */
+    @Transactional(readOnly = true)
+    public PlanMensualResponseDTO obtener(String mesTexto, boolean incluirReferencias) {
         YearMonth mes = MesPlan.parsear(mesTexto);
         String rut = securityUtils.getAuthenticatedRut();
         PlanMensual plan = planMensualRepository
                 .findByUsuarioRutAndMes(rut, MesPlan.primerDia(mes))
                 .orElse(null);
-        return armarPlan(rut, mes, plan);
+        return armarPlan(rut, mes, plan, incluirReferencias, List.of());
     }
 
     /** Define, cambia o limpia ({@code monto: null}) el ingreso de referencia. */
@@ -128,10 +171,37 @@ public class PlanService {
         YearMonth mes = MesPlan.parsear(mesTexto);
         String rut = securityUtils.getAuthenticatedRut();
 
-        Categoria categoria = buscarCategoria(dto.getCategoriaId());
-        validarCategoriaDePartida(categoria);
         String nombre = validarNombre(dto.getNombre());
         String normalizado = NombrePartida.normalizar(nombre);
+
+        Deuda deuda = null;
+        Categoria categoria;
+        BigDecimal monto;
+        if (dto.getDeudaId() != null) {
+            if (dto.getMontoPlanificado() != null) {
+                throw new DatosInvalidosException(
+                        "No puedes enviar montoPlanificado cuando vinculas una deuda.");
+            }
+            deuda = resolverDeuda(dto.getDeudaId());
+            categoria = categoriaDeudas();
+            if (dto.getCategoriaId() != null && !dto.getCategoriaId().equals(categoria.getId())) {
+                throw new DatosInvalidosException(
+                        "Una partida vinculada a una deuda siempre es de la categoría Pago de Deudas.");
+            }
+            monto = cuotaDelMes(deuda, mes);
+        } else {
+            if (dto.getCategoriaId() == null) {
+                throw new ValidacionFallidaException("categoriaId", "La categoría es obligatoria.");
+            }
+            if (dto.getMontoPlanificado() == null) {
+                throw new ValidacionFallidaException("montoPlanificado",
+                        "El monto planificado es obligatorio.");
+            }
+            categoria = buscarCategoria(dto.getCategoriaId());
+            validarCategoriaDePartida(categoria);
+            monto = dinero(dto.getMontoPlanificado());
+        }
+        GrupoPlan grupo = dto.getGrupoId() == null ? null : resolverGrupo(dto.getGrupoId());
 
         PlanMensual plan = planMensualRepository
                 .findByUsuarioRutAndMes(rut, MesPlan.primerDia(mes))
@@ -149,15 +219,22 @@ public class PlanService {
             if (partidaPlanRepository.existsByPlanIdAndNombreNormalizado(plan.getId(), normalizado)) {
                 throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO, MENSAJE_NOMBRE_DUPLICADO);
             }
+            if (deuda != null && partidaPlanRepository.existsByPlanIdAndDeudaId(
+                    plan.getId(), deuda.getId())) {
+                throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
+                        "Ya existe una partida para esta deuda en este mes.");
+            }
             orden = partidaPlanRepository.maxOrden(plan.getId()) + 1;
         }
 
         PartidaPlan partida = new PartidaPlan();
         partida.setPlan(plan);
         partida.setCategoria(categoria);
+        partida.setGrupo(grupo);
+        partida.setDeuda(deuda);
         partida.setNombre(nombre);
         partida.setNombreNormalizado(normalizado);
-        partida.setMontoPlanificado(dinero(dto.getMontoPlanificado()));
+        partida.setMontoPlanificado(monto);
         partida.setOrden(orden);
         partidaPlanRepository.save(partida);
 
@@ -166,16 +243,23 @@ public class PlanService {
         return armarPlan(rut, mes, plan);
     }
 
-    /** Cambia nombre y/o categoría; cambiar la categoría con movimientos vinculados es 409. */
+    /** Cambia nombre, categoría, grupo y/o deuda; las reglas de vínculo son 409. */
     @Transactional
     public PlanMensualResponseDTO editarPartida(String mesTexto, Long partidaId, PartidaEdicionDTO dto) {
         YearMonth mes = MesPlan.parsear(mesTexto);
         String rut = securityUtils.getAuthenticatedRut();
         PartidaPlan partida = resolverPartidaDelMes(rut, mes, partidaId);
 
-        if (dto.getNombre() == null && dto.getCategoriaId() == null) {
+        boolean quitarGrupo = Boolean.TRUE.equals(dto.getQuitarGrupo());
+        if (dto.getGrupoId() != null && quitarGrupo) {
+            throw new DatosInvalidosException(
+                    "No puedes enviar grupoId y quitarGrupo al mismo tiempo.");
+        }
+        if (dto.getNombre() == null && dto.getCategoriaId() == null
+                && dto.getGrupoId() == null && dto.getDeudaId() == null && !quitarGrupo) {
             throw new ValidacionFallidaException("partida",
-                    "Debes enviar al menos uno de los campos: nombre o categoriaId.");
+                    "Debes enviar al menos uno de los campos: nombre, categoriaId, grupoId, "
+                            + "quitarGrupo o deudaId.");
         }
 
         boolean cambio = false;
@@ -193,9 +277,40 @@ public class PlanService {
             }
         }
 
+        if (dto.getDeudaId() != null) {
+            Deuda actual = partida.getDeuda();
+            if (actual != null && !dto.getDeudaId().equals(actual.getId())) {
+                throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
+                        "No puedes cambiar la deuda de una partida vinculada. "
+                                + "Borra la partida y vuelve a crearla.");
+            }
+            if (dto.getCategoriaId() != null
+                    && !dto.getCategoriaId().equals(categoriaDeudas().getId())) {
+                throw new DatosInvalidosException(
+                        "Una partida vinculada a una deuda siempre es de la categoría Pago de Deudas.");
+            }
+            if (actual == null) {
+                Deuda deuda = resolverDeuda(dto.getDeudaId());
+                if (partidaPlanRepository.existsByPlanIdAndDeudaIdAndIdNot(
+                        partida.getPlan().getId(), deuda.getId(), partida.getId())) {
+                    throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
+                            "Ya existe una partida para esta deuda en este mes.");
+                }
+                partida.setDeuda(deuda);
+                partida.setCategoria(categoriaDeudas());
+                partida.setMontoPlanificado(cuotaDelMes(deuda, mes));
+                cambio = true;
+            }
+        }
+
         if (dto.getCategoriaId() != null) {
             Categoria nueva = buscarCategoria(dto.getCategoriaId());
             validarCategoriaDePartida(nueva);
+            if (partida.getDeuda() != null
+                    && !nueva.getId().equals(partida.getCategoria().getId())) {
+                throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
+                        "No puedes cambiar la categoría de una partida vinculada a una deuda.");
+            }
             if (!nueva.getId().equals(partida.getCategoria().getId())) {
                 if (movimientoRepository.countByPartidaId(partida.getId()) > 0) {
                     throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
@@ -204,6 +319,18 @@ public class PlanService {
                 partida.setCategoria(nueva);
                 cambio = true;
             }
+        }
+
+        if (dto.getGrupoId() != null) {
+            GrupoPlan grupo = resolverGrupo(dto.getGrupoId());
+            if (partida.getGrupo() == null || !grupo.getId().equals(partida.getGrupo().getId())) {
+                partida.setGrupo(grupo);
+                cambio = true;
+            }
+        }
+        if (quitarGrupo && partida.getGrupo() != null) {
+            partida.setGrupo(null);
+            cambio = true;
         }
 
         if (cambio) {
@@ -249,6 +376,10 @@ public class PlanService {
                                 ajena.getPlan().getUsuario().getRut()));
                 throw new EntityNotFoundException(
                         "Partida no encontrada en este plan con ID: " + cambio.getPartidaId());
+            }
+            if (partida.getDeuda() != null) {
+                throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
+                        "El monto de una partida de deuda lo define la cuota.");
             }
             objetivos.add(partida);
         }
@@ -322,25 +453,79 @@ public class PlanService {
         planDestino.setActualizadoEn(ahora);
         planDestino = planMensualRepository.save(planDestino);
 
+        // T10d: las partidas vinculadas solo se copian si la deuda tiene una
+        // cuota que vence en el mes destino. Las omitidas se informan en avisos.
+        List<Deuda> deudas = new ArrayList<>();
+        for (PartidaPlan origen : partidasOrigen) {
+            if (origen.getDeuda() != null) {
+                deudas.add(origen.getDeuda());
+            }
+        }
+        Map<Long, CuotaDelMes> cuotasDestino = cuotasMesService.cuotasDelMes(deudas, mes);
+        List<AvisoPlanDTO> avisos = new ArrayList<>();
+
         List<PartidaPlan> copias = new ArrayList<>(partidasOrigen.size());
         for (PartidaPlan origen : partidasOrigen) {
+            Deuda deuda = origen.getDeuda();
+            BigDecimal monto = origen.getMontoPlanificado();
+            if (deuda != null) {
+                CuotaDelMes cuota = cuotasDestino.get(deuda.getId());
+                if (cuota == null) {
+                    avisos.add(avisoSinCuota(origen));
+                    continue;
+                }
+                monto = cuota.monto();
+            }
             PartidaPlan copia = new PartidaPlan();
             copia.setPlan(planDestino);
             copia.setCategoria(origen.getCategoria());
+            copia.setGrupo(origen.getGrupo());
+            copia.setDeuda(deuda);
             copia.setNombre(origen.getNombre());
             copia.setNombreNormalizado(origen.getNombreNormalizado());
-            copia.setMontoPlanificado(origen.getMontoPlanificado());
+            copia.setMontoPlanificado(monto);
             copia.setOrden(origen.getOrden());
             copias.add(copia);
         }
         partidaPlanRepository.saveAll(copias);
 
-        return armarPlan(rut, mes, planDestino);
+        return armarPlan(rut, mes, planDestino, false, avisos);
+    }
+
+    private static AvisoPlanDTO avisoSinCuota(PartidaPlan origen) {
+        AvisoPlanDTO aviso = new AvisoPlanDTO();
+        aviso.setMotivo("SIN_COUOTA_EN_EL_MES");
+        aviso.setPartidaId(origen.getId());
+        aviso.setNombre(origen.getNombre());
+        aviso.setDeudaId(origen.getDeuda().getId());
+        aviso.setMensaje("La deuda no tiene una cuota que venza en el mes de destino.");
+        return aviso;
     }
 
     // ──────────────────────── armado del DTO ────────────────────────
 
     private PlanMensualResponseDTO armarPlan(String rut, YearMonth mes, PlanMensual plan) {
+        return armarPlan(rut, mes, plan, false, List.of());
+    }
+
+    private PlanMensualResponseDTO armarPlan(String rut, YearMonth mes, PlanMensual plan,
+                                             boolean incluirReferencias,
+                                             List<AvisoPlanDTO> avisos) {
+        // Tipo efectivo y guía: una consulta de preferencias y una de configuración
+        // por solicitud (T10d); la resolución es en memoria.
+        Map<Long, TipoPresupuesto> preferencias = preferenciaTipoService.cargarPreferencias(rut);
+        ConfiguracionPresupuesto config = configuracionPresupuestoRepository
+                .findByUsuarioRut(rut)
+                .orElse(null);
+        GuiaCalculo guia = guiaDe(config);
+
+        List<GrupoPlan> gruposEntidad = grupoPlanRepository
+                .findByUsuarioRutOrderByOrdenAscIdAsc(rut);
+        List<GrupoCalculo> gruposCalculo = new ArrayList<>(gruposEntidad.size());
+        for (GrupoPlan grupo : gruposEntidad) {
+            gruposCalculo.add(new GrupoCalculo(grupo.getId(), grupo.getNombre(), grupo.getOrden()));
+        }
+
         List<PartidaPlan> partidas = plan == null
                 ? List.of()
                 : partidaPlanRepository.buscarDelPlan(plan.getId());
@@ -350,16 +535,40 @@ public class PlanService {
                 FechasMovimiento.inicioDeMes(mes),
                 FechasMovimiento.inicioDeMesSiguiente(mes));
 
+        // T10d: la cuota se recalcula en cada lectura y se carga en lote. Si el
+        // vínculo ya no calcula, se conserva el último monto guardado.
+        List<Deuda> deudasVinculadas = new ArrayList<>();
+        for (PartidaPlan partida : partidas) {
+            if (partida.getDeuda() != null) {
+                deudasVinculadas.add(partida.getDeuda());
+            }
+        }
+        Map<Long, CuotaDelMes> cuotas = cuotasMesService.cuotasDelMes(deudasVinculadas, mes);
+        Map<Long, Boolean> vinculosDesactualizados = new HashMap<>();
+
         List<PartidaCalculo> partidasCalculo = new ArrayList<>(partidas.size());
         Map<Long, PartidaPlan> entidadesPorId = new HashMap<>();
         for (PartidaPlan partida : partidas) {
             entidadesPorId.put(partida.getId(), partida);
+            BigDecimal monto = partida.getMontoPlanificado();
+            boolean desactualizado = false;
+            if (partida.getDeuda() != null) {
+                CuotaDelMes cuota = cuotas.get(partida.getDeuda().getId());
+                if (cuota != null) {
+                    monto = cuota.monto();
+                } else {
+                    desactualizado = true;
+                }
+            }
+            vinculosDesactualizados.put(partida.getId(), desactualizado);
             partidasCalculo.add(new PartidaCalculo(
                     partida.getId(),
                     partida.getNombre(),
-                    categoriaRef(partida.getCategoria()),
-                    partida.getMontoPlanificado(),
-                    partida.getOrden()));
+                    categoriaRef(partida.getCategoria(), preferencias),
+                    monto,
+                    partida.getOrden(),
+                    partida.getGrupo() == null ? null : partida.getGrupo().getId(),
+                    partida.getDeuda() == null ? null : partida.getDeuda().getId()));
         }
 
         List<MovimientoCalculo> movimientosCalculo = new ArrayList<>(movimientos.size());
@@ -368,22 +577,78 @@ public class PlanService {
                     movimiento.getMonto(),
                     movimiento.getTipoMovimiento(),
                     movimiento.getPartida() == null ? null : movimiento.getPartida().getId(),
-                    categoriaRef(movimiento.getCategoria())));
+                    movimiento.getDeuda() == null ? null : movimiento.getDeuda().getId(),
+                    categoriaRef(movimiento.getCategoria(), preferencias)));
         }
 
         Resultado resultado = calculadora.calcular(
                 plan == null ? null : plan.getIngresoReferencia(),
+                guia,
+                gruposCalculo,
                 partidasCalculo,
                 movimientosCalculo);
+
+        Map<Long, Referencia> referencias = incluirReferencias
+                ? cargarReferencias(rut, mes, resultado.porCategoria())
+                : Map.of();
 
         PlanMensualResponseDTO dto = new PlanMensualResponseDTO();
         dto.setMes(mes.toString());
         dto.setExiste(plan != null);
         dto.setIngresoReferencia(plan == null ? null : plan.getIngresoReferencia());
         dto.setResumen(aResumen(resultado.resumen()));
-        dto.setPartidas(aPartidas(resultado.partidas(), entidadesPorId));
-        dto.setPorCategoria(aCategorias(resultado.porCategoria()));
+        dto.setPartidas(aPartidas(resultado.partidas(), entidadesPorId,
+                vinculosDesactualizados));
+        dto.setPorCategoria(aCategorias(resultado.porCategoria(), referencias));
+        dto.setRepartoPorTipo(aReparto(resultado.repartoPorTipo()));
+        dto.setGuia(guia == null ? null : aGuia(guia));
+        dto.setGrupos(aGrupos(resultado.grupos()));
+        dto.setAvisos(avisos == null ? List.of() : avisos);
         return dto;
+    }
+
+    /**
+     * Series de gasto por categoría y mes para las referencias (T10d, sección
+     * 8). Una sola consulta agregada sobre [max(primerMes, mes−3), mes).
+     */
+    private Map<Long, Referencia> cargarReferencias(String rut, YearMonth mes,
+                                                    List<CategoriaResultado> categorias) {
+        Date primerMovimiento = movimientoRepository.primerMovimiento(rut);
+        if (primerMovimiento == null) {
+            return Map.of();
+        }
+        YearMonth primerMes = FechasMovimiento.mesDe(primerMovimiento);
+        if (!primerMes.isBefore(mes)) {
+            return Map.of();
+        }
+
+        YearMonth desde = mes.minusMonths(3);
+        if (desde.isBefore(primerMes)) {
+            desde = primerMes;
+        }
+        List<Object[]> filas = movimientoRepository.gastoPorCategoriaYMes(
+                rut, FechasMovimiento.inicioDeMes(desde), FechasMovimiento.inicioDeMes(mes));
+
+        Map<Long, Map<YearMonth, BigDecimal>> series = new HashMap<>();
+        for (Object[] fila : filas) {
+            Long categoriaId = ((Number) fila[0]).longValue();
+            int anio = ((Number) fila[1]).intValue();
+            int numeroMes = ((Number) fila[2]).intValue();
+            BigDecimal monto = fila[3] instanceof BigDecimal valor
+                    ? valor
+                    : new BigDecimal(fila[3].toString());
+            series.computeIfAbsent(categoriaId, id -> new HashMap<>())
+                    .put(YearMonth.of(anio, numeroMes), monto);
+        }
+
+        Map<Long, Referencia> referencias = new HashMap<>();
+        for (CategoriaResultado categoria : categorias) {
+            Map<YearMonth, BigDecimal> serie = series.getOrDefault(
+                    categoria.categoriaId(), Map.of());
+            referencias.put(categoria.categoriaId(),
+                    ReferenciasHistoricas.calcular(serie, mes, primerMes));
+        }
+        return referencias;
     }
 
     private ResumenPlanDTO aResumen(CalculadoraPlan.ResumenCalculado calculado) {
@@ -417,7 +682,8 @@ public class PlanService {
     }
 
     private List<PartidaPlanDTO> aPartidas(List<PartidaResultado> calculadas,
-                                           Map<Long, PartidaPlan> entidadesPorId) {
+                                           Map<Long, PartidaPlan> entidadesPorId,
+                                           Map<Long, Boolean> vinculosDesactualizados) {
         List<PartidaPlanDTO> dtos = new ArrayList<>(calculadas.size());
         for (PartidaResultado calculada : calculadas) {
             PartidaPlan entidad = entidadesPorId.get(calculada.partida().id());
@@ -435,6 +701,11 @@ public class PlanService {
             dto.setDiferencia(calculada.diferencia());
             dto.setPorcentajeUsado(calculada.porcentajeUsado());
             dto.setEstado(calculada.estado());
+            dto.setEstadoCuota(calculada.estadoCuota());
+            dto.setGrupoId(calculada.partida().grupoId());
+            dto.setDeudaId(calculada.partida().deudaId());
+            dto.setVinculoDesactualizado(
+                    Boolean.TRUE.equals(vinculosDesactualizados.get(calculada.partida().id())));
             dto.setOrden(calculada.partida().orden());
             dto.setActualizadoEn(entidad == null ? null : entidad.getActualizadoEn());
             dtos.add(dto);
@@ -442,7 +713,8 @@ public class PlanService {
         return dtos;
     }
 
-    private List<CategoriaPlanDTO> aCategorias(List<CategoriaResultado> calculadas) {
+    private List<CategoriaPlanDTO> aCategorias(List<CategoriaResultado> calculadas,
+                                               Map<Long, Referencia> referencias) {
         List<CategoriaPlanDTO> dtos = new ArrayList<>(calculadas.size());
         for (CategoriaResultado calculada : calculadas) {
             CategoriaPlanDTO dto = new CategoriaPlanDTO();
@@ -454,6 +726,29 @@ public class PlanService {
             dto.setDiferencia(calculada.diferencia());
             dto.setPorcentajeUsado(calculada.porcentajeUsado());
             dto.setEstado(calculada.estado());
+            Referencia referencia = referencias.get(calculada.categoriaId());
+            if (referencia != null) {
+                ReferenciaCategoriaDTO referenciaDTO = new ReferenciaCategoriaDTO();
+                referenciaDTO.setMesAnterior(referencia.mesAnterior());
+                referenciaDTO.setPromedio3Meses(referencia.promedio3Meses());
+                dto.setReferencia(referenciaDTO);
+            }
+            dtos.add(dto);
+        }
+        return dtos;
+    }
+
+    private static List<GrupoPlanResumenDTO> aGrupos(List<GrupoResultado> calculados) {
+        List<GrupoPlanResumenDTO> dtos = new ArrayList<>(calculados.size());
+        for (GrupoResultado calculado : calculados) {
+            GrupoPlanResumenDTO dto = new GrupoPlanResumenDTO();
+            dto.setId(calculado.id());
+            dto.setNombre(calculado.nombre());
+            dto.setOrden(calculado.orden());
+            dto.setPlanificado(calculado.planificado());
+            dto.setPorcentajeDelPlanificado(calculado.porcentajeDelPlanificado());
+            dto.setReal(calculado.real());
+            dto.setPartidaIds(calculado.partidaIds());
             dtos.add(dto);
         }
         return dtos;
@@ -484,6 +779,43 @@ public class PlanService {
         return categoriaRepository.findById(categoriaId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Categoría no encontrada con ID: " + categoriaId));
+    }
+
+    private GrupoPlan resolverGrupo(Long grupoId) {
+        GrupoPlan grupo = grupoPlanRepository.findById(grupoId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Grupo no encontrado con ID: " + grupoId));
+        securityUtils.validarPropietario(grupo.getUsuario().getRut());
+        return grupo;
+    }
+
+    private Deuda resolverDeuda(Long deudaId) {
+        Deuda deuda = deudaRepository.findById(deudaId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Deuda no encontrada con ID: " + deudaId));
+        securityUtils.validarPropietario(deuda.getUsuario().getRut());
+        if (deuda.getEstado() == EstadoDeuda.CANCELADA) {
+            throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
+                    "No puedes vincular una deuda cancelada.");
+        }
+        if (deuda.getFechaPrimeraCuota() == null) {
+            throw new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
+                    "Esta deuda no tiene fechas de cuotas.");
+        }
+        return deuda;
+    }
+
+    private Categoria categoriaDeudas() {
+        return categoriaRepository.findByCodigo("DEUDAS")
+                .orElseThrow(() -> new IllegalStateException(
+                        "La categoría DEUDAS no fue encontrada."));
+    }
+
+    private BigDecimal cuotaDelMes(Deuda deuda, YearMonth mes) {
+        return cuotasMesService.buscar(deuda, mes)
+                .map(CuotaDelMes::monto)
+                .orElseThrow(() -> new ErrorNegocio(CodigoError.CONFLICTO_REGLA_NEGOCIO,
+                        "No hay una cuota de la deuda que venza en el mes del plan."));
     }
 
     /** SUELDO y AHORRO no se usan en partidas (DC14/DC15). */
@@ -520,11 +852,42 @@ public class PlanService {
         planMensualRepository.save(plan);
     }
 
-    private static CategoriaRef categoriaRef(Categoria categoria) {
+    private static CategoriaRef categoriaRef(Categoria categoria,
+                                             Map<Long, TipoPresupuesto> preferencias) {
         if (categoria == null) {
             return null;
         }
-        return new CategoriaRef(categoria.getId(), categoria.getCodigo(), categoria.getTipoPresupuesto());
+        return new CategoriaRef(categoria.getId(), categoria.getCodigo(),
+                PreferenciaTipoService.tipoEfectivo(preferencias, categoria));
+    }
+
+    /** Guía del usuario; null si no tiene configuración (T10d, sección 4). */
+    private static GuiaCalculo guiaDe(ConfiguracionPresupuesto config) {
+        if (config == null) {
+            return null;
+        }
+        return new GuiaCalculo(config.getPorcentajeNecesidades(),
+                config.getPorcentajeDeseos(),
+                config.getPorcentajeAhorro());
+    }
+
+    private static GuiaDTO aGuia(GuiaCalculo guia) {
+        return new GuiaDTO(guia.necesidades(), guia.deseos(), guia.ahorro());
+    }
+
+    private static List<RepartoTipoDTO> aReparto(List<CalculadoraPlan.RepartoTipoCalculado> calculado) {
+        List<RepartoTipoDTO> dtos = new ArrayList<>(calculado.size());
+        for (CalculadoraPlan.RepartoTipoCalculado fila : calculado) {
+            RepartoTipoDTO dto = new RepartoTipoDTO();
+            dto.setTipo(fila.tipo());
+            dto.setPlanificado(fila.planificado());
+            dto.setPorcentajeDelIngreso(fila.porcentajeDelIngreso());
+            dto.setReal(fila.real());
+            dto.setPorcentajeRealDelIngresoReal(fila.porcentajeRealDelIngresoReal());
+            dto.setDiferenciaPuntos(fila.diferenciaPuntos());
+            dtos.add(dto);
+        }
+        return dtos;
     }
 
     private static BigDecimal dinero(BigDecimal valor) {

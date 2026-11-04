@@ -10,6 +10,9 @@
     "description" : "Generated server url"
   } ],
   "tags" : [ {
+    "name" : "Categorías",
+    "description" : "Catálogo de categorías, sugerencias por texto y preferencia de tipo."
+  }, {
     "name" : "Deudas",
     "description" : "Deudas, pagos, amortización e historial de pagos."
   }, {
@@ -45,9 +48,6 @@
   }, {
     "name" : "Notificaciones",
     "description" : "Dispositivos para recordatorios push de vencimiento."
-  }, {
-    "name" : "Categorías",
-    "description" : "Catálogo de categorías de movimientos y sugerencias por texto."
   } ],
   "paths" : {
     "/api/v1/usuarios/me/contrasena" : {
@@ -618,6 +618,189 @@
         } ]
       }
     },
+    "/api/v1/planes/grupos/{id}" : {
+      "put" : {
+        "tags" : [ "Planes" ],
+        "summary" : "Edita un grupo de partidas",
+        "operationId" : "editarGrupoPlan",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GrupoPlanEdicionDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GrupoPlanDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "delete" : {
+        "tags" : [ "Planes" ],
+        "summary" : "Elimina un grupo de partidas",
+        "operationId" : "eliminarGrupoPlan",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Grupo eliminado; las partidas quedan sin grupo"
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/movimientos/{id}" : {
       "put" : {
         "tags" : [ "Movimientos" ],
@@ -1107,6 +1290,193 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/categorias/{id}/tipo-preferido" : {
+      "put" : {
+        "tags" : [ "Categorías" ],
+        "summary" : "Establece el tipo preferido de una categoría",
+        "description" : "Reclasifica la categoría como NECESIDAD o DESEO para el usuario\nautenticado. El tipo efectivo pasa a ser ese valor en toda la app\n(ejecución 50/30/20, plan y sugerencia). Cuerpo: {\"tipo\": \"NECESIDAD\"}.\n",
+        "operationId" : "establecerTipoPreferido",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "Identificador de la categoría.",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TipoPreferidoRequestDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PreferenciaCategoriaDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "delete" : {
+        "tags" : [ "Categorías" ],
+        "summary" : "Elimina el tipo preferido de una categoría",
+        "description" : "La categoría vuelve a su tipo por defecto. Es idempotente: responde 204 aunque no tuviera preferencia previa.",
+        "operationId" : "eliminarTipoPreferido",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "Identificador de la categoría.",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Preferencia eliminada (idempotente)"
           },
           "400" : {
             "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
@@ -1754,6 +2124,181 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/PlanMensualResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/planes/grupos" : {
+      "get" : {
+        "tags" : [ "Planes" ],
+        "summary" : "Lista los grupos de partidas",
+        "operationId" : "listarGruposPlan",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/GrupoPlanDTO"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "Planes" ],
+        "summary" : "Crea un grupo de partidas",
+        "operationId" : "crearGrupoPlan",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GrupoPlanCreacionDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GrupoPlanDTO"
                 }
               }
             }
@@ -3755,6 +4300,89 @@
         } ]
       }
     },
+    "/api/v1/presupuestos/sugerencia-regla" : {
+      "get" : {
+        "tags" : [ "Presupuestos" ],
+        "summary" : "Sugiere una regla 50/30/20 desde el comportamiento real",
+        "description" : "Analiza hasta los 3 meses cerrados más recientes anteriores al mes en\ncurso (America/Santiago) que tengan ingresos. Mediana del % de gasto en\nnecesidades y deseos sobre el ingreso real; si el gasto supera el\ningreso, la sugerencia se escala para sumar 100 y ahorro queda en 0.\nSugerencia redondeada a múltiplos de 5. Informativa y de solo lectura:\npara aceptarla, el cliente usa POST /api/v1/presupuestos/me.\n",
+        "operationId" : "obtenerSugerenciaRegla",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SugerenciaReglaResponseDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/presupuestos/historial/me" : {
       "get" : {
         "tags" : [ "Presupuestos" ],
@@ -4067,6 +4695,14 @@
           "required" : true,
           "schema" : {
             "type" : "string"
+          }
+        }, {
+          "name" : "incluirReferencias",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
           }
         } ],
         "responses" : {
@@ -4908,6 +5544,92 @@
         } ]
       }
     },
+    "/api/v1/categorias/preferencias" : {
+      "get" : {
+        "tags" : [ "Categorías" ],
+        "summary" : "Lista las categorías con su tipo por defecto, preferido y efectivo",
+        "description" : "El tipo efectivo es el preferido del usuario si existe y, si no, el tipo\npor defecto del catálogo. Ordena igual que el catálogo: NECESIDAD →\nDESEO → AHORRO → OTROS y luego por nombre.\n",
+        "operationId" : "obtenerPreferenciasTipo",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PreferenciaCategoriaDTO"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/app/version" : {
       "get" : {
         "tags" : [ "App" ],
@@ -5098,9 +5820,52 @@
             "type" : "integer",
             "description" : "Nueva categoría del catálogo.",
             "format" : "int64"
+          },
+          "grupoId" : {
+            "type" : "integer",
+            "description" : "ID del grupo al que mover la partida.",
+            "format" : "int64"
+          },
+          "quitarGrupo" : {
+            "type" : "boolean",
+            "description" : "true quita el grupo de la partida. Prohibido junto con grupoId."
+          },
+          "deudaId" : {
+            "type" : "integer",
+            "description" : "ID de la deuda a vincular. Solo si la partida aún no tiene deuda.",
+            "format" : "int64"
           }
         },
         "description" : "Edición parcial de una partida; al menos un campo es obligatorio."
+      },
+      "AvisoPlanDTO" : {
+        "required" : [ "motivo" ],
+        "type" : "object",
+        "properties" : {
+          "motivo" : {
+            "type" : "string",
+            "description" : "Motivo estable del aviso."
+          },
+          "partidaId" : {
+            "type" : "integer",
+            "description" : "ID de la partida de origen, si aplica.",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nombre de la partida de origen, si aplica."
+          },
+          "deudaId" : {
+            "type" : "integer",
+            "description" : "ID de la deuda vinculada, si aplica.",
+            "format" : "int64"
+          },
+          "mensaje" : {
+            "type" : "string",
+            "description" : "Texto de respaldo para mostrar al usuario."
+          }
+        },
+        "description" : "Aviso informativo del plan."
       },
       "CategoriaPlanDTO" : {
         "required" : [ "categoriaId", "codigo", "diferencia", "estado", "planificado", "real" ],
@@ -5140,9 +5905,72 @@
             "type" : "string",
             "description" : "Estado informativo de la categoría.",
             "enum" : [ "BAJO_EL_PLAN", "CERCA_DEL_PLAN", "SOBRE_EL_PLAN" ]
+          },
+          "referencia" : {
+            "$ref" : "#/components/schemas/ReferenciaCategoriaDTO"
           }
         },
         "description" : "Ejecución de una categoría dentro del plan del mes."
+      },
+      "GrupoPlanResumenDTO" : {
+        "required" : [ "nombre", "partidaIds", "planificado", "real" ],
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "description" : "ID del grupo; null para el grupo \"Sin grupo\".",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nombre del grupo."
+          },
+          "orden" : {
+            "type" : "integer",
+            "description" : "Orden del grupo; null para \"Sin grupo\".",
+            "format" : "int32"
+          },
+          "planificado" : {
+            "type" : "number",
+            "description" : "Suma de las partidas del grupo."
+          },
+          "porcentajeDelPlanificado" : {
+            "type" : "number",
+            "description" : "planificado ÷ planificadoTotal × 100, HALF_UP; null si el total es 0."
+          },
+          "real" : {
+            "type" : "number",
+            "description" : "Gasto real imputado a las partidas del grupo."
+          },
+          "partidaIds" : {
+            "type" : "array",
+            "description" : "IDs de las partidas del grupo, en orden de presentación.",
+            "items" : {
+              "type" : "integer",
+              "description" : "IDs de las partidas del grupo, en orden de presentación.",
+              "format" : "int64"
+            }
+          }
+        },
+        "description" : "Resumen de un grupo dentro del plan del mes."
+      },
+      "GuiaDTO" : {
+        "type" : "object",
+        "properties" : {
+          "necesidades" : {
+            "type" : "number",
+            "description" : "Porcentaje de necesidades de la guía."
+          },
+          "deseos" : {
+            "type" : "number",
+            "description" : "Porcentaje de deseos de la guía."
+          },
+          "ahorro" : {
+            "type" : "number",
+            "description" : "Porcentaje de ahorro de la guía."
+          }
+        },
+        "description" : "Guía de porcentajes del usuario; null si no tiene configuración."
       },
       "MotivoSinPlanificarDTO" : {
         "required" : [ "monto", "motivo", "movimientos" ],
@@ -5208,6 +6036,25 @@
             "description" : "Estado informativo del plan.",
             "enum" : [ "BAJO_EL_PLAN", "CERCA_DEL_PLAN", "SOBRE_EL_PLAN" ]
           },
+          "estadoCuota" : {
+            "type" : "string",
+            "description" : "Estado del pago de la cuota; solo para partidas vinculadas a una deuda.",
+            "enum" : [ "PENDIENTE", "PARCIAL", "PAGADA" ]
+          },
+          "grupoId" : {
+            "type" : "integer",
+            "description" : "ID del grupo de presentación; null si no tiene grupo.",
+            "format" : "int64"
+          },
+          "deudaId" : {
+            "type" : "integer",
+            "description" : "ID de la deuda vinculada; null si la partida es normal.",
+            "format" : "int64"
+          },
+          "vinculoDesactualizado" : {
+            "type" : "boolean",
+            "description" : "true si la cuota ya no se puede recalcular y se muestra el último monto guardado."
+          },
           "orden" : {
             "type" : "integer",
             "description" : "Posición de la partida dentro del plan.",
@@ -5222,7 +6069,7 @@
         "description" : "Partida del plan y su gasto real del mes."
       },
       "PlanMensualResponseDTO" : {
-        "required" : [ "existe", "mes", "partidas", "porCategoria", "resumen" ],
+        "required" : [ "avisos", "existe", "grupos", "mes", "partidas", "porCategoria", "repartoPorTipo", "resumen" ],
         "type" : "object",
         "properties" : {
           "mes" : {
@@ -5253,9 +6100,79 @@
             "items" : {
               "$ref" : "#/components/schemas/CategoriaPlanDTO"
             }
+          },
+          "repartoPorTipo" : {
+            "type" : "array",
+            "description" : "Reparto informativo del plan por tipo (NECESIDAD, DESEO, OTROS), frente a la guía.",
+            "items" : {
+              "$ref" : "#/components/schemas/RepartoTipoDTO"
+            }
+          },
+          "guia" : {
+            "$ref" : "#/components/schemas/GuiaDTO"
+          },
+          "grupos" : {
+            "type" : "array",
+            "description" : "Grupos del usuario y, al final, \"Sin grupo\" si hay partidas sin grupo.",
+            "items" : {
+              "$ref" : "#/components/schemas/GrupoPlanResumenDTO"
+            }
+          },
+          "avisos" : {
+            "type" : "array",
+            "description" : "Avisos informativos; lista vacía fuera de una copia entre meses.",
+            "items" : {
+              "$ref" : "#/components/schemas/AvisoPlanDTO"
+            }
           }
         },
         "description" : "Plan del mes con su resumen, partidas y ejecución por categoría."
+      },
+      "ReferenciaCategoriaDTO" : {
+        "type" : "object",
+        "properties" : {
+          "mesAnterior" : {
+            "type" : "number",
+            "description" : "Gasto real del mes inmediatamente anterior; null si no hay historial."
+          },
+          "promedio3Meses" : {
+            "type" : "number",
+            "description" : "Promedio de hasta 3 meses cerrados previos, HALF_UP; null sin historial."
+          }
+        },
+        "description" : "Gasto histórico de referencia de una categoría."
+      },
+      "RepartoTipoDTO" : {
+        "required" : [ "planificado", "real", "tipo" ],
+        "type" : "object",
+        "properties" : {
+          "tipo" : {
+            "type" : "string",
+            "description" : "Tipo del reparto.",
+            "enum" : [ "NECESIDAD", "DESEO", "AHORRO", "OTROS" ]
+          },
+          "planificado" : {
+            "type" : "number",
+            "description" : "Suma de las partidas del tipo efectivo, con escala 2."
+          },
+          "porcentajeDelIngreso" : {
+            "type" : "number",
+            "description" : "planificado ÷ ingresoReferencia × 100 (HALF_UP); null sin ingreso."
+          },
+          "real" : {
+            "type" : "number",
+            "description" : "Gasto real del tipo en el mes, con escala 2."
+          },
+          "porcentajeRealDelIngresoReal" : {
+            "type" : "number",
+            "description" : "real ÷ ingresoReal × 100 (HALF_UP); null sin ingreso real."
+          },
+          "diferenciaPuntos" : {
+            "type" : "number",
+            "description" : "porcentajeDelIngreso − porcentaje de la guía, con 2 decimales; null para OTROS o si falta el ingreso o la guía."
+          }
+        },
+        "description" : "Plan y gasto real de un tipo (NECESIDAD, DESEO u OTROS) y su diferencia de puntos con la guía."
       },
       "ResumenPlanDTO" : {
         "required" : [ "ahorroRegistrado", "disponibleReal", "excedeIngreso", "gastoRealTotal", "ingresoReal", "planificadoTotal", "sinPlanificar" ],
@@ -5333,6 +6250,42 @@
           }
         },
         "description" : "Ingreso de referencia del plan; null para limpiarlo."
+      },
+      "GrupoPlanEdicionDTO" : {
+        "type" : "object",
+        "properties" : {
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nuevo nombre del grupo."
+          },
+          "orden" : {
+            "type" : "integer",
+            "description" : "Nuevo orden de presentación.",
+            "format" : "int32"
+          }
+        },
+        "description" : "Edición parcial de un grupo; al menos un campo es obligatorio."
+      },
+      "GrupoPlanDTO" : {
+        "required" : [ "id", "nombre", "orden" ],
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "description" : "Identificador del grupo.",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nombre del grupo (1 a 60 caracteres)."
+          },
+          "orden" : {
+            "type" : "integer",
+            "description" : "Orden de presentación.",
+            "format" : "int32"
+          }
+        },
+        "description" : "Grupo de partidas del plan."
       },
       "MovimientoEdicionDTO" : {
         "type" : "object",
@@ -5718,6 +6671,61 @@
           }
         },
         "description" : "Datos de una deuda. Las tasas se exponen en porcentaje, no como fracción."
+      },
+      "TipoPreferidoRequestDTO" : {
+        "required" : [ "tipo" ],
+        "type" : "object",
+        "properties" : {
+          "tipo" : {
+            "type" : "string",
+            "description" : "Tipo preferido: NECESIDAD o DESEO.",
+            "enum" : [ "NECESIDAD", "DESEO", "AHORRO", "OTROS" ]
+          }
+        },
+        "description" : "Nuevo tipo preferido para la categoría; solo NECESIDAD o DESEO."
+      },
+      "PreferenciaCategoriaDTO" : {
+        "required" : [ "codigo", "id", "nombre", "tipoEfectivo", "tipoPorDefecto" ],
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "description" : "Identificador de la categoría.",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nombre de la categoría."
+          },
+          "codigo" : {
+            "type" : "string",
+            "description" : "Código estable de la categoría."
+          },
+          "iconId" : {
+            "type" : "string",
+            "description" : "Identificador del ícono de la categoría."
+          },
+          "colorHex" : {
+            "type" : "string",
+            "description" : "Color hexadecimal de la categoría."
+          },
+          "tipoPorDefecto" : {
+            "type" : "string",
+            "description" : "Tipo por defecto del catálogo.",
+            "enum" : [ "NECESIDAD", "DESEO", "AHORRO", "OTROS" ]
+          },
+          "tipoPreferido" : {
+            "type" : "string",
+            "description" : "Tipo preferido por el usuario; null si no definió uno.",
+            "enum" : [ "NECESIDAD", "DESEO", "AHORRO", "OTROS" ]
+          },
+          "tipoEfectivo" : {
+            "type" : "string",
+            "description" : "Tipo efectivo: tipoPreferido si existe; si no, tipoPorDefecto.",
+            "enum" : [ "NECESIDAD", "DESEO", "AHORRO", "OTROS" ]
+          }
+        },
+        "description" : "Categoría del catálogo con su tipo por defecto, preferido y efectivo."
       },
       "UsuarioRegistroDTO" : {
         "required" : [ "apellido", "contrasena", "email", "nombre", "rut" ],
@@ -6162,7 +7170,7 @@
         "description" : "Configuración 50/30/20 guardada por el usuario."
       },
       "PartidaCreacionDTO" : {
-        "required" : [ "categoriaId", "montoPlanificado", "nombre" ],
+        "required" : [ "nombre" ],
         "type" : "object",
         "properties" : {
           "nombre" : {
@@ -6171,17 +7179,43 @@
           },
           "categoriaId" : {
             "type" : "integer",
-            "description" : "ID de la categoría del catálogo (distinta de SUELDO y AHORRO).",
+            "description" : "ID de la categoría del catálogo (distinta de SUELDO y AHORRO). Obligatoria salvo cuando se vincula una deuda, en cuyo caso se fuerza DEUDAS.",
             "format" : "int64"
           },
           "montoPlanificado" : {
             "minimum" : 0,
             "exclusiveMinimum" : false,
             "type" : "number",
-            "description" : "Monto planificado con escala 2."
+            "description" : "Monto planificado con escala 2. Prohibido si se vincula una deuda."
+          },
+          "grupoId" : {
+            "type" : "integer",
+            "description" : "ID de un grupo del usuario; null deja la partida sin grupo.",
+            "format" : "int64"
+          },
+          "deudaId" : {
+            "type" : "integer",
+            "description" : "ID de una deuda a vincular. El monto y la categoría se derivan de la cuota.",
+            "format" : "int64"
           }
         },
         "description" : "Datos para crear una partida del plan."
+      },
+      "GrupoPlanCreacionDTO" : {
+        "required" : [ "nombre" ],
+        "type" : "object",
+        "properties" : {
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nombre del grupo (1 a 60 caracteres)."
+          },
+          "orden" : {
+            "type" : "integer",
+            "description" : "Orden de presentación; si se omite usa 0.",
+            "format" : "int32"
+          }
+        },
+        "description" : "Datos para crear un grupo de partidas."
       },
       "ResultadoRecordatoriosDTO" : {
         "required" : [ "enviados", "evaluados", "omitidos" ],
@@ -6446,6 +7480,58 @@
           }
         },
         "description" : "Saldo actual calculado como la suma de los movimientos del usuario."
+      },
+      "PorcentajesReglaDTO" : {
+        "required" : [ "ahorro", "deseos", "necesidades" ],
+        "type" : "object",
+        "properties" : {
+          "necesidades" : {
+            "type" : "number",
+            "description" : "Porcentaje de necesidades."
+          },
+          "deseos" : {
+            "type" : "number",
+            "description" : "Porcentaje de deseos."
+          },
+          "ahorro" : {
+            "type" : "number",
+            "description" : "Porcentaje de ahorro."
+          }
+        },
+        "description" : "Porcentajes de la regla: necesidades, deseos y ahorro."
+      },
+      "SugerenciaReglaResponseDTO" : {
+        "required" : [ "actual", "gastoSuperaIngreso", "igualALaGuia", "mesesAnalizados" ],
+        "type" : "object",
+        "properties" : {
+          "mesesAnalizados" : {
+            "type" : "array",
+            "description" : "Meses cerrados analizados, formato yyyy-MM, en orden ascendente.",
+            "items" : {
+              "type" : "string",
+              "description" : "Meses cerrados analizados, formato yyyy-MM, en orden ascendente."
+            }
+          },
+          "actual" : {
+            "$ref" : "#/components/schemas/PorcentajesReglaDTO"
+          },
+          "sugerencia" : {
+            "$ref" : "#/components/schemas/PorcentajesReglaDTO"
+          },
+          "gastoSuperaIngreso" : {
+            "type" : "boolean",
+            "description" : "true si el gasto real de necesidades y deseos supera el ingreso; la sugerencia se escaló para sumar 100."
+          },
+          "igualALaGuia" : {
+            "type" : "boolean",
+            "description" : "true si la sugerencia coincide con la configuración del usuario; false si no la tiene."
+          },
+          "motivo" : {
+            "type" : "string",
+            "description" : "Motivo por el que no hay sugerencia; DATOS_INSUFICIENTES con menos de 2 meses válidos."
+          }
+        },
+        "description" : "Sugerencia de regla 50/30/20 calculada desde los meses cerrados."
       },
       "EjecucionPresupuestoDTO" : {
         "required" : [ "ahorroRealizado", "automatizarAhorroEnMetas", "gastoDeseos", "gastoNecesidades", "porcentajeAhorroConfigurado", "porcentajeDeseosConfigurado", "porcentajeNecesidadesConfigurado", "presupuestoAhorro", "presupuestoDeseos", "presupuestoNecesidades", "totalIngresos" ],

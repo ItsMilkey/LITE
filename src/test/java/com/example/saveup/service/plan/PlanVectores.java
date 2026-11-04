@@ -4,10 +4,14 @@ import com.example.saveup.model.enums.TipoMovimiento;
 import com.example.saveup.model.enums.TipoPresupuesto;
 import com.example.saveup.service.plan.CalculadoraPlan.CategoriaRef;
 import com.example.saveup.service.plan.CalculadoraPlan.CategoriaResultado;
+import com.example.saveup.service.plan.CalculadoraPlan.GuiaCalculo;
+import com.example.saveup.service.plan.CalculadoraPlan.GrupoCalculo;
+import com.example.saveup.service.plan.CalculadoraPlan.GrupoResultado;
 import com.example.saveup.service.plan.CalculadoraPlan.MotivoCalculado;
 import com.example.saveup.service.plan.CalculadoraPlan.MovimientoCalculo;
 import com.example.saveup.service.plan.CalculadoraPlan.PartidaCalculo;
 import com.example.saveup.service.plan.CalculadoraPlan.PartidaResultado;
+import com.example.saveup.service.plan.CalculadoraPlan.RepartoTipoCalculado;
 import com.example.saveup.service.plan.CalculadoraPlan.Resultado;
 import com.example.saveup.service.plan.CalculadoraPlan.SinPlanificarCalculado;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -45,6 +49,8 @@ final class PlanVectores {
             new CategoriaRef(5L, "SALUD_BIENESTAR", TipoPresupuesto.NECESIDAD);
     private static final CategoriaRef DEUDAS =
             new CategoriaRef(9L, "DEUDAS", TipoPresupuesto.NECESIDAD);
+    private static final CategoriaRef OTROS =
+            new CategoriaRef(10L, "OTROS", TipoPresupuesto.OTROS);
 
     private static final PartidaCalculo ARRIENDO =
             partida(1L, "Arriendo", VIVIENDA, "400000.00", 1);
@@ -65,8 +71,9 @@ final class PlanVectores {
 
     static ObjectNode generar() {
         ObjectNode raiz = MAPPER.createObjectNode();
-        raiz.put("version", 1);
+        raiz.put("version", 3);
         raiz.put("generadoPor", "CalculadoraPlan");
+        raiz.put("cambio", "T10d (sesión 2): agrega grupos, deudaId, estadoCuota e imputación por deuda.");
         ArrayNode casos = raiz.putArray("casos");
 
         casos.add(caso("V01", "Sin plan, sin ingreso y sin movimientos",
@@ -129,15 +136,117 @@ final class PlanVectores {
                 List.of(new MovimientoCalculo(dinero("900000.00"), TipoMovimiento.INGRESO_GENERAL, null, null),
                         gasto("100000.00", null, VIVIENDA))));
 
+        // ─── T10d (sesión 1): guía y reparto por tipo ───
+
+        GuiaCalculo GUIA_50_30_20 = new GuiaCalculo(dinero("50"), dinero("30"), dinero("20"));
+        casos.add(casoConGuia("V19", "Datos de referencia con guía 50/30/20 (D12)",
+                "1000000.00", GUIA_50_30_20, REFERENCIA, List.of()));
+        casos.add(casoConGuia("V20", "Sin ingreso y sin guía: porcentajes y diferencias nulos (D13)",
+                null, null, List.of(ARRIENDO, SUPERMERCADO), List.of()));
+        casos.add(casoConGuia("V21", "Real por tipo con preferencia: gasto en categoría reclasificada (D14)",
+                "1000000.00", GUIA_50_30_20,
+                List.of(partida(40L, "Netflix",
+                        new CategoriaRef(8L, "SUSCRIPCIONES_DIGITAL", TipoPresupuesto.NECESIDAD),
+                        "10000.00", 1)),
+                List.of(gasto("10000.00", 40L,
+                        new CategoriaRef(8L, "SUSCRIPCIONES_DIGITAL", TipoPresupuesto.NECESIDAD)))));
+        casos.add(casoConGuia("V22", "Partida y gasto de categoría OTROS van al tipo OTROS (D15)",
+                "1000000.00", GUIA_50_30_20,
+                List.of(partida(30L, "Varios", OTROS, "20000.00", 1)),
+                List.of(gasto("5000.00", 30L, OTROS))));
+        casos.add(casoConGuia("V23", "Porcentaje real del ingreso real por tipo con guía",
+                "1000000.00", GUIA_50_30_20, List.of(ARRIENDO),
+                List.of(new MovimientoCalculo(dinero("800000.00"), TipoMovimiento.INGRESO_GENERAL, null, null),
+                        gasto("300000.00", 1L, VIVIENDA))));
+        casos.add(casoConGuia("V24", "Guía presente sin ingreso: guía reportada, diferencias nulas",
+                null, GUIA_50_30_20, List.of(ARRIENDO), List.of()));
+        casos.add(casoConGuia("V25", "Partida AHORRO: fuera del reparto por tipo",
+                "1000000.00", GUIA_50_30_20,
+                List.of(ARRIENDO, partida(31L, "Ahorro fijo",
+                        new CategoriaRef(7L, "AHORRO_META", TipoPresupuesto.AHORRO),
+                        "25000.00", 2)),
+                List.of()));
+
+        // ─── T10d (sesión 2): grupos, deudas vinculadas y estado de cuota ───
+
+        GrupoCalculo FIJOS = new GrupoCalculo(1L, "Fijos", 1);
+        GrupoCalculo VARIABLE = new GrupoCalculo(2L, "Variable", 2);
+
+        List<PartidaCalculo> conGrupos = List.of(
+                partida(1L, "Arriendo", VIVIENDA, "400000.00", 1, 1L, null),
+                partida(2L, "Supermercado", ALIMENTACION, "250000.00", 2, 2L, null),
+                partida(3L, "Transporte", TRANSPORTE, "80000.00", 3, 2L, null),
+                partida(4L, "Netflix", SUSCRIPCIONES, "10000.00", 4, 1L, null),
+                partida(5L, "Spotify", SUSCRIPCIONES, "6000.00", 5, 1L, null));
+
+        casos.add(casoConGrupos("V26", "Dos grupos: Fijos 416.000 (55,76 %) y Variable 330.000 (44,24 %) (D30)",
+                "1000000.00", null, List.of(FIJOS, VARIABLE), conGrupos, List.of()));
+
+        casos.add(casoConGrupos("V27", "Plan con total 0: porcentajeDelPlanificado nulo (D31)",
+                "0.00", null, List.of(FIJOS),
+                List.of(partida(1L, "Arriendo", VIVIENDA, "0.00", 1, 1L, null)),
+                List.of()));
+
+        casos.add(casoConGrupos("V28", "Sin grupo aparece solo si hay partidas sin grupo y va al final (D32)",
+                "1000000.00", null, List.of(FIJOS),
+                List.of(partida(1L, "Arriendo", VIVIENDA, "400000.00", 1, 1L, null),
+                        partida(2L, "Supermercado", ALIMENTACION, "250000.00", 2, null, null)),
+                List.of()));
+
+        casos.add(casoConGrupos("V29", "Un grupo sin partidas aparece con planificado 0 (D35)",
+                "1000000.00", null,
+                List.of(FIJOS, new GrupoCalculo(3L, "Vacío", 3)),
+                List.of(partida(1L, "Arriendo", VIVIENDA, "400000.00", 1, 1L, null)),
+                List.of()));
+
+        PartidaCalculo CUOTA = partida(20L, "Cuota crédito", DEUDAS, "43500.00", 1, 1L, 77L);
+        casos.add(casoConGrupos("V30", "Cuota de 43.500 con pago de 20.000: PARCIAL y diferencia 23.500 (D41/D46)",
+                "1000000.00", null, List.of(FIJOS), List.of(CUOTA),
+                List.of(new MovimientoCalculo(dinero("-20000.00"), TipoMovimiento.PAGO_DEUDA,
+                        null, 77L, DEUDAS))));
+        casos.add(casoConGrupos("V31", "Cuota de 43.500 pagada completa: PAGADA (D41)",
+                "1000000.00", null, List.of(FIJOS), List.of(CUOTA),
+                List.of(new MovimientoCalculo(dinero("-43500.00"), TipoMovimiento.PAGO_DEUDA,
+                        null, 77L, DEUDAS))));
+        casos.add(casoConGrupos("V32", "Cuota sin pagos en el mes: PENDIENTE (D41)",
+                "1000000.00", null, List.of(FIJOS), List.of(CUOTA), List.of()));
+        casos.add(casoConGrupos("V33", "PAGO_DEUDA sin partida_id se imputa a la partida vinculada por deuda (D43)",
+                "1000000.00", null, List.of(FIJOS), List.of(CUOTA),
+                List.of(new MovimientoCalculo(dinero("-43500.00"), TipoMovimiento.PAGO_DEUDA,
+                        null, 77L, DEUDAS))));
+
         return raiz;
     }
 
     private static ObjectNode caso(String id, String descripcion, String ingreso,
                                    List<PartidaCalculo> partidas,
                                    List<MovimientoCalculo> movimientos) {
-        Resultado resultado = new CalculadoraPlan().calcular(
-                ingreso == null ? null : dinero(ingreso), partidas, movimientos);
+        return casoConGrupos(id, descripcion, ingreso, null, List.of(), partidas, movimientos);
+    }
 
+    /** Caso con guía del usuario (T10d); {@code guia} nulo equivale a sin configuración. */
+    private static ObjectNode casoConGuia(String id, String descripcion, String ingreso,
+                                          GuiaCalculo guia,
+                                          List<PartidaCalculo> partidas,
+                                          List<MovimientoCalculo> movimientos) {
+        return casoConGrupos(id, descripcion, ingreso, guia, List.of(), partidas, movimientos);
+    }
+
+    private static ObjectNode casoConGrupos(String id, String descripcion, String ingreso,
+                                            GuiaCalculo guia,
+                                            List<GrupoCalculo> grupos,
+                                            List<PartidaCalculo> partidas,
+                                            List<MovimientoCalculo> movimientos) {
+        Resultado resultado = new CalculadoraPlan().calcular(
+                ingreso == null ? null : dinero(ingreso), guia, grupos, partidas, movimientos);
+        return nodoCaso(id, descripcion, ingreso, resultado, grupos, partidas, movimientos);
+    }
+
+    private static ObjectNode nodoCaso(String id, String descripcion, String ingreso,
+                                       Resultado resultado,
+                                       List<GrupoCalculo> grupos,
+                                       List<PartidaCalculo> partidas,
+                                       List<MovimientoCalculo> movimientos) {
         ObjectNode caso = MAPPER.createObjectNode();
         caso.put("id", id);
         caso.put("descripcion", descripcion);
@@ -145,6 +254,18 @@ final class PlanVectores {
             caso.putNull("ingresoReferencia");
         } else {
             caso.put("ingresoReferencia", dinero(ingreso));
+        }
+
+        ArrayNode gruposJson = caso.putArray("grupos");
+        for (GrupoCalculo grupo : grupos) {
+            ObjectNode nodo = gruposJson.addObject();
+            nodo.put("id", grupo.id());
+            nodo.put("nombre", grupo.nombre());
+            if (grupo.orden() == null) {
+                nodo.putNull("orden");
+            } else {
+                nodo.put("orden", grupo.orden());
+            }
         }
 
         ArrayNode partidasJson = caso.putArray("partidas");
@@ -155,6 +276,16 @@ final class PlanVectores {
             nodo.set("categoria", categoria(partida.categoria()));
             nodo.put("montoPlanificado", escala(partida.montoPlanificado()));
             nodo.put("orden", partida.orden());
+            if (partida.grupoId() == null) {
+                nodo.putNull("grupoId");
+            } else {
+                nodo.put("grupoId", partida.grupoId());
+            }
+            if (partida.deudaId() == null) {
+                nodo.putNull("deudaId");
+            } else {
+                nodo.put("deudaId", partida.deudaId());
+            }
         }
 
         ArrayNode movimientosJson = caso.putArray("movimientos");
@@ -166,6 +297,11 @@ final class PlanVectores {
                 nodo.putNull("partidaId");
             } else {
                 nodo.put("partidaId", movimiento.partidaId());
+            }
+            if (movimiento.deudaId() == null) {
+                nodo.putNull("deudaId");
+            } else {
+                nodo.put("deudaId", movimiento.deudaId());
             }
             if (movimiento.categoria() == null) {
                 nodo.putNull("categoria");
@@ -212,6 +348,11 @@ final class PlanVectores {
             nodo.put("diferencia", partida.diferencia());
             decimalONulo(nodo, "porcentajeUsado", partida.porcentajeUsado());
             nodo.put("estado", partida.estado().name());
+            if (partida.estadoCuota() == null) {
+                nodo.putNull("estadoCuota");
+            } else {
+                nodo.put("estadoCuota", partida.estadoCuota().name());
+            }
         }
 
         ArrayNode categorias = esperado.putArray("porCategoria");
@@ -225,6 +366,49 @@ final class PlanVectores {
             nodo.put("diferencia", categoria.diferencia());
             decimalONulo(nodo, "porcentajeUsado", categoria.porcentajeUsado());
             nodo.put("estado", categoria.estado().name());
+        }
+
+        ArrayNode reparto = esperado.putArray("repartoPorTipo");
+        for (RepartoTipoCalculado tipo : resultado.repartoPorTipo()) {
+            ObjectNode nodo = reparto.addObject();
+            nodo.put("tipo", tipo.tipo().name());
+            nodo.put("planificado", tipo.planificado());
+            decimalONulo(nodo, "porcentajeDelIngreso", tipo.porcentajeDelIngreso());
+            nodo.put("real", tipo.real());
+            decimalONulo(nodo, "porcentajeRealDelIngresoReal", tipo.porcentajeRealDelIngresoReal());
+            decimalONulo(nodo, "diferenciaPuntos", tipo.diferenciaPuntos());
+        }
+
+        if (resultado.guia() != null) {
+            ObjectNode guia = esperado.putObject("guia");
+            guia.put("necesidades", resultado.guia().necesidades());
+            guia.put("deseos", resultado.guia().deseos());
+            guia.put("ahorro", resultado.guia().ahorro());
+        } else {
+            esperado.putNull("guia");
+        }
+
+        ArrayNode grupos = esperado.putArray("grupos");
+        for (GrupoResultado grupo : resultado.grupos()) {
+            ObjectNode nodo = grupos.addObject();
+            if (grupo.id() == null) {
+                nodo.putNull("id");
+            } else {
+                nodo.put("id", grupo.id());
+            }
+            nodo.put("nombre", grupo.nombre());
+            if (grupo.orden() == null) {
+                nodo.putNull("orden");
+            } else {
+                nodo.put("orden", grupo.orden());
+            }
+            nodo.put("planificado", grupo.planificado());
+            decimalONulo(nodo, "porcentajeDelPlanificado", grupo.porcentajeDelPlanificado());
+            nodo.put("real", grupo.real());
+            ArrayNode ids = nodo.putArray("partidaIds");
+            for (Long id : grupo.partidaIds()) {
+                ids.add(id);
+            }
         }
 
         return esperado;
@@ -260,7 +444,12 @@ final class PlanVectores {
 
     private static PartidaCalculo partida(Long id, String nombre, CategoriaRef categoria,
                                           String monto, int orden) {
-        return new PartidaCalculo(id, nombre, categoria, dinero(monto), orden);
+        return partida(id, nombre, categoria, monto, orden, null, null);
+    }
+
+    private static PartidaCalculo partida(Long id, String nombre, CategoriaRef categoria,
+                                          String monto, int orden, Long grupoId, Long deudaId) {
+        return new PartidaCalculo(id, nombre, categoria, dinero(monto), orden, grupoId, deudaId);
     }
 
     private static MovimientoCalculo gasto(String monto, Long partidaId, CategoriaRef categoria) {

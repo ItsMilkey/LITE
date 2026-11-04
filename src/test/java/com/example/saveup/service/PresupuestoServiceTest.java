@@ -20,6 +20,7 @@ import com.example.saveup.repository.MovimientoRepository;
 import com.example.saveup.repository.PresupuestoCategoriaRepository;
 import com.example.saveup.repository.UsuarioRepository;
 import com.example.saveup.security.SecurityUtils;
+import com.example.saveup.service.categoria.PreferenciaTipoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -71,6 +72,9 @@ class PresupuestoServiceTest {
 
     @Mock
     private MetaAhorroRepository metaAhorroRepository;
+
+    @Mock
+    private PreferenciaTipoService preferenciaTipoService;
 
     @Mock
     private SecurityUtils securityUtils;

@@ -36,4 +36,19 @@ public class PlanMensualResponseDTO {
     @Schema(description = "Ejecución de las categorías con partidas o gasto real en el mes.",
             requiredMode = Schema.RequiredMode.REQUIRED)
     private List<CategoriaPlanDTO> porCategoria;
+
+    @Schema(description = "Reparto informativo del plan por tipo (NECESIDAD, DESEO, OTROS), frente a la guía.",
+            requiredMode = Schema.RequiredMode.REQUIRED)
+    private List<RepartoTipoDTO> repartoPorTipo;
+
+    @Schema(description = "Guía 50/30/20 del usuario; null si no tiene configuración.")
+    private GuiaDTO guia;
+
+    @Schema(description = "Grupos del usuario y, al final, \"Sin grupo\" si hay partidas sin grupo.",
+            requiredMode = Schema.RequiredMode.REQUIRED)
+    private List<GrupoPlanResumenDTO> grupos;
+
+    @Schema(description = "Avisos informativos; lista vacía fuera de una copia entre meses.",
+            requiredMode = Schema.RequiredMode.REQUIRED)
+    private List<AvisoPlanDTO> avisos;
 }

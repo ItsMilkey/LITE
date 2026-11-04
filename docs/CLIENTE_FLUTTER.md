@@ -153,13 +153,20 @@ editables y no hay cierre de mes.
 
 | Método | Ruta | Cuerpo | Respuesta |
 |---|---|---|---|
-| `GET` | `/planes/{mes}` | — | `200` plan completo (`existe:false` si no hay plan) |
+| `GET` | `/planes/{mes}` | — (`?incluirReferencias=true` opcional) | `200` plan completo (`existe:false` si no hay plan) |
 | `PUT` | `/planes/{mes}/ingreso-referencia` | `{ "monto": 1000000.00 }` o `{ "monto": null }` | `200` plan completo |
-| `POST` | `/planes/{mes}/partidas` | `{ "nombre": "Arriendo", "categoriaId": 4, "montoPlanificado": 400000.00 }` | `201` plan completo |
-| `PUT` | `/planes/{mes}/partidas/{id}` | `{ "nombre": "...", "categoriaId": 4 }` (al menos uno) | `200` plan completo |
+| `POST` | `/planes/{mes}/partidas` | `{ "nombre": "Arriendo", "categoriaId": 4, "montoPlanificado": 400000.00, "grupoId": 1 }` | `201` plan completo |
+| `PUT` | `/planes/{mes}/partidas/{id}` | `{ "nombre": "...", "categoriaId": 4, "grupoId": 1 }` o `{ "quitarGrupo": true }` (al menos uno) | `200` plan completo |
 | `DELETE` | `/planes/{mes}/partidas/{id}` | — | `204` |
 | `PATCH` | `/planes/{mes}/montos` | `{ "cambios": [ { "partidaId": 1, "monto": 420000.00 } ] }` | `200` plan completo |
 | `POST` | `/planes/{mes}/copiar-desde/{mesOrigen}` | — | `201` plan completo |
+| `GET` | `/planes/grupos` | — | `200` lista de grupos |
+| `POST` | `/planes/grupos` | `{ "nombre": "Fijos", "orden": 1 }` | `201` grupo |
+| `PUT` | `/planes/grupos/{id}` | `{ "nombre": "...", "orden": 2 }` (al menos uno) | `200` grupo |
+| `DELETE` | `/planes/grupos/{id}` | — | `204` (las partidas quedan sin grupo) |
+
+Para vincular una deuda, `POST /planes/{mes}/partidas` acepta `{ "nombre": "Cuota crédito", "deudaId": 7 }` **sin**
+`categoriaId` ni `montoPlanificado`: la categoría es siempre `DEUDAS` y el monto sale de la cuota.
 
 Todas las rutas llevan `Authorization: Bearer <token>`. Toda modificación devuelve el **plan completo recalculado**:
 reemplaza tu estado local con esa respuesta en lugar de parchear el objeto a mano.
@@ -167,7 +174,8 @@ reemplaza tu estado local con esa respuesta en lugar de parchear el objeto a man
 - **`GET /planes/{mes}` de un mes sin plan** responde `200` con `existe:false`, `ingresoReferencia:null`,
   `partidas:[]`, `planificadoTotal:0` y el gasto real del mes entero en `sinPlanificar` (motivo `SIN_PARTIDA`).
   Nunca es un 404: la pantalla se muestra vacía y lista para empezar.
-- **Forma de la respuesta** (siempre: `mes`, `existe`, `ingresoReferencia`, `resumen`, `partidas`, `porCategoria`):
+- **Forma de la respuesta** (siempre: `mes`, `existe`, `ingresoReferencia`, `resumen`, `partidas`, `porCategoria`,
+  `repartoPorTipo`, `guia`, `grupos`, `avisos`; `referencia` solo con `incluirReferencias=true`):
 
 ```json
 {
@@ -192,14 +200,30 @@ reemplaza tu estado local con esa respuesta en lugar de parchear el objeto a man
   "partidas": [
     { "id": 1, "nombre": "Arriendo", "categoriaId": 4, "categoriaCodigo": "VIVIENDA_SUMINISTROS",
       "montoPlanificado": 400000.00, "real": 400000.00, "diferencia": 0.00,
-      "porcentajeUsado": 100.00, "estado": "CERCA_DEL_PLAN", "orden": 1,
+      "porcentajeUsado": 100.00, "estado": "CERCA_DEL_PLAN", "grupoId": 1,
+      "deudaId": null, "estadoCuota": null, "vinculoDesactualizado": false, "orden": 1,
       "actualizadoEn": "2026-11-02T03:00:00.000Z" }
   ],
   "porCategoria": [
     { "categoriaId": 4, "codigo": "VIVIENDA_SUMINISTROS", "tipo": "NECESIDAD",
       "planificado": 400000.00, "real": 400000.00, "diferencia": 0.00,
-      "porcentajeUsado": 100.00, "estado": "CERCA_DEL_PLAN" }
-  ]
+      "porcentajeUsado": 100.00, "estado": "CERCA_DEL_PLAN",
+      "referencia": { "mesAnterior": 80000.00, "promedio3Meses": 100000.00 } }
+  ],
+  "repartoPorTipo": [
+    { "tipo": "NECESIDAD", "planificado": 400000.00, "porcentajeDelIngreso": 40.00,
+      "real": 400000.00, "porcentajeRealDelIngresoReal": 44.44, "diferenciaPuntos": -10.00 },
+    { "tipo": "DESEO", "planificado": 0.00, "porcentajeDelIngreso": 0.00,
+      "real": 0.00, "porcentajeRealDelIngresoReal": 0.00, "diferenciaPuntos": -30.00 },
+    { "tipo": "OTROS", "planificado": 0.00, "porcentajeDelIngreso": 0.00,
+      "real": 0.00, "porcentajeRealDelIngresoReal": 0.00, "diferenciaPuntos": null }
+  ],
+  "guia": { "necesidades": 50.00, "deseos": 30.00, "ahorro": 20.00 },
+  "grupos": [
+    { "id": 1, "nombre": "Fijos", "orden": 1, "planificado": 400000.00,
+      "porcentajeDelPlanificado": 100.00, "real": 400000.00, "partidaIds": [1] }
+  ],
+  "avisos": []
 }
 ```
 
@@ -218,10 +242,95 @@ reemplaza tu estado local con esa respuesta en lugar de parchear el objeto a man
 - **`PATCH /montos` es atómico**: los montos son absolutos (no incrementos). Si el mes no tiene plan (`404`), una
   partida no pertenece al plan (`404`/`403` si es de otro usuario), un monto es inválido, hay un `partidaId` repetido,
   la lista está vacía o supera 100 cambios, no se aplica **ninguno**. Reenviar el mismo lote no cambia
-  `actualizadoEn` de las partidas cuyo monto no cambió.
+  `actualizadoEn` de las partidas cuyo monto no cambió. En una **partida vinculada a una deuda** el monto lo define
+  la cuota: el `PATCH` sobre ella → `409 CONFLICTO_REGLA_NEGOCIO` y no se aplica nada.
 - **Copiar un mes:** el origen debe tener al menos una partida (`404 NO_ENCONTRADO`), el destino no debe tener
   partidas (`409 CONFLICTO_REGLA_NEGOCIO`) y los meses deben ser distintos (`400 PARAMETRO_INVALIDO`). Copia nombre,
-  categoría, monto y orden; el ingreso de referencia solo si el destino no tenía uno.
+  categoría, monto, orden y grupo; el ingreso de referencia solo si el destino no tenía uno. Las partidas vinculadas
+  se copian solo si la deuda tiene cuota en el destino; las omitidas llegan en `avisos` (ver más abajo).
+
+### Preferencia de tipo y reparto por tipo (T10d, sesión 1)
+
+El usuario puede reclasificar categorías del catálogo como NECESIDAD o DESEO. **Tipo efectivo** = preferencia si
+existe; si no, el tipo por defecto del catálogo. El tipo efectivo reemplaza al por defecto en toda la app:
+ejecución 50/30/20 (T5), `porCategoria.tipo`, `repartoPorTipo` y sugerencia de regla.
+
+| Método | Ruta | Cuerpo | Respuesta |
+|---|---|---|---|
+| `GET` | `/categorias/preferencias` | — | `200` catálogo con `tipoPorDefecto`, `tipoPreferido` (o `null`) y `tipoEfectivo` |
+| `PUT` | `/categorias/{id}/tipo-preferido` | `{ "tipo": "NECESIDAD" }` | `200` la fila del catálogo |
+| `DELETE` | `/categorias/{id}/tipo-preferido` | — | `204` (idempotente; vuelve al por defecto) |
+
+- El listado ordena igual que el catálogo: NECESIDAD → DESEO → AHORRO → OTROS y luego por nombre.
+- Solo pueden reclasificarse categorías cuyo tipo por defecto es NECESIDAD o DESEO; el tipo pedido tampoco puede
+  ser AHORRO ni OTROS: todos esos casos → `400 DATOS_INVALIDOS`. Un valor no conocido (`"XYZ"`) → `400
+  SOLICITUD_INVALIDA`. Categoría inexistente → `404 NO_ENCONTRADO` (en `PUT` y en `DELETE`).
+- `repartoPorTipo` (siempre tres filas: NECESIDAD, DESEO, OTROS) y `guia` del plan (**informativos**:
+  ninguna diferencia es un error) se documentan en [`PLAN_FORMULAS.md`](PLAN_FORMULAS.md), sección 7. Cómo
+  repartir los colores lo decide la app, no la API.
+
+### Grupos, deudas vinculadas y referencias (T10d, sesión 2)
+
+**Grupos.** `GET/POST /planes/grupos` y `PUT/DELETE /planes/grupos/{id}` (en la tabla de arriba). Reglas:
+
+- Nombre de 1 a 60 caracteres; único por usuario comparando sin tildes ni mayúsculas (`"Fijos"` y `" fijos "`
+  chocan) → `409 CONFLICTO_REGLA_NEGOCIO`. Máximo **20** grupos por usuario → `409`. Nombre vacío, de más de 60 o
+  con caracteres de control → `400 VALIDACION_FALLIDA`.
+- `DELETE` responde `204` y **no borra partidas**: las deja con `grupoId = null`.
+- El plan trae `grupos`: un elemento por grupo del usuario en orden `orden, id` y, al final, `"Sin grupo"` (con
+  `id` y `orden` nulos) solo si hay partidas sin grupo. Cada uno trae `planificado`, `real`, `partidaIds` y
+  `porcentajeDelPlanificado` (nulo si el planificado total es 0; la suma puede no dar exactamente 100,00 y la app no
+  debe forzarla). Un grupo sin partidas en el mes aparece con `planificado: 0.00`.
+- `POST` de partida acepta `grupoId`; `PUT` acepta `grupoId` o `quitarGrupo:true`, nunca ambos (`400
+  DATOS_INVALIDOS`). Copiar un mes conserva el grupo.
+
+**Deudas vinculadas.** `POST /planes/{mes}/partidas` con `deudaId` (sin `montoPlanificado` ni otra categoría):
+
+- La deuda debe existir (`404`), ser del usuario (`403`), no estar `CANCELADA` y tener `fechaPrimeraCuota` (`409`),
+  y tener una cuota que venza en el mes (`409`). Enviar `montoPlanificado` o una categoría distinta de `DEUDAS` →
+  `400 DATOS_INVALIDOS`. Una sola partida por deuda y mes → `409`.
+- `montoPlanificado` = cuota del mes + costo adicional, recalculado en cada lectura; la app **no** lo envía. Si el
+  vínculo ya no calcula (por ejemplo, editaron la deuda), llega el último monto guardado con
+  `vinculoDesactualizado: true`.
+- `estadoCuota`: `PENDIENTE` (sin pagos), `PARCIAL` (pagado < monto) o `PAGADA` (pagado ≥ monto). Es adicional al
+  `estado` neutro, que se sigue calculando.
+- `PATCH /montos` sobre una partida vinculada → `409`. Tampoco se puede cambiar su `deudaId` ni su `categoriaId`:
+  bórrala y vuelve a crearla. Si la deuda se borra, la partida queda normal (`deudaId: null`).
+- Un `PAGO_DEUDA` sin `partidaId` cuya deuda tenga partida vinculada en el plan se imputa a esa partida
+  automáticamente; el `partidaId` explícito manda.
+
+**Avisos.** `avisos` solo se llena al copiar un mes. Cada elemento tiene
+`{motivo, partidaId, nombre, deudaId, mensaje}`; hoy el único motivo es `SIN_COUOTA_EN_EL_MES` (la partida
+vinculada no se copió porque la deuda no tiene cuota en el destino). Fuera de una copia siempre es `[]`. Un aviso
+nunca es un error HTTP.
+
+**Referencias históricas.** Con `GET /planes/{mes}?incluirReferencias=true`, cada `porCategoria` agrega
+`referencia: {mesAnterior, promedio3Meses}`. Sin el parámetro el campo **no aparece**. La ventana son los hasta 3
+meses cerrados previos al mes, desde el mes del primer movimiento del usuario; los meses sin gasto cuentan 0 y
+`promedio3Meses` redondea HALF_UP a 2 decimales. Si el primer movimiento es del mismo mes (o no hay historial), la
+referencia es nula. Es solo información: la app decide cómo mostrarla.
+
+### Sugerencia de regla (T10d, sesión 1)
+
+| Método | Ruta | Respuesta |
+|---|---|---|
+| `GET` | `/presupuestos/sugerencia-regla` | `200` siempre; con menos de 2 meses devuelve `sugerencia:null` y `motivo` |
+
+Analiza hasta los **3 meses cerrados más recientes** (anterior al mes en curso, zona `America/Santiago`) que
+tengan `ingresoReal > 0`; `PAGO_DEUDA` cuenta y la categoría OTROS se ignora. Devuelve:
+
+```json
+{ "mesesAnalizados": ["2026-09", "2026-10"],
+  "actual": { "necesidades": 58.00, "deseos": 24.00, "ahorro": 18.00 },
+  "sugerencia": { "necesidades": 60, "deseos": 25, "ahorro": 15 },
+  "gastoSuperaIngreso": false, "igualALaGuia": false, "motivo": null }
+```
+
+- `actual` = mediana de los porcentajes reales, 2 decimales. `sugerencia` = múltiplos de 5 que suman 100;
+  si el gasto supera el ingreso, se escala (`gastoSuperaIngreso:true`) y `ahorro` queda en 0.
+- Con menos de 2 meses válidos → `sugerencia:null` y `motivo:"DATOS_INSUFICIENTES"`; nunca 404.
+- `igualALaGuia` compara con la configuración del usuario (`false` si no la tiene). Es **solo lectura**: para
+  aceptar la sugerencia, la app llama al `POST /presupuestos/me` existente.
 - **Sliders:** el máximo sugerido de cada slider es `monto actual + máx(remanenteLibre, 0)` y se recalcula localmente
   al mover otras partidas. Si el usuario teclea más, acéptalo con un aviso: sobreasignar es válido. Guarda al soltar
   el slider o al confirmar el teclado, acumulando los cambios en un solo `PATCH`; tras la respuesta, reemplaza el
