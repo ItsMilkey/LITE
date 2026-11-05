@@ -1,6 +1,6 @@
 # 02 — Diagrama de contenedores (C4 Nivel 2)
 
-**Tipo mermaid:** `C4Container` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
+**Tipo mermaid:** `C4Container` · **Estado:** parcial (base verificada en `446a9f5`; migraciones hasta V17)
 
 ## Qué responde
 Dentro de la caja negra del sistema: qué unidades ejecutables/desplegables existen y con qué hablan.
@@ -9,7 +9,7 @@ Dentro de la caja negra del sistema: qué unidades ejecutables/desplegables exis
 - `pom.xml` (`artifactId=saveup`, `version=0.0.1-SNAPSHOT`, Spring Boot 3.3.0, Flyway 10)
 - `Dockerfile` (multi-etapa: `maven:3.9.6-eclipse-temurin-21` → `eclipse-temurin:21-jre-alpine`)
 - `src/main/resources/application-*.properties`
-- `src/main/resources/db/migration/postgresql/V1..V8`
+- `src/main/resources/db/migration/postgresql/V1..V17`
 - `.github/workflows/keep_alive.yml`
 
 ## Diagrama
@@ -22,7 +22,7 @@ C4Container
 
     System_Boundary(plataforma, "Plataforma SaveUp Lite") {
         Container(api, "Aplicacion Spring Boot", "Spring Boot 3.3.0 / Java 21 / Flyway 10", "API REST de finanzas personales. Artefacto unico: saveup-0.0.1-SNAPSHOT.jar. Incluye Spring MVC, Spring Data JPA, Spring Security y OpenPDF. Puerto 8080.")
-        ContainerDb(db, "Base de datos PostgreSQL", "PostgreSQL - Supabase", "Esquema de 8 tablas creado y versionado por Flyway (V1..V8 en db/migration/postgresql). Solo la aplicacion accede a ella.")
+        ContainerDb(db, "Base de datos PostgreSQL", "PostgreSQL - Supabase", "Esquema de 16 tablas creado y versionado por Flyway (V1..V17 en db/migration/postgresql). Solo la aplicacion accede a ella.")
     }
 
     System_Ext(cliente, "App movil / Frontend", "App movil en Flutter que consume la API REST (los origenes CORS actuales son de un cliente Ionic/Angular legacy)")

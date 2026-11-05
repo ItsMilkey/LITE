@@ -1,6 +1,6 @@
 # 13 — Flujo: presupuesto 50/30/20 y ejecución
 
-**Tipo mermaid:** `sequenceDiagram` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
+**Tipo mermaid:** `sequenceDiagram` · **Estado:** parcial (base verificada en `446a9f5`; no incorpora el tipo efectivo ni los estados neutros de T10a/T10d)
 
 ## Qué responde
 Cómo se guarda la configuración 50/30/20, cómo se calcula la ejecución por tipo y por categoría y cómo se arma el historial mensual.

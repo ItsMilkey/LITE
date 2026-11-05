@@ -1,33 +1,32 @@
 # Diagramas — SaveUp Lite (backend)
 
 Esquemas y mapas de la arquitectura y el dominio del backend en formato [mermaid.js](https://mermaid.js.org/).
-Un archivo por diagrama. Todos los bloques `mermaid` están verificados: renderizan sin error con `mermaid-cli`.
+Un archivo por diagrama. Los bloques base se validaron con `mermaid-cli`; los bloques 03/05/08 actualizados en esta pasada se revisaron contra la sintaxis de Mermaid y deben re-renderizarse antes de publicar.
 
-> **Commit de HEAD verificado:** `446a9f5` (`Pruebas locales`).
-> El código manda sobre la documentación: cualquier desajuste se registra como **discrepancia**
-> en la sección correspondiente.
+> **Última revisión:** `714a36d` (T10d) más el parche de documentación. El código manda sobre la documentación: cualquier desajuste se registra como **discrepancia** en la sección correspondiente.
+> Los diagramas 03, 04, 05, 07 y 08 se actualizaron a HEAD; 16 y 17 están verificados contra T10b/T10c–T10d. Los diagramas 01, 02, 06, 09–15 conservan el contenido base revisado en `446a9f5` y **no cubren todos los módulos T8c–T10d**.
 
 ## Índice
 
 | # | Diagrama | Tipo mermaid | Qué pregunta responde | Fuentes usadas | Commit | Discrepancias |
 |---|---|---|---|---|---|---|
 | 01 | [Contexto](01-contexto.md) | `C4Context` | ¿Quién usa el sistema y con qué sistemas externos habla? | `.agents/rules/00-*`, `application-*.properties`, `keep_alive.yml`, `SecurityConfig` | `446a9f5` | D1 |
-| 02 | [Contenedores](02-contenedores.md) | `C4Container` | ¿Qué unidades ejecutables hay y dónde corren? | `pom.xml`, `Dockerfile`, `application-*.properties`, `db/migration/postgresql/V1..V8` | `446a9f5` | D1 |
-| 03 | [Componentes](03-componentes.md) | `C4Component` | ¿Qué componentes internos tiene la API y en qué capas? | `src/main/java/com/example/saveup/**` | `446a9f5` | D2 |
-| 04 | [Paquetes](04-paquetes.md) | `classDiagram` | ¿Qué paquetes hay y cuál es la dirección de dependencia? | `src/main/java/com/example/saveup/**`, `.agents/rules/00-*` | `446a9f5` | — |
-| 05 | [Modelo ER](05-modelo-er.md) | `erDiagram` (+ `classDiagram`) | ¿Qué tablas, FKs, cardinalidades y enums existen? | `V1..V8`, `model/**`, `model/enums/**` | `446a9f5` | D3 |
+| 02 | [Contenedores](02-contenedores.md) | `C4Container` | ¿Qué unidades ejecutables hay y dónde corren? | `pom.xml`, `Dockerfile`, `application-*.properties`, `db/migration/postgresql/V1..V17` | `446a9f5` (base) | D1 |
+| 03 | [Componentes](03-componentes.md) | `C4Component` | ¿Qué componentes internos tiene la API y en qué capas? | `src/main/java/com/example/saveup/**` | actual (base + T8c–T10) | D2 |
+| 04 | [Paquetes](04-paquetes.md) | `classDiagram` | ¿Qué paquetes hay y cuál es la dirección de dependencia? | `src/main/java/com/example/saveup/**`, `.agents/rules/00-*` | actual (T1–T10) | — |
+| 05 | [Modelo ER](05-modelo-er.md) | `erDiagram` (+ `classDiagram`) | ¿Qué tablas, FKs, cardinalidades y enums existen? | `V1..V17`, `model/**`, `model/enums/**` | actual | D3 |
 | 06 | [Despliegue](06-despliegue.md) | `C4Deployment` | ¿Cómo se construye, empaqueta y despliega? | `Dockerfile`, `application-*.properties`, `keep_alive.yml` | `446a9f5` | D1 |
-| 07 | [Modelo conceptual](07-modelo-conceptual.md) | `mindmap` | ¿Cómo se relacionan los conceptos del dominio? | `docs/GLOSSARY.md`, `docs/CONTEXT.md`, `SignoMovimiento`, `service/finanzas/**` | `446a9f5` | D4 |
-| 08 | [Estados](08-estados.md) | `stateDiagram-v2` | ¿Cómo evolucionan `EstadoDeuda` y `EstadoEjecucion`? | `enums/**`, `DeudaService`, `PresupuestoService` | `446a9f5` | — |
+| 07 | [Modelo conceptual](07-modelo-conceptual.md) | `mindmap` | ¿Cómo se relacionan los conceptos del dominio? | `docs/GLOSSARY.md`, `docs/CONTEXT.md`, `SignoMovimiento`, `service/finanzas/**` | actual (T1–T10) | D4 |
+| 08 | [Estados](08-estados.md) | `stateDiagram-v2` | ¿Cómo evolucionan `EstadoDeuda`, `EstadoCuota` y `EstadoEjecucion`? | `enums/**`, `DeudaService`, `PresupuestoService`, `CalculadoraPlan` | actual | — |
 | 09 | [Flujo: auth](09-flujo-auth.md) | `sequenceDiagram` | ¿Cómo se registra, loguea y valida un JWT? | `UsuarioController`, `UsuarioService`, `security/**`, `SecurityConfig` | `446a9f5` | — |
 | 10 | [Flujo: Smart-Split](10-flujo-movimiento-smart-split.md) | `sequenceDiagram` | ¿Cómo un ingreso reparte abonos a metas? | `MovimientoService`, `SmartSplitProcessor`, `SignoMovimiento` | `446a9f5` | — |
 | 11 | [Flujo: pago de deuda](11-flujo-pago-deuda.md) | `sequenceDiagram` | ¿Cómo se paga una deuda y se imputan los pagos? | `DeudaController`, `DeudaService`, `ImputacionPagos`, `SignoMovimiento` | `446a9f5` | — |
 | 12 | [Flujo: simulación](12-flujo-simulacion.md) | `sequenceDiagram` | ¿Cómo se simula un crédito sin persistir? | `SimulacionController`, `SimulacionService`, `service/finanzas/**`, `PorcentajeTasa` | `446a9f5` | — |
 | 13 | [Flujo: presupuesto](13-flujo-presupuesto.md) | `sequenceDiagram` | ¿Cómo se calcula 50/30/20, la ejecución y el historial? | `ConfiguracionPresupuestoController`, `PresupuestoService`, `FechasMovimiento`, `EstadoEjecucion` | `446a9f5` | — |
 | 14 | [Flujo: abono a meta](14-flujo-abono-meta.md) | `sequenceDiagram` | ¿Cómo se abona, retira y reintegra una meta? | `MetaAhorroController`, `MetaAhorroService`, `SignoMovimiento`, `MetaAhorroRepository` | `446a9f5` | — |
-| 15 | [Casos de uso](15-casos-de-uso.md) | `flowchart` | ¿Qué casos de uso cubre cada módulo? | `docs/CONTEXT.md`, `controller/**`, `docs/tareas/T0..T5`, `T1d` | `446a9f5` | — |
+| 15 | [Casos de uso](15-casos-de-uso.md) | `flowchart` | ¿Qué casos de uso cubre cada módulo? | `docs/CONTEXT.md`, `controller/**`, `docs/tareas/T0..T10`, `T1d` | `446a9f5` (base; T10d pendiente) | — |
 | 16 | [Flujo: sugerencia de categoría](16-flujo-sugerencia-categoria.md) | `sequenceDiagram` | ¿Cómo se convierte un texto libre en hasta 3 categorías? | `CategoriaController`, `SugerenciaCategoriaService`, `SugeridorCategoria`, `DiccionarioCategorias`, `NormalizadorTexto` | T10b | — |
-| 17 | [Flujo: plan del mes](17-flujo-plan-mensual.md) | `sequenceDiagram` | ¿Cómo se arma el plan, se guardan partidas y montos, se copia un mes y se vincula un movimiento? | `PlanController`, `PlanService`, `CalculadoraPlan`, `MesPlan`, `ValidadorPartidaMovimiento`, `MovimientoRepository` | T10c | — |
+| 17 | [Flujo: plan del mes](17-flujo-plan-mensual.md) | `sequenceDiagram` | ¿Cómo se arma el plan, se guardan partidas y montos, se copia un mes y se vincula un movimiento? | `PlanController`, `PlanService`, `CalculadoraPlan`, `MesPlan`, `ValidadorPartidaMovimiento`, `MovimientoRepository` | T10c–T10d | — |
 
 ## Validación
 
@@ -65,16 +64,16 @@ Si el código contradice a un doc, gana el código y se anota abajo.
   `service.finanzas` y `DataSourceConfig` en `config`. Ninguno existe en HEAD: los campos derivados de
   `DeudaResponseDTO` se calculan en `DeudaService.enriquecer(...)`. **Gana el código.**
 - **D3 — Recuento de tablas y enums.** El plan previo hablaba de 7 tablas y 5 enumerados y de un alcance T0–T3.
-  HEAD tiene **8 tablas** (V6 añade `presupuesto_categoria`) y **7 enums** (suma `EstadoEjecucion` y `ModoPago`),
-  con alcance T0–T5 (+ T1d). **Gana el código.**
+  HEAD tiene **16 tablas** (V6 `presupuesto_categoria`, V9 `auth_refresh_token`, V11 `token_verificacion`,
+  V12 `dispositivo_push`/`recordatorio_enviado`, V14 `plan_mensual`/`partida_plan`, V15
+  `preferencia_categoria_usuario` y V16 `grupo_plan`) y **14 enums**, con alcance T0–T10. **Gana el código.**
 - **D4 — "CAE" ambiguo.** `docs/GLOSSARY.md` advierte que "CAE" designa dos cosas (Carga Anual Equivalente y el
   Crédito con Aval del Estado). En el código el indicador financiero se llama siempre `cargaAnualEquivalente`;
   los diagramas respetan esa denominación.
-- **D5 — Migraciones al día (V8).** Los diagramas se verificaron con `V1..V7`; el HEAD actual añade
-  `V8__normalizar_constraints_indices_rls.sql`, que renombra los constraints a minúscula, valida
-  `chk_movimiento_signo`, crea 6 índices de FK/filtro y activa RLS en las 8 tablas de dominio. No cambia
-  el esquema lógico (tablas, FKs, enums), solo su coherencia y su seguridad; el rango de fuentes ya dice
-  `V1..V8`. **Gana el código.**
+- **D5 — Migraciones al día (V17).** Los diagramas base se verificaron con `V1..V7`; el HEAD actual aplica
+  `V1..V17`. V8 normaliza constraints e índices y activa RLS; V9–V12 añaden sesión, recuperación y push;
+  V13–V16 añaden el catálogo de códigos, el plan, las preferencias y los grupos; V17 agrega `chk_grupo_orden`
+  y recrea `chk_categoria_codigo` con `NOT VALID` + `VALIDATE`. **Gana el código.**
 - **D6 — Cliente del frontend.** Los diagramas describen un cliente "Ionic / Angular / Capacitor"; el
   frontend de producto se implementará en **Flutter**. Los orígenes siguen siendo los declarados en
   `app.cors.allowed-origins` (`localhost:8100`, `localhost:4200`, `capacitor://localhost`, `localhost`):

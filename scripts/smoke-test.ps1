@@ -3,12 +3,14 @@
 #
 # Prueba de humo end-to-end contra la API real (por defecto http://localhost:8080).
 # No lleva credenciales embebidas: crea un usuario de prueba con datos aleatorios.
+# Requiere una base migrada por Flyway (18 categorías sembradas) y la API arriba.
 # Cada paso verifica su resultado; si algo falla, el script termina con código
 # distinto de cero (1 = fallos de verificación, 2 = API inalcanzable).
 #
 # Uso:
 #   ./scripts/smoke-test.ps1
 #   $env:BASE_URL="http://localhost:9090"; ./scripts/smoke-test.ps1
+#   powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\smoke-test.ps1
 # ============================================================================
 
 [CmdletBinding()]
@@ -266,15 +268,29 @@ Check $editGasto.Ok "PUT parcial del gasto responde 2xx"
 Check ($editGasto.Body.descripcion -eq "Gasto smoke editado") "Se aplicó la nueva descripción"
 Check ([decimal]$editGasto.Body.monto -eq -5000) "El monto no enviado se conserva (-5000)"
 
-Step "13. Presupuesto por categoría: límites, ejecución e historial"
+Step "13. Catálogo T10a y sugerencia T10b"
 $cats = Invoke-SaveUpApi -Method GET -Path "/api/v1/categorias" -Token $token
 Check $cats.Ok "GET /api/v1/categorias responde 2xx"
-Check (@($cats.Body).Count -ge 1) "Hay categorías sembradas disponibles"
-$comida = @($cats.Body) | Where-Object { $_.nombre -eq "Comida" } | Select-Object -First 1
-Check ($null -ne $comida) "Existe la categoría 'Comida'"
+Check (@($cats.Body).Count -eq 18) "El catálogo tiene 18 categorías (obtenidas $(@($cats.Body).Count))"
+$alimentacion = @($cats.Body) | Where-Object { $_.codigo -eq "ALIMENTACION_BASE" } | Select-Object -First 1
+$vivienda = @($cats.Body) | Where-Object { $_.codigo -eq "VIVIENDA_SUMINISTROS" } | Select-Object -First 1
+$ocio = @($cats.Body) | Where-Object { $_.codigo -eq "OCIO_RECREACION" } | Select-Object -First 1
+Check ($null -ne $alimentacion) "Existe la categoría ALIMENTACION_BASE"
+Check ($null -ne $vivienda) "Existe la categoría VIVIENDA_SUMINISTROS"
+Check ($null -ne $ocio) "Existe la categoría OCIO_RECREACION"
 
+$sug = Invoke-SaveUpApi -Method GET -Path "/api/v1/categorias/sugerencia" -Token $token -Query @{
+    texto = "supermercado"; contexto = "GASTO"
+}
+Check $sug.Ok "GET /api/v1/categorias/sugerencia responde 2xx"
+Check (@($sug.Body.sugerencias).Count -ge 1) "La sugerencia devuelve al menos una categoría"
+Check ($sug.Body.sugerencias[0].codigo -eq "ALIMENTACION_BASE") "supermercado sugiere ALIMENTACION_BASE"
+Check ($sug.Body.sugerencias[0].motivo -eq "PALABRA_CLAVE") "El motivo es PALABRA_CLAVE"
+Check ([decimal]$sug.Body.sugerencias[0].confianza -eq 0.90) "La confianza es 0,90"
+
+Step "14. Presupuesto por categoría T5 y estado neutro T10a"
 $putLim = Invoke-SaveUpApi -Method PUT -Path "/api/v1/presupuestos/categorias/me" -Token $token -Body @{
-    categorias = @(@{ categoriaId = $comida.id; limiteMensual = 1000 })
+    categorias = @(@{ categoriaId = $alimentacion.id; limiteMensual = 1000 })
 }
 Check $putLim.Ok "PUT /api/v1/presupuestos/categorias/me responde 2xx"
 Check (@($putLim.Body).Count -eq 1) "Se persiste 1 límite de categoría"
@@ -283,8 +299,20 @@ $getLim = Invoke-SaveUpApi -Method GET -Path "/api/v1/presupuestos/categorias/me
 Check $getLim.Ok "GET /api/v1/presupuestos/categorias/me responde 2xx"
 Check (@($getLim.Body).Count -eq 1) "El límite persiste (1 registro)"
 
+# Gasto de 800 con categoría: 800/1000 = 80 % => CERCA_DEL_PLAN (borde inferior).
+$gastoCat = Invoke-SaveUpApi -Method POST -Path "/api/v1/movimientos" -Token $token -Body @{
+    monto = 800; descripcion = "Gasto categoria 800"; tipoMovimiento = "GASTO_GENERAL"
+    categoriaId = $alimentacion.id
+}
+Check $gastoCat.Ok "POST gasto con categoría responde 2xx"
+
 $ejCat = Invoke-SaveUpApi -Method GET -Path "/api/v1/presupuestos/categorias/ejecucion/me" -Token $token
 Check $ejCat.Ok "GET /api/v1/presupuestos/categorias/ejecucion/me responde 2xx"
+$ejAlim = @($ejCat.Body) | Where-Object { $_.categoriaId -eq $alimentacion.id } | Select-Object -First 1
+Check ($null -ne $ejAlim) "La ejecución incluye ALIMENTACION_BASE"
+Check ([decimal]$ejAlim.gastado -eq 800) "gastado = 800"
+Check ([decimal]$ejAlim.porcentajeUsado -eq 80) "porcentajeUsado = 80,00"
+Check ($ejAlim.estado -eq "CERCA_DEL_PLAN") "80 % exacto es CERCA_DEL_PLAN"
 
 $ejGen = Invoke-SaveUpApi -Method GET -Path "/api/v1/presupuestos/ejecucion/me" -Token $token
 Check $ejGen.Ok "GET /api/v1/presupuestos/ejecucion/me responde 2xx"
@@ -293,6 +321,95 @@ $hist = Invoke-SaveUpApi -Method GET -Path "/api/v1/presupuestos/historial/me" -
     desde = "2026-01"; hasta = "2026-06"
 }
 Check $hist.Ok "GET /api/v1/presupuestos/historial/me responde 2xx"
+
+Step "15. Plan del mes T10c: ingreso, partida, lote de montos e imputación"
+$mes = (Get-Date).ToString("yyyy-MM")
+$plan = Invoke-SaveUpApi -Method PUT -Path "/api/v1/planes/$mes/ingreso-referencia" -Token $token -Body @{
+    monto = 1000000
+}
+Check $plan.Ok "PUT ingreso de referencia responde 2xx"
+Check ([decimal]$plan.Body.ingresoReferencia -eq 1000000) "Ingreso de referencia = 1.000.000"
+Check ($plan.Body.existe -eq $true) "El plan queda creado"
+
+$planPartida = Invoke-SaveUpApi -Method POST -Path "/api/v1/planes/$mes/partidas" -Token $token -Body @{
+    nombre = "Arriendo smoke"; categoriaId = $vivienda.id; montoPlanificado = 250000
+}
+Check $planPartida.Ok "POST partida responde 2xx"
+Check (@($planPartida.Body.partidas).Count -eq 1) "El plan tiene 1 partida"
+$partidaId = $planPartida.Body.partidas[0].id
+Check ($planPartida.Body.partidas[0].categoriaCodigo -eq "VIVIENDA_SUMINISTROS") "La partida hereda la categoría"
+
+$patch = Invoke-SaveUpApi -Method PATCH -Path "/api/v1/planes/$mes/montos" -Token $token -Body @{
+    cambios = @(@{ partidaId = $partidaId; monto = 300000 })
+}
+Check $patch.Ok "PATCH /planes/{mes}/montos responde 2xx"
+Check ([decimal]$patch.Body.resumen.planificadoTotal -eq 300000) "planificadoTotal = 300.000 tras el lote"
+Check ([decimal]$patch.Body.resumen.remanenteLibre -eq 700000) "remanenteLibre = 700.000"
+Check ([decimal]$patch.Body.resumen.margenSeguridadPct -eq 70) "margenSeguridadPct = 70,00"
+
+$gastoPlan = Invoke-SaveUpApi -Method POST -Path "/api/v1/movimientos" -Token $token -Body @{
+    monto = 8000; descripcion = "Gasto imputado a partida"; tipoMovimiento = "GASTO_GENERAL"
+    categoriaId = $vivienda.id; partidaId = $partidaId
+}
+Check $gastoPlan.Ok "POST gasto con partidaId responde 2xx"
+Check ($gastoPlan.Body.partidaId -eq $partidaId) "El movimiento quedó imputado a la partida"
+
+$planGet = Invoke-SaveUpApi -Method GET -Path "/api/v1/planes/$mes" -Token $token -Query @{
+    incluirReferencias = "true"
+}
+Check $planGet.Ok "GET /planes/{mes} responde 2xx"
+$partidaGet = @($planGet.Body.partidas) | Where-Object { $_.id -eq $partidaId } | Select-Object -First 1
+Check ($null -ne $partidaGet) "La partida aparece en el plan"
+Check ([decimal]$partidaGet.real -eq 8000) "real de la partida = 8.000"
+Check ([decimal]$partidaGet.diferencia -eq 292000) "diferencia = 292.000"
+Check ([decimal]$partidaGet.porcentajeUsado -eq 2.66) "porcentajeUsado truncado = 2,66"
+Check ($partidaGet.estado -eq "BAJO_EL_PLAN") "La partida está BAJO_EL_PLAN"
+Check (@($planGet.Body.repartoPorTipo).Count -eq 3) "repartoPorTipo trae NECESIDAD, DESEO y OTROS"
+
+Step "16. Copia de mes y grupos T10c/T10d"
+$mesSiguiente = (Get-Date).AddMonths(1).ToString("yyyy-MM")
+$copia = Invoke-SaveUpApi -Method POST -Path "/api/v1/planes/$mesSiguiente/copiar-desde/$mes" -Token $token
+Check $copia.Ok "POST copiar-desde responde 2xx"
+Check (@($copia.Body.partidas).Count -eq 1) "La copia trae 1 partida"
+Check ([decimal]$copia.Body.resumen.planificadoTotal -eq 300000) "La copia conserva el monto planificado"
+Check ([decimal]$copia.Body.ingresoReferencia -eq 1000000) "La copia conserva el ingreso si el destino no tenía"
+$copiadaId = $copia.Body.partidas[0].id
+
+$delCopia = Invoke-SaveUpApi -Method DELETE -Path "/api/v1/planes/$mesSiguiente/partidas/$copiadaId" -Token $token
+Check $delCopia.Ok "DELETE de la partida copiada responde 2xx"
+
+$grupo = Invoke-SaveUpApi -Method POST -Path "/api/v1/planes/grupos" -Token $token -Body @{
+    nombre = "Fijos smoke"; orden = 1
+}
+Check $grupo.Ok "POST /planes/grupos responde 2xx"
+$grupoId = $grupo.Body.id
+$grupos = Invoke-SaveUpApi -Method GET -Path "/api/v1/planes/grupos" -Token $token
+Check (@($grupos.Body).Count -eq 1) "GET /planes/grupos devuelve 1 grupo"
+$grupoEdit = Invoke-SaveUpApi -Method PUT -Path "/api/v1/planes/grupos/$grupoId" -Token $token -Body @{
+    nombre = "Fijos smoke editado"
+}
+Check $grupoEdit.Ok "PUT /planes/grupos/{id} responde 2xx"
+Check ($grupoEdit.Body.nombre -eq "Fijos smoke editado") "El grupo se renombró"
+Check (Invoke-SaveUpApi -Method DELETE -Path "/api/v1/planes/grupos/$grupoId" -Token $token).Ok "DELETE /planes/grupos/{id} responde 2xx"
+
+Step "17. Preferencias y sugerencia de regla T10d"
+$prefs = Invoke-SaveUpApi -Method GET -Path "/api/v1/categorias/preferencias" -Token $token
+Check $prefs.Ok "GET /categorias/preferencias responde 2xx"
+Check (@($prefs.Body).Count -eq 18) "Las preferencias cubren las 18 categorías"
+$ocioPref = @($prefs.Body) | Where-Object { $_.codigo -eq "OCIO_RECREACION" } | Select-Object -First 1
+Check ($ocioPref.tipoPorDefecto -eq "DESEO") "OCIO_RECREACION es DESEO por defecto"
+
+$putPref = Invoke-SaveUpApi -Method PUT -Path "/api/v1/categorias/$($ocio.id)/tipo-preferido" -Token $token -Body @{
+    tipo = "NECESIDAD"
+}
+Check $putPref.Ok "PUT tipo-preferido responde 2xx"
+Check ($putPref.Body.tipoEfectivo -eq "NECESIDAD") "El tipo efectivo pasa a NECESIDAD"
+Check (Invoke-SaveUpApi -Method DELETE -Path "/api/v1/categorias/$($ocio.id)/tipo-preferido" -Token $token).Ok "DELETE tipo-preferido responde 2xx"
+
+$regla = Invoke-SaveUpApi -Method GET -Path "/api/v1/presupuestos/sugerencia-regla" -Token $token
+Check $regla.Ok "GET /presupuestos/sugerencia-regla responde 2xx"
+Check ($null -eq $regla.Body.sugerencia) "Con menos de 2 meses cerrados, sugerencia es null"
+Check ($regla.Body.motivo -eq "DATOS_INSUFICIENTES") "El motivo es DATOS_INSUFICIENTES"
 
 # ---------------------------------------------------------------------------
 Write-Host ""

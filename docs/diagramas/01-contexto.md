@@ -1,6 +1,6 @@
 # 01 — Diagrama de contexto (C4 Nivel 1)
 
-**Tipo mermaid:** `C4Context` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
+**Tipo mermaid:** `C4Context` · **Estado:** parcial (base verificada en `446a9f5`; no incorpora T8c–T10d)
 
 ## Qué responde
 Quién usa SaveUp Lite, qué es el sistema como caja negra y con qué sistemas externos reales se relaciona.
@@ -24,7 +24,7 @@ C4Context
 
     System_Ext(cliente, "App movil / Frontend", "Cliente HTTP (app movil en Flutter). Origenes declarados hoy en CORS: localhost:8100, localhost:4200, capacitor://localhost y localhost (pendientes de actualizar para el cliente Flutter).")
 
-    System_Ext(supabase, "PostgreSQL - Supabase", "Base de datos unica de dev y prod (Session Pooler, sslmode=require). Esquema de 8 tablas versionado por Flyway 10.")
+    System_Ext(supabase, "PostgreSQL - Supabase", "Base de datos unica de dev y prod (Session Pooler, sslmode=require). Esquema de 16 tablas versionado por Flyway 10 (V1..V17).")
 
     System_Ext(cron, "GitHub Actions - keep_alive", "Workflow programado que hace HEAD al servicio de Render cada 14 minutos para evitar el cold start.")
 

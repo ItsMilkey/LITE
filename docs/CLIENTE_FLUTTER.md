@@ -294,8 +294,9 @@ ejecución 50/30/20 (T5), `porCategoria.tipo`, `repartoPorTipo` y sugerencia de 
   `vinculoDesactualizado: true`.
 - `estadoCuota`: `PENDIENTE` (sin pagos), `PARCIAL` (pagado < monto) o `PAGADA` (pagado ≥ monto). Es adicional al
   `estado` neutro, que se sigue calculando.
-- `PATCH /montos` sobre una partida vinculada → `409`. Tampoco se puede cambiar su `deudaId` ni su `categoriaId`:
-  bórrala y vuelve a crearla. Si la deuda se borra, la partida queda normal (`deudaId: null`).
+- `PATCH /montos` sobre una partida vinculada → `409`. El vínculo con la deuda solo se crea en el `POST`; el `PUT`
+  no acepta `deudaId` y tampoco se puede cambiar su `categoriaId`: bórrala y vuelve a crearla. Si la deuda se borra,
+  la partida queda normal (`deudaId: null`).
 - Un `PAGO_DEUDA` sin `partidaId` cuya deuda tenga partida vinculada en el plan se imputa a esa partida
   automáticamente; el `partidaId` explícito manda.
 

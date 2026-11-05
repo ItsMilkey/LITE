@@ -2,6 +2,12 @@
                     SAVEUP LITE - BACKEND REST API
             DOCUMENTACION TECNICA COMPLETA Y DETALLADA DEL PROYECTO
 ================================================================================
+AVISO: DOCUMENTO HISTORICO (T0-T5). No cubre T8c-T10d (OpenAPI, sesion movil,
+       notificaciones, catalogo de 18 categorias, plan del mes, grupos ni
+       referencias). Fuentes vigentes: docs/CONTEXT.md, docs/openapi.json,
+       docs/CLIENTE_FLUTTER.md y docs/PLAN_FORMULAS.md. No usar este archivo
+       como referencia del estado actual del backend.
+================================================================================
 Fecha de Generacion: 2026-09-29
 Ultima Actualizacion: 2026-10-18
 Version: 0.0.1-SNAPSHOT

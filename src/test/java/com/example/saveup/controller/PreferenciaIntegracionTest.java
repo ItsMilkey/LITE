@@ -290,6 +290,60 @@ class PreferenciaIntegracionTest {
                 .compareTo(BigDecimal.ZERO));
     }
 
+    @Test
+    @DisplayName("D12: el plan compara repartoPorTipo con la guía 50/30/20 configurada")
+    void d12_repartoContraGuia() throws Exception {
+        mockMvc.perform(post("/api/v1/presupuestos/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"porcentajeNecesidades\":50.00,\"porcentajeDeseos\":30.00,"
+                                + "\"porcentajeAhorro\":20.00}"))
+                .andExpect(status().isOk());
+
+        YearMonth mes = YearMonth.of(2026, 9);
+        mockMvc.perform(put("/api/v1/planes/{mes}/ingreso-referencia", mes)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"monto\": 1000000.00}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/planes/{mes}/partidas", mes)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nombre\": \"Arriendo\", \"categoriaId\": " + vivienda.getId()
+                                + ", \"montoPlanificado\": 730000.00}"))
+                .andExpect(status().isCreated());
+        MvcResult respuesta = mockMvc.perform(post("/api/v1/planes/{mes}/partidas", mes)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nombre\": \"Cine\", \"categoriaId\": " + ocio.getId()
+                                + ", \"montoPlanificado\": 16000.00}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        JsonNode cuerpo = objectMapper.readTree(respuesta.getResponse().getContentAsString());
+        assertEquals(0, cuerpo.path("guia").path("necesidades").decimalValue()
+                .compareTo(new BigDecimal("50.00")));
+        assertEquals(0, cuerpo.path("guia").path("deseos").decimalValue()
+                .compareTo(new BigDecimal("30.00")));
+        assertEquals(0, cuerpo.path("guia").path("ahorro").decimalValue()
+                .compareTo(new BigDecimal("20.00")));
+
+        JsonNode necesidades = reparto(cuerpo, "NECESIDAD");
+        assertEquals(0, necesidades.path("planificado").decimalValue()
+                .compareTo(new BigDecimal("730000.00")));
+        assertEquals(0, necesidades.path("porcentajeDelIngreso").decimalValue()
+                .compareTo(new BigDecimal("73.00")));
+        assertEquals(0, necesidades.path("diferenciaPuntos").decimalValue()
+                .compareTo(new BigDecimal("23.00")));
+
+        JsonNode deseos = reparto(cuerpo, "DESEO");
+        assertEquals(0, deseos.path("porcentajeDelIngreso").decimalValue()
+                .compareTo(new BigDecimal("1.60")));
+        assertEquals(0, deseos.path("diferenciaPuntos").decimalValue()
+                .compareTo(new BigDecimal("-28.40")));
+    }
+
     // ────────────────────────────── errores ──────────────────────────────
 
     @Test

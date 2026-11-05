@@ -32,7 +32,7 @@ a su **endpoint** en [`../CONTEXT.md`](../CONTEXT.md) y a su **tarea** en [`../t
 
 | Estado | Significado |
 |---|---|
-| **implementada** | El endpoint existe en la API (HEAD `446a9f5`) y tiene criterios verificables con tests. |
+| **implementada** | El endpoint existe en la API (HEAD actual) y tiene criterios verificables con tests. |
 | **parcial** | Parte del comportamiento existe; el resto depende del cliente o de otra pieza. |
 | **backlog** | No implementada; registrada en [`../tareas/BACKLOG.md`](../tareas/BACKLOG.md). |
 
@@ -97,14 +97,21 @@ a su **endpoint** en [`../CONTEXT.md`](../CONTEXT.md) y a su **tarea** en [`../t
 | HU-08-06 | UC25 Armar el plan del mes | `POST /api/v1/planes/{mes}/copiar-desde/{mesOrigen}` | T10c | implementada |
 | HU-08-07 | UC4 Registrar movimiento (extiende UC25) | `POST/PUT /api/v1/movimientos`, `GET .../paginados/me` | T10c | implementada |
 | HU-08-08 | UC25 Armar el plan del mes | `DELETE /api/v1/planes/{mes}/partidas/{id}` y validaciones | T10c | implementada |
+| HU-08-09 | UC25 Armar el plan del mes | `GET /api/v1/categorias/preferencias`, `PUT/DELETE /api/v1/categorias/{id}/tipo-preferido` | T10d | implementada |
+| HU-08-10 | UC25 Armar el plan del mes | `GET /api/v1/planes/{mes}` (`repartoPorTipo`, `guia`) | T10d | implementada |
+| HU-08-11 | UC25 Armar el plan del mes | `GET /api/v1/presupuestos/sugerencia-regla` | T10d | implementada |
+| HU-08-12 | UC25 Armar el plan del mes | `GET/POST /api/v1/planes/grupos`, `PUT/DELETE /api/v1/planes/grupos/{id}` | T10d | implementada |
+| HU-08-13 | UC25 Armar el plan del mes | `POST /api/v1/planes/{mes}/partidas` (`deudaId`) | T10d | implementada |
+| HU-08-14 | UC25 Armar el plan del mes | `POST /api/v1/planes/{mes}/copiar-desde/{mesOrigen}` (`avisos`) | T10d | implementada |
+| HU-08-15 | UC25 Armar el plan del mes | `GET /api/v1/planes/{mes}?incluirReferencias=true` | T10d | implementada |
 
 ## Cobertura
 
 - **Casos de uso cubiertos: 25 / 25.** Cada UC1–UC25 tiene al menos una HU.
 - HU adicionales sin caso de uso propio: HU-01-04 (cerrar sesión) y toda la épica **HU-07** (transversal).
 - HU que extienden un caso de uso: HU-05-06 (Smart-Split, UC4), HU-05-10 y HU-05-11 (soporte UC4/UC20) y
-  HU-08-07 (partida en movimientos, UC4).
-- **Total: 56 historias de usuario.**
+  HU-08-07 a HU-08-15 (partidas, grupos, deudas vinculadas y referencias, UC25/UC4).
+- **Total: 64 historias de usuario.**
 
 ## Épicas
 

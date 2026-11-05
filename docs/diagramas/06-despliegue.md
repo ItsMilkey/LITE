@@ -1,6 +1,6 @@
 # 06 — Diagrama de despliegue
 
-**Tipo mermaid:** `C4Deployment` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
+**Tipo mermaid:** `C4Deployment` · **Estado:** parcial (base verificada en `446a9f5`; migraciones hasta V17)
 
 ## Qué responde
 Dónde corre la aplicación: construcción con Maven, imagen Docker, servicio en Render y base de datos Supabase, sin exponer valores de credenciales.
@@ -30,7 +30,7 @@ C4Deployment
     }
 
     Deployment_Node(supabase, "Supabase - PostgreSQL gestionado", "Session Pooler con SSL obligatorio") {
-        ContainerDb(pg, "Base de datos SaveUp", "PostgreSQL", "Esquema de 8 tablas versionado por Flyway (V1..V8)")
+        ContainerDb(pg, "Base de datos SaveUp", "PostgreSQL", "Esquema de 16 tablas versionado por Flyway (V1..V17)")
     }
 
     Deployment_Node(gh, "GitHub Actions", "Runner ubuntu-latest") {

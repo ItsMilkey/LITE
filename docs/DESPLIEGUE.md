@@ -78,7 +78,12 @@ suposiciones. Solo se cambian editando el archivo o con una variable de entorno 
 | `springdoc.api-docs.enabled` / `springdoc.swagger-ui.enabled` | activos / `false` | el contrato de prod vive en `docs/openapi.json` |
 | `app.cors.allowed-methods` / `allowed-headers` / `max-age` | iguales en ambos | `allow-credentials` es `true` en dev y `false` en prod |
 | `app.mail.url-restablecer` | vacío | URL pública de la pantalla de restablecimiento |
+| `app.mail.log-only` | `true` (base/dev) / `false` (prod) | simula el correo en log sin SMTP |
+| `app.push.enabled` | `false` (base/prod) / `true` (dev) | bandera maestra del scheduler y los envíos |
+| `app.push.habilitado` | `true` | interruptor interno que consulta `NotificacionScheduler`; no reemplaza a `app.push.enabled` |
+| `app.push.log-only` | `true` (base) | simula el push en log sin Firebase; en prod se activa al configurar FCM |
 | `app.push.dias-antes` | `3` | antelación del aviso PROXIMA_VENCER |
+| `app.behind-proxy` | `false` | confiar en `X-Forwarded-For` para el rate limit (ver `APP_BEHIND_PROXY`) |
 | `app.version.min-ios` / `latest-ios` | `1.0.0` | mismos umbrales que Android |
 | `app.version.terminos` / `privacidad` | `1` | versión de los documentos legales |
 | `spring.jackson.time-zone` / `hibernate.jdbc.time_zone` | `UTC` | contrato de fechas e instantes en UTC |
@@ -116,7 +121,7 @@ desplegar.
 Comandos equivalentes en local (requiere Docker para el segundo):
 
 ```powershell
-.\mvnw.cmd test                                    # suite H2, sin Docker (643 tests)
+.\mvnw.cmd test                                    # suite H2, sin Docker (644 tests)
 .\mvnw.cmd test -Ppostgres "-Dtest=*PostgresTest"  # Flyway, V17 y constraints sobre PostgreSQL 16
 ```
 

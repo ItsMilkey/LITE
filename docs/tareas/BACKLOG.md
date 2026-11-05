@@ -17,7 +17,8 @@ Criterio: se difiere lo que es aditivo (se puede agregar después sin romper el 
 - **Periodicidades distintas de mensual** y prorrateo del primer período por días.
 - **Fecha opcional al registrar movimientos y pagos** (registrar algo de ayer; no futura).
 - **Historial de simulaciones guardadas** para comparar después.
-- **T8 — Contrato para el frontend**: documentación OpenAPI (springdoc) y formato uniforme de errores (RFC 7807) en todos los endpoints.
+- **Partidas de ahorro (DC14, T10)**: T10c/T10d dejaron fuera las partidas de categoría AHORRO; falta decidir cómo se planifica el ahorro y cómo se relacionan los abonos a metas con el plan.
+- **Provisiones anuales (T10)**: comparar el plan mensual contra lo acumulado en el año.
 - **T7 — Crédito con Aval del Estado (estudiantil)**:
   No es la Carga Anual Equivalente: comparten sigla pero son productos distintos (ver docs/GLOSSARY.md).
   Datos recopilados en octubre de 2026 (fuentes secundarias; verificar con Comisión Ingresa / MINEDUC antes de implementar):

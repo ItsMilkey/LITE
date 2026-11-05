@@ -255,5 +255,7 @@ parámetro, el campo no se incluye.
 - Ejemplo: 100.000 en agosto, 120.000 en septiembre y 80.000 en octubre, con
   plan en noviembre → `promedio3Meses = 100.000,00` y
   `mesAnterior = 80.000,00`.
-- Una sola consulta agregada por categoría y mes; el cálculo en sí vive en
-  `ReferenciasHistoricas` (puro).
+- Una consulta de rango (más `primerMovimiento` para fijar el inicio) y agrupación por mes en memoria con
+  `FechasMovimiento` (America/Santiago); el cálculo en sí vive en
+  `ReferenciasHistoricas` (puro). No se usa `EXTRACT(MONTH ...)` en SQL: la
+  columna `fecha` está en UTC y movería los gastos de fin de mes.

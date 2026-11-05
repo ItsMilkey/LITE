@@ -1,9 +1,9 @@
 # 07 — Modelo conceptual del dominio
 
-**Tipo mermaid:** `mindmap` · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
+**Tipo mermaid:** `mindmap` · **Estado:** completo (verificado contra el código y el glosario, T1–T10)
 
 ## Qué responde
-Los conceptos del dominio y cómo se relacionan: saldo, presupuesto 50/30/20, ejecución, imputación de pagos, Smart-Split, carga anual equivalente y el signo del movimiento. Alineado con `docs/GLOSSARY.md`.
+Los conceptos del dominio y cómo se relacionan: saldo, presupuesto 50/30/20, plan del mes y partidas, ejecución, imputación de pagos, Smart-Split, carga anual equivalente y el signo del movimiento. Alineado con `docs/GLOSSARY.md`.
 
 ## Fuentes
 - `docs/GLOSSARY.md`
@@ -53,9 +53,35 @@ mindmap
         Ahorro realizado
       Limite por categoria
         EstadoEjecucion
-          OK
-          ALERTA
-          EXCEDIDO
+          BAJO_EL_PLAN
+          CERCA_DEL_PLAN
+          SOBRE_EL_PLAN
+      Tipo efectivo
+        Preferencia del usuario
+        Tipo por defecto
+    Plan del mes
+      Ingreso de referencia
+      Partida
+        Nombre libre
+        Categoria del catalogo
+        Monto planificado
+        Grupo
+        Deuda vinculada
+      Remanente libre
+      Sin planificar
+        SIN_PARTIDA
+        CATEGORIA_AMBIGUA
+      Reparto por tipo
+        NECESIDAD
+        DESEO
+        OTROS
+      Referencia historica
+        mesAnterior
+        promedio3Meses
+      EstadoCuota
+        PENDIENTE
+        PARCIAL
+        PAGADA
     Smart-Split
       Porcentaje de ahorro
       Asignaciones por meta
@@ -71,4 +97,4 @@ mindmap
 - **cargaAnualEquivalente**: en el código el indicador financiero se llama siempre `cargaAnualEquivalente`; "CAE" es ambiguo en `GLOSSARY.md` porque también designa el Crédito con Aval del Estado, que en SaveUp es solo un `TipoDeuda.EDUCACION`.
 - **Invariante de metas**: tras abonar, retirar, Smart-Split y eliminar, `montoActual` = −(suma de movimientos `ABONO_META` vinculados a esa meta).
 - **Ejecución presupuestaria**: presupuesto = ingresos del mes × porcentaje; gasto real = `GASTO_GENERAL` y `PAGO_DEUDA` clasificados por `categoria.tipoPresupuesto`; `ahorroRealizado` = suma de `ABONO_META` del mes.
-- **EstadoEjecucion** se deriva del porcentaje usado con umbrales `80` y `100` (`UMBRAL_ALERTA` / `UMBRAL_EXCEDIDO`).
+- **EstadoEjecucion** se deriva con `EstadoEjecucion.desde(real, planificado)` por multiplicación cruzada: `BAJO_EL_PLAN` (<80 %), `CERCA_DEL_PLAN` (80 %–100 % inclusive) y `SOBRE_EL_PLAN` (>100 %). No es un error, solo información.

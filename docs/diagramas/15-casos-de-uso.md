@@ -1,6 +1,6 @@
 # 15 — Mapa de casos de uso por módulo
 
-**Tipo mermaid:** `flowchart` (mermaid no tiene diagrama UML de casos de uso) · **Estado:** completo (verificado contra el código en HEAD `446a9f5`)
+**Tipo mermaid:** `flowchart` (mermaid no tiene diagrama UML de casos de uso) · **Estado:** parcial (base verificada en `446a9f5`; T10d pendiente de reflejar en el grafo)
 
 ## Qué responde
 Los casos de uso cubiertos por el backend, agrupados por módulo y ligados al actor Usuario.
@@ -8,7 +8,7 @@ Los casos de uso cubiertos por el backend, agrupados por módulo y ligados al ac
 ## Fuentes
 - `docs/CONTEXT.md` (§Endpoints)
 - `src/main/java/com/example/saveup/controller/**`
-- `docs/tareas/T0..T5`, `T1d`, `T10a..T10c` y `BACKLOG.md`
+- `docs/tareas/T0..T5`, `T1d`, `T10a..T10d` y `BACKLOG.md`
 
 ## Diagrama
 
