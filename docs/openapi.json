@@ -2555,8 +2555,8 @@
           "required" : true
         },
         "responses" : {
-          "200" : {
-            "description" : "El dispositivo ya existía y se refrescó",
+          "201" : {
+            "description" : "Dispositivo registrado",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -2565,8 +2565,8 @@
               }
             }
           },
-          "201" : {
-            "description" : "Dispositivo registrado",
+          "200" : {
+            "description" : "El dispositivo ya existía y se refrescó",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -4613,6 +4613,91 @@
                   "type" : "array",
                   "items" : {
                     "$ref" : "#/components/schemas/EjecucionCategoriaDTO"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Solicitud inválida. Revisa el cuerpo y los parámetros.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado o token inválido/expirado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No tienes permisos para acceder al recurso.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Recurso no encontrado.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto con una regla de negocio.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno. Usa idError para reportarlo.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemaHttp"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/presupuestos/asignaciones/me" : {
+      "get" : {
+        "tags" : [ "Presupuestos" ],
+        "summary" : "Lista las asignaciones de ahorro a metas",
+        "operationId" : "obtenerAsignacionesPresupuesto",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/AsignacionPresupuestoResponseDTO"
                   }
                 }
               }
@@ -7079,12 +7164,8 @@
             "format" : "int64"
           },
           "porcentaje" : {
-            "maximum" : 100.0,
-            "exclusiveMaximum" : false,
-            "minimum" : 0.0,
-            "exclusiveMinimum" : false,
             "type" : "number",
-            "description" : "Porcentaje del ahorro destinado a la meta (0–100), no una fracción."
+            "description" : "Porcentaje del ahorro destinado a la meta (0–100), no una fracción. El conjunto debe sumar 100.00."
           }
         },
         "description" : "Distribución opcional del ahorro entre metas."
@@ -7645,6 +7726,26 @@
           }
         },
         "description" : "Ejecución del límite de una categoría en un mes."
+      },
+      "AsignacionPresupuestoResponseDTO" : {
+        "required" : [ "metaId", "metaNombre", "porcentaje" ],
+        "type" : "object",
+        "properties" : {
+          "metaId" : {
+            "type" : "integer",
+            "description" : "Identificador de la meta.",
+            "format" : "int64"
+          },
+          "metaNombre" : {
+            "type" : "string",
+            "description" : "Nombre de la meta."
+          },
+          "porcentaje" : {
+            "type" : "number",
+            "description" : "Porcentaje del ahorro asignado (0–100), no una fracción."
+          }
+        },
+        "description" : "Asignación del ahorro a una meta."
       },
       "MovimientoFiltroDTO" : {
         "type" : "object",

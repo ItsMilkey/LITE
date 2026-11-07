@@ -1,6 +1,7 @@
 package com.example.saveup.service;
 
 import com.example.saveup.dto.AsignacionPresupuestoDTO;
+import com.example.saveup.dto.AsignacionPresupuestoResponseDTO;
 import com.example.saveup.dto.ConfiguracionPresupuestoRequestDTO;
 import com.example.saveup.dto.ConfiguracionPresupuestoResponseDTO;
 import com.example.saveup.dto.EjecucionCategoriaDTO;
@@ -139,34 +140,114 @@ public class PresupuestoService {
                 request.getAutomatizarAhorroEnMetas() != null ? request.getAutomatizarAhorroEnMetas() : false);
 
         ConfiguracionPresupuesto guardada = configuracionPresupuestoRepository.save(config);
-        reemplazarAsignaciones(guardada, request.getAsignaciones());
+        reemplazarAsignaciones(rut, guardada, request.getAsignaciones());
         return aDTO(guardada);
     }
 
-    private void reemplazarAsignaciones(ConfiguracionPresupuesto config, List<AsignacionPresupuestoDTO> asignaciones) {
+    /**
+     * Asignaciones de ahorro a metas del usuario. Si no hay configuración o no
+     * hay asignaciones devuelve una lista vacía (no es un error).
+     */
+    @Transactional(readOnly = true)
+    public List<AsignacionPresupuestoResponseDTO> obtenerAsignaciones(String rut) {
+        return configuracionPresupuestoRepository.findByUsuarioRut(rut)
+                .map(config -> asignacionMetaPresupuestoRepository
+                        .findByConfiguracionId(config.getId()).stream()
+                        .map(this::aAsignacionDTO)
+                        .toList())
+                .orElse(List.of());
+    }
+
+    /**
+     * Reemplaza el conjunto completo de asignaciones del ahorro.
+     *
+     * - `null`: no toca las asignaciones existentes.
+     * - Lista vacía: las elimina todas (sin automatización).
+     * - Lista con datos: cada porcentaje > 0, sin metas repetidas, todas las
+     *   metas del usuario y la suma exacta de 100.00; cualquier violación es
+     *   400 DATOS_INVALIDOS con detail.
+     */
+    private void reemplazarAsignaciones(String rut, ConfiguracionPresupuesto config,
+                                        List<AsignacionPresupuestoDTO> asignaciones) {
         if (asignaciones == null) {
             return;
         }
+
+        if (asignaciones.isEmpty()) {
+            List<AsignacionMetaPresupuesto> actuales =
+                    asignacionMetaPresupuestoRepository.findByConfiguracionId(config.getId());
+            asignacionMetaPresupuestoRepository.deleteAll(actuales);
+            asignacionMetaPresupuestoRepository.flush();
+            return;
+        }
+
+        // Validar todo antes de borrar: un request inválido no toca datos.
+        Set<Long> metaIds = new HashSet<>();
+        BigDecimal suma = BigDecimal.ZERO;
+        List<MetaAhorro> metas = new ArrayList<>();
+
+        for (AsignacionPresupuestoDTO asignacion : asignaciones) {
+            if (asignacion == null || asignacion.getMetaId() == null) {
+                throw new DatosInvalidosException("Cada asignación debe indicar una meta.");
+            }
+            if (asignacion.getPorcentaje() == null) {
+                throw new DatosInvalidosException("Cada asignación debe indicar un porcentaje.");
+            }
+            BigDecimal porcentaje = asignacion.getPorcentaje();
+            if (porcentaje.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new DatosInvalidosException(
+                        "El porcentaje de asignación debe ser mayor a 0.");
+            }
+            if (porcentaje.compareTo(new BigDecimal("100")) > 0) {
+                throw new DatosInvalidosException(
+                        "El porcentaje de asignación no puede exceder 100.");
+            }
+            if (porcentaje.stripTrailingZeros().scale() > 2) {
+                throw new DatosInvalidosException(
+                        "El porcentaje de asignación debe tener como máximo 2 decimales.");
+            }
+            if (!metaIds.add(asignacion.getMetaId())) {
+                throw new DatosInvalidosException("La meta " + asignacion.getMetaId()
+                        + " está repetida en las asignaciones.");
+            }
+            suma = suma.add(porcentaje);
+
+            MetaAhorro meta = metaAhorroRepository.findById(asignacion.getMetaId())
+                    .orElseThrow(() -> new DatosInvalidosException(
+                            "La meta " + asignacion.getMetaId()
+                                    + " no existe o no pertenece al usuario."));
+            String dueno = meta.getUsuario() != null ? meta.getUsuario().getRut() : null;
+            if (dueno == null || !dueno.equals(rut)) {
+                throw new DatosInvalidosException("La meta " + asignacion.getMetaId()
+                        + " no existe o no pertenece al usuario.");
+            }
+            metas.add(meta);
+        }
+
+        if (suma.compareTo(new BigDecimal("100")) != 0) {
+            throw new DatosInvalidosException(
+                    "Los porcentajes de asignación deben sumar 100.00.");
+        }
+
         List<AsignacionMetaPresupuesto> actuales =
                 asignacionMetaPresupuestoRepository.findByConfiguracionId(config.getId());
         asignacionMetaPresupuestoRepository.deleteAll(actuales);
-
-        for (AsignacionPresupuestoDTO asignacion : asignaciones) {
-            if (asignacion.getMetaId() == null || asignacion.getPorcentaje() == null
-                    || asignacion.getPorcentaje().compareTo(BigDecimal.ZERO) <= 0) {
-                continue;
-            }
-            metaAhorroRepository.findById(asignacion.getMetaId()).ifPresent(meta -> {
-                // Anti-IDOR: la meta debe pertenecer al usuario autenticado.
-                securityUtils.validarPropietario(meta.getUsuario().getRut());
-
-                AsignacionMetaPresupuesto nueva = new AsignacionMetaPresupuesto();
-                nueva.setConfiguracion(config);
-                nueva.setMeta(meta);
-                nueva.setPorcentajeAsignacion(asignacion.getPorcentaje());
-                asignacionMetaPresupuestoRepository.save(nueva);
-            });
+        asignacionMetaPresupuestoRepository.flush();
+        for (int i = 0; i < asignaciones.size(); i++) {
+            AsignacionMetaPresupuesto nueva = new AsignacionMetaPresupuesto();
+            nueva.setConfiguracion(config);
+            nueva.setMeta(metas.get(i));
+            nueva.setPorcentajeAsignacion(asignaciones.get(i).getPorcentaje());
+            asignacionMetaPresupuestoRepository.save(nueva);
         }
+    }
+
+    private AsignacionPresupuestoResponseDTO aAsignacionDTO(AsignacionMetaPresupuesto asignacion) {
+        MetaAhorro meta = asignacion.getMeta();
+        return new AsignacionPresupuestoResponseDTO(
+                meta != null ? meta.getId() : null,
+                meta != null ? meta.getNombre() : null,
+                asignacion.getPorcentajeAsignacion());
     }
 
     private ConfiguracionPresupuestoResponseDTO aDTO(ConfiguracionPresupuesto config) {

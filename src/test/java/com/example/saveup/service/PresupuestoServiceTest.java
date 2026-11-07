@@ -1,11 +1,17 @@
 package com.example.saveup.service;
 
 import com.example.saveup.dto.ConfiguracionPresupuestoRequestDTO;
+import com.example.saveup.dto.AsignacionPresupuestoDTO;
+import com.example.saveup.dto.AsignacionPresupuestoResponseDTO;
 import com.example.saveup.dto.EjecucionCategoriaDTO;
 import com.example.saveup.dto.EjecucionPresupuestoDTO;
 import com.example.saveup.dto.HistorialPresupuestoDTO;
 import com.example.saveup.dto.PresupuestoCategoriaItemDTO;
+import com.example.saveup.error.DatosInvalidosException;
+import com.example.saveup.model.AsignacionMetaPresupuesto;
 import com.example.saveup.model.Categoria;
+import com.example.saveup.model.ConfiguracionPresupuesto;
+import com.example.saveup.model.MetaAhorro;
 import com.example.saveup.model.Movimiento;
 import com.example.saveup.model.PresupuestoCategoria;
 import com.example.saveup.model.Usuario;
@@ -39,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -280,6 +287,171 @@ class PresupuestoServiceTest {
     }
 
     // ─────────────────────────────── Helpers ───────────────────────────────
+
+    // ───────────────────── Asignaciones del ahorro ─────────────────────
+
+    @Test
+    @DisplayName("GET asignaciones sin configuración devuelve lista vacía")
+    void obtenerAsignaciones_sinConfiguracion_vacio() {
+        when(configuracionPresupuestoRepository.findByUsuarioRut(RUT)).thenReturn(Optional.empty());
+
+        assertTrue(presupuestoService.obtenerAsignaciones(RUT).isEmpty());
+    }
+
+    @Test
+    @DisplayName("GET asignaciones devuelve meta, nombre y porcentaje")
+    void obtenerAsignaciones_conDatos_ok() {
+        ConfiguracionPresupuesto config = configuracion(1L);
+        MetaAhorro meta = meta(10L, "Viaje", usuario, "0.00");
+        AsignacionMetaPresupuesto asignacion = new AsignacionMetaPresupuesto();
+        asignacion.setConfiguracion(config);
+        asignacion.setMeta(meta);
+        asignacion.setPorcentajeAsignacion(new BigDecimal("60.00"));
+        when(configuracionPresupuestoRepository.findByUsuarioRut(RUT)).thenReturn(Optional.of(config));
+        when(asignacionMetaPresupuestoRepository.findByConfiguracionId(1L)).thenReturn(List.of(asignacion));
+
+        List<AsignacionPresupuestoResponseDTO> resultado = presupuestoService.obtenerAsignaciones(RUT);
+
+        assertEquals(1, resultado.size());
+        assertEquals(10L, resultado.get(0).getMetaId());
+        assertEquals("Viaje", resultado.get(0).getMetaNombre());
+        assertEquals(0, resultado.get(0).getPorcentaje().compareTo(new BigDecimal("60.00")));
+    }
+
+    @Test
+    @DisplayName("POST con asignaciones válidas reemplaza y guarda")
+    void guardar_asignacionesValidas_ok() {
+        ConfiguracionPresupuesto config = configuracion(1L);
+        prepararGuardado(config);
+        MetaAhorro m1 = meta(10L, "Viaje", usuario, "0.00");
+        MetaAhorro m2 = meta(11L, "Notebook", usuario, "0.00");
+        when(metaAhorroRepository.findById(10L)).thenReturn(Optional.of(m1));
+        when(metaAhorroRepository.findById(11L)).thenReturn(Optional.of(m2));
+        when(asignacionMetaPresupuestoRepository.findByConfiguracionId(1L)).thenReturn(List.of());
+
+        ConfiguracionPresupuestoRequestDTO request = request("50", "30", "20");
+        request.setAsignaciones(List.of(asignacion(10L, "60.00"), asignacion(11L, "40.00")));
+
+        presupuestoService.guardarConfiguracion(RUT, request);
+
+        verify(asignacionMetaPresupuestoRepository).deleteAll(List.of());
+        verify(asignacionMetaPresupuestoRepository).flush();
+        verify(asignacionMetaPresupuestoRepository, times(2)).save(any(AsignacionMetaPresupuesto.class));
+    }
+
+    @Test
+    @DisplayName("POST con suma distinta de 100 → DatosInvalidos y no borra")
+    void guardar_asignacionesSumaNo100_400() {
+        ConfiguracionPresupuesto config = configuracion(1L);
+        prepararGuardado(config);
+        when(metaAhorroRepository.findById(10L)).thenReturn(Optional.of(meta(10L, "Viaje", usuario, "0.00")));
+        when(metaAhorroRepository.findById(11L)).thenReturn(Optional.of(meta(11L, "Notebook", usuario, "0.00")));
+
+        ConfiguracionPresupuestoRequestDTO request = request("50", "30", "20");
+        request.setAsignaciones(List.of(asignacion(10L, "60.00"), asignacion(11L, "30.00")));
+
+        assertThrows(DatosInvalidosException.class,
+                () -> presupuestoService.guardarConfiguracion(RUT, request));
+        verify(asignacionMetaPresupuestoRepository, never()).deleteAll(any());
+    }
+
+    @Test
+    @DisplayName("POST con meta repetida → DatosInvalidos y no borra")
+    void guardar_asignacionesMetaRepetida_400() {
+        ConfiguracionPresupuesto config = configuracion(1L);
+        prepararGuardado(config);
+        when(metaAhorroRepository.findById(10L)).thenReturn(Optional.of(meta(10L, "Viaje", usuario, "0.00")));
+
+        ConfiguracionPresupuestoRequestDTO request = request("50", "30", "20");
+        request.setAsignaciones(List.of(asignacion(10L, "60.00"), asignacion(10L, "40.00")));
+
+        assertThrows(DatosInvalidosException.class,
+                () -> presupuestoService.guardarConfiguracion(RUT, request));
+        verify(asignacionMetaPresupuestoRepository, never()).deleteAll(any());
+    }
+
+    @Test
+    @DisplayName("POST con meta ajena → DatosInvalidos y no borra")
+    void guardar_asignacionesMetaAjena_400() {
+        ConfiguracionPresupuesto config = configuracion(1L);
+        prepararGuardado(config);
+        Usuario otro = new Usuario();
+        otro.setRut("99999999-9");
+        when(metaAhorroRepository.findById(10L)).thenReturn(Optional.of(meta(10L, "Ajena", otro, "0.00")));
+
+        ConfiguracionPresupuestoRequestDTO request = request("50", "30", "20");
+        request.setAsignaciones(List.of(asignacion(10L, "100.00")));
+
+        assertThrows(DatosInvalidosException.class,
+                () -> presupuestoService.guardarConfiguracion(RUT, request));
+        verify(asignacionMetaPresupuestoRepository, never()).deleteAll(any());
+    }
+
+    @Test
+    @DisplayName("POST con porcentaje cero → DatosInvalidos")
+    void guardar_asignacionesPorcentajeCero_400() {
+        ConfiguracionPresupuesto config = configuracion(1L);
+        prepararGuardado(config);
+
+        ConfiguracionPresupuestoRequestDTO request = request("50", "30", "20");
+        request.setAsignaciones(List.of(asignacion(10L, "0.00")));
+
+        assertThrows(DatosInvalidosException.class,
+                () -> presupuestoService.guardarConfiguracion(RUT, request));
+        verify(asignacionMetaPresupuestoRepository, never()).deleteAll(any());
+    }
+
+    @Test
+    @DisplayName("POST con lista vacía borra las asignaciones")
+    void guardar_asignacionesVacias_limpia() {
+        ConfiguracionPresupuesto config = configuracion(1L);
+        prepararGuardado(config);
+        AsignacionMetaPresupuesto existente = new AsignacionMetaPresupuesto();
+        when(asignacionMetaPresupuestoRepository.findByConfiguracionId(1L))
+                .thenReturn(List.of(existente));
+
+        ConfiguracionPresupuestoRequestDTO request = request("50", "30", "20");
+        request.setAsignaciones(List.of());
+
+        presupuestoService.guardarConfiguracion(RUT, request);
+
+        verify(asignacionMetaPresupuestoRepository).deleteAll(List.of(existente));
+        verify(asignacionMetaPresupuestoRepository).flush();
+        verify(asignacionMetaPresupuestoRepository, never()).save(any());
+    }
+
+    private ConfiguracionPresupuesto configuracion(Long id) {
+        ConfiguracionPresupuesto config = new ConfiguracionPresupuesto();
+        config.setId(id);
+        config.setUsuario(usuario);
+        config.setPorcentajeNecesidades(new BigDecimal("50.00"));
+        config.setPorcentajeDeseos(new BigDecimal("30.00"));
+        config.setPorcentajeAhorro(new BigDecimal("20.00"));
+        config.setActivo(true);
+        config.setAutomatizarAhorroEnMetas(false);
+        return config;
+    }
+
+    private void prepararGuardado(ConfiguracionPresupuesto config) {
+        when(configuracionPresupuestoRepository.findByUsuarioRut(RUT)).thenReturn(Optional.of(config));
+        when(configuracionPresupuestoRepository.save(any(ConfiguracionPresupuesto.class))).thenReturn(config);
+    }
+
+    private MetaAhorro meta(Long id, String nombre, Usuario dueno, String montoActual) {
+        MetaAhorro meta = new MetaAhorro();
+        meta.setId(id);
+        meta.setNombre(nombre);
+        meta.setUsuario(dueno);
+        meta.setMontoActual(new BigDecimal(montoActual));
+        return meta;
+    }
+
+    private AsignacionPresupuestoDTO asignacion(Long metaId, String porcentaje) {
+        AsignacionPresupuestoDTO dto = new AsignacionPresupuestoDTO();
+        dto.setMetaId(metaId);
+        dto.setPorcentaje(new BigDecimal(porcentaje));
+        return dto;
+    }
 
     private ConfiguracionPresupuestoRequestDTO request(String nec, String des, String aho) {
         ConfiguracionPresupuestoRequestDTO dto = new ConfiguracionPresupuestoRequestDTO();

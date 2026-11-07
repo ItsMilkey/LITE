@@ -1,5 +1,6 @@
 package com.example.saveup.controller;
 
+import com.example.saveup.dto.AsignacionPresupuestoResponseDTO;
 import com.example.saveup.dto.ConfiguracionPresupuestoRequestDTO;
 import com.example.saveup.dto.ConfiguracionPresupuestoResponseDTO;
 import com.example.saveup.dto.EjecucionCategoriaDTO;
@@ -63,6 +64,18 @@ public class ConfiguracionPresupuestoController {
             @Valid @RequestBody ConfiguracionPresupuestoRequestDTO request) {
         String rut = securityUtils.getAuthenticatedRut();
         return ResponseEntity.ok(presupuestoService.guardarConfiguracion(rut, request));
+    }
+
+    /**
+     * Asignaciones del ahorro a metas del usuario autenticado. Sin
+     * configuración o sin asignaciones responde `200 []`.
+     */
+    @GetMapping("/asignaciones/me")
+    @Operation(summary = "Lista las asignaciones de ahorro a metas",
+            operationId = "obtenerAsignacionesPresupuesto")
+    public ResponseEntity<List<AsignacionPresupuestoResponseDTO>> obtenerAsignacionesMe() {
+        String rut = securityUtils.getAuthenticatedRut();
+        return ResponseEntity.ok(presupuestoService.obtenerAsignaciones(rut));
     }
 
     /**

@@ -337,6 +337,20 @@ tengan `ingresoReal > 0`; `PAGO_DEUDA` cuenta y la categoría OTROS se ignora. D
   el slider o al confirmar el teclado, acumulando los cambios en un solo `PATCH`; tras la respuesta, reemplaza el
   estado local por el plan devuelto.
 
+### Asignaciones del ahorro a metas (F11)
+
+| Método | Ruta | Respuesta |
+|---|---|---|
+| `GET` | `/presupuestos/asignaciones/me` | `200 [{metaId, metaNombre, porcentaje}]`; `[]` si no hay configuración o asignaciones |
+
+`POST /presupuestos/me` acepta `asignaciones` opcional:
+
+- `null` u omitido: conserva las asignaciones actuales.
+- `[]`: las elimina todas (sin automatización).
+- Lista: cada `porcentaje` > 0, sin metas repetidas, todas del usuario y la **suma exacta 100.00**. Cualquier violación responde `400 DATOS_INVALIDOS` con `detail` (no se omiten en silencio).
+
+El Smart-Split toma el `porcentajeAhorro` y lo reparte según estas asignaciones; con suma 100 se asigna todo el ahorro. La app debe leer primero el `GET` para editar el conjunto sin sobrescribir lo que no ve.
+
 **Partida en los movimientos (T10c).** `MovimientoRegistroDTO`, `MovimientoEdicionDTO`, `MovimientoResponseDTO` y el
 filtro añaden `partidaId`:
 
