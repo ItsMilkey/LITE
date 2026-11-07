@@ -200,6 +200,10 @@ public class PresupuestoService {
     public List<PresupuestoCategoriaDTO> reemplazarCategorias(String rut, List<PresupuestoCategoriaItemDTO> items) {
         List<PresupuestoCategoria> nuevos = validarYConstruir(rut, items);
         presupuestoCategoriaRepository.deleteByUsuarioRut(rut);
+        // Hibernate ordena los INSERT antes que los DELETE al hacer flush; sin
+        // este flush explícito, reemplazar un conjunto existente choca con la
+        // UNIQUE(usuario_rut, categoria_id) y responde 409.
+        presupuestoCategoriaRepository.flush();
         presupuestoCategoriaRepository.saveAll(nuevos);
         return nuevos.stream().map(this::aDTO).toList();
     }

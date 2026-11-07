@@ -86,6 +86,36 @@ class PresupuestoCategoriaControllerTest {
     }
 
     @Test
+    @DisplayName("PUT reemplaza un conjunto existente sin violar la unicidad")
+    void putReemplazaConjuntoExistente_ok() throws Exception {
+        Categoria ocio = categoriaRepository.save(
+                new Categoria(null, "OCIO_T5", "Ocio T5", "ic_ocio", "#00FF00", TipoPresupuesto.DESEO));
+
+        mockMvc.perform(put("/api/v1/presupuestos/categorias/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"categorias\":[{\"categoriaId\":" + comida.getId() + ",\"limiteMensual\":150000.00},"
+                                + "{\"categoriaId\":" + ocio.getId() + ",\"limiteMensual\":50000.00}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[1].categoriaId").value(ocio.getId()));
+
+        // Reemplazo completo sobre un conjunto ya existente (regresión: 409 por UNIQUE).
+        mockMvc.perform(put("/api/v1/presupuestos/categorias/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"categorias\":[{\"categoriaId\":" + comida.getId() + ",\"limiteMensual\":120000.00}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].categoriaId").value(comida.getId()))
+                .andExpect(jsonPath("$[0].limiteMensual").value(120000.00))
+                .andExpect(jsonPath("$[1]").doesNotExist());
+
+        mockMvc.perform(get("/api/v1/presupuestos/categorias/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].limiteMensual").value(120000.00))
+                .andExpect(jsonPath("$[1]").doesNotExist());
+    }
+
+    @Test
     @DisplayName("PUT con límite ≤ 0 → 400 Bad Request (Bean Validation)")
     void putLimiteNoPositivo_400() throws Exception {
         mockMvc.perform(put("/api/v1/presupuestos/categorias/me")
