@@ -18,10 +18,11 @@ public class MetaAhorroCreacionDTO {
 
     @Positive(message = "El monto objetivo debe ser positivo")
     @Digits(integer = 13, fraction = 2, message = "El monto objetivo debe tener como máximo 13 enteros y 2 decimales")
-    @Schema(description = "Monto objetivo, con escala 2.", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Monto objetivo, con escala 2. Opcional al editar la meta por defecto 'Ahorros'.",
+            nullable = true, requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private BigDecimal montoObjetivo;
 
     @Future(message = "La fecha límite debe ser en el futuro")
-    @Schema(description = "Fecha límite en formato yyyy-MM-dd.")
+    @Schema(description = "Fecha límite en formato yyyy-MM-dd.", nullable = true)
     private LocalDate fechaLimite;
 }

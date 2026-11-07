@@ -2555,8 +2555,8 @@
           "required" : true
         },
         "responses" : {
-          "201" : {
-            "description" : "Dispositivo registrado",
+          "200" : {
+            "description" : "El dispositivo ya existía y se refrescó",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -2565,8 +2565,8 @@
               }
             }
           },
-          "200" : {
-            "description" : "El dispositivo ya existía y se refrescó",
+          "201" : {
+            "description" : "Dispositivo registrado",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -6389,7 +6389,7 @@
         "description" : "Movimiento registrado. El signo del monto refleja si suma o resta al saldo."
       },
       "MetaAhorroCreacionDTO" : {
-        "required" : [ "montoObjetivo", "nombre" ],
+        "required" : [ "nombre" ],
         "type" : "object",
         "properties" : {
           "nombre" : {
@@ -6398,18 +6398,20 @@
           },
           "montoObjetivo" : {
             "type" : "number",
-            "description" : "Monto objetivo, con escala 2."
+            "description" : "Monto objetivo, con escala 2. Opcional al editar la meta por defecto 'Ahorros'.",
+            "nullable" : true
           },
           "fechaLimite" : {
             "type" : "string",
             "description" : "Fecha límite en formato yyyy-MM-dd.",
-            "format" : "date"
+            "format" : "date",
+            "nullable" : true
           }
         },
         "description" : "Datos para crear o editar una meta de ahorro."
       },
       "MetaAhorroResponseDTO" : {
-        "required" : [ "id", "montoActual", "montoObjetivo", "nombre" ],
+        "required" : [ "id", "montoActual", "nombre" ],
         "type" : "object",
         "properties" : {
           "id" : {
@@ -6423,12 +6425,14 @@
           },
           "montoObjetivo" : {
             "type" : "number",
-            "description" : "Monto objetivo, con escala 2."
+            "description" : "Monto objetivo, con escala 2. Puede ser nulo en la meta por defecto 'Ahorros'.",
+            "nullable" : true
           },
           "fechaLimite" : {
             "type" : "string",
-            "description" : "Fecha límite en formato yyyy-MM-dd.",
-            "format" : "date"
+            "description" : "Fecha límite en formato yyyy-MM-dd. Puede ser nula en la meta por defecto.",
+            "format" : "date",
+            "nullable" : true
           },
           "montoActual" : {
             "type" : "number",

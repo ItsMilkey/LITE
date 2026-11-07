@@ -14,10 +14,12 @@ public class MetaAhorroResponseDTO {
     @Schema(description = "Nombre de la meta.", requiredMode = Schema.RequiredMode.REQUIRED)
     private String nombre;
 
-    @Schema(description = "Monto objetivo, con escala 2.", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Monto objetivo, con escala 2. Puede ser nulo en la meta por defecto 'Ahorros'.",
+            nullable = true, requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private BigDecimal montoObjetivo;
 
-    @Schema(description = "Fecha límite en formato yyyy-MM-dd.")
+    @Schema(description = "Fecha límite en formato yyyy-MM-dd. Puede ser nula en la meta por defecto.",
+            nullable = true)
     private LocalDate fechaLimite;
 
     // Campo calculado en el servicio (ahora persistido)
