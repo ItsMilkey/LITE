@@ -411,6 +411,78 @@ Check $regla.Ok "GET /presupuestos/sugerencia-regla responde 2xx"
 Check ($null -eq $regla.Body.sugerencia) "Con menos de 2 meses cerrados, sugerencia es null"
 Check ($regla.Body.motivo -eq "DATOS_INSUFICIENTES") "El motivo es DATOS_INSUFICIENTES"
 
+Step "18. Metas de ahorro F7"
+$fechaLimite = (Get-Date).AddMonths(6).ToString("yyyy-MM-dd")
+$meta = Invoke-SaveUpApi -Method POST -Path "/api/v1/metas" -Token $token -Body @{
+    nombre = "Meta smoke"; montoObjetivo = 100000; fechaLimite = $fechaLimite
+}
+Check $meta.Ok "POST /metas responde 2xx"
+$metaId = $meta.Body.id
+$metas = Invoke-SaveUpApi -Method GET -Path "/api/v1/metas/me" -Token $token
+Check (@($metas.Body | Where-Object { $_.id -eq $metaId }).Count -eq 1) "La meta aparece en GET /metas/me"
+Check ([decimal]$meta.Body.montoActual -eq 0) "La meta nace con montoActual 0"
+
+$abonoMeta = Invoke-SaveUpApi -Method POST -Path "/api/v1/metas/$metaId/abonar" -Token $token -Body @{
+    monto = 30000; descripcion = "Abono smoke"
+}
+Check $abonoMeta.Ok "POST /metas/{id}/abonar responde 2xx"
+Check ([decimal]$abonoMeta.Body.montoActual -eq 30000) "montoActual = 30.000 tras el abono"
+
+$retiroMeta = Invoke-SaveUpApi -Method POST -Path "/api/v1/metas/$metaId/retirar" -Token $token -Body @{
+    monto = 10000; descripcion = "Retiro smoke"
+}
+Check $retiroMeta.Ok "POST /metas/{id}/retirar responde 2xx"
+Check ([decimal]$retiroMeta.Body.montoActual -eq 20000) "montoActual = 20.000 tras el retiro"
+
+$retiroExcesivo = Invoke-SaveUpApi -Method POST -Path "/api/v1/metas/$metaId/retirar" -Token $token -Body @{
+    monto = 999999; descripcion = "Retiro excesivo"
+}
+Check ($retiroExcesivo.Status -eq 409) "Retirar más de lo ahorrado -> 409"
+Check ($retiroExcesivo.Body.codigo -eq "CONFLICTO_REGLA_NEGOCIO") "codigo CONFLICTO_REGLA_NEGOCIO"
+
+$metaEdit = Invoke-SaveUpApi -Method PUT -Path "/api/v1/metas/$metaId" -Token $token -Body @{
+    nombre = "Meta smoke editada"; montoObjetivo = 120000; fechaLimite = $fechaLimite
+}
+Check ($metaEdit.Body.nombre -eq "Meta smoke editada") "PUT /metas/{id} actualiza el nombre"
+Check (Invoke-SaveUpApi -Method DELETE -Path "/api/v1/metas/$metaId" -Token $token).Ok "DELETE /metas/{id} responde 2xx"
+$metasFinal = Invoke-SaveUpApi -Method GET -Path "/api/v1/metas/me" -Token $token
+Check (@($metasFinal.Body | Where-Object { $_.id -eq $metaId }).Count -eq 0) "La meta ya no aparece tras eliminarla"
+
+Step "19. Reportes CSV/PDF F8"
+$csvUri = "$BaseUrl/api/v1/reportes/movimientos/exportar?alcance=COMPLETO&formato=CSV"
+try {
+    $csvReporte = Invoke-WebRequest -Uri $csvUri -Headers @{ Authorization = "Bearer $token" } -UseBasicParsing -TimeoutSec 30
+    $csvOk = $true
+} catch {
+    $csvOk = $false
+}
+Check $csvOk "GET reporte CSV responde 2xx"
+Check (([string]$csvReporte.Headers["Content-Type"]) -like "text/csv*") "Content-Type text/csv"
+Check (([string]$csvReporte.Headers["Content-Disposition"]) -like "*reporte_saveup_completo.csv*") "Content-Disposition con nombre CSV"
+Check ($csvReporte.Content -match "Fecha") "El CSV incluye cabecera"
+
+$pdfPath = Join-Path $env:TEMP "saveup-smoke-reporte.pdf"
+$pdfUri = "$BaseUrl/api/v1/reportes/movimientos/exportar?alcance=MENSUAL&formato=PDF&mes=$((Get-Date).Month)&anio=$((Get-Date).Year)"
+try {
+    Invoke-WebRequest -Uri $pdfUri -Headers @{ Authorization = "Bearer $token" } -UseBasicParsing -OutFile $pdfPath -TimeoutSec 30
+    $pdfOk = $true
+} catch {
+    $pdfOk = $false
+}
+Check $pdfOk "GET reporte PDF responde 2xx"
+if ($pdfOk) {
+    $pdfBytes = [System.IO.File]::ReadAllBytes($pdfPath)
+    Check ($pdfBytes.Length -gt 100) "El PDF no está vacío"
+    Check ([System.Text.Encoding]::ASCII.GetString($pdfBytes[0..3]) -eq "%PDF") "El PDF empieza con %PDF"
+    Remove-Item $pdfPath -ErrorAction SilentlyContinue
+}
+
+$badReporte = Invoke-SaveUpApi -Method GET -Path "/api/v1/reportes/movimientos/exportar" -Token $token -Query @{
+    alcance = "MENSUAL"; formato = "CSV"; mes = 13; anio = 2026
+}
+Check ($badReporte.Status -eq 400) "Mes fuera de rango -> 400"
+Check ($badReporte.Body.codigo -eq "DATOS_INVALIDOS") "codigo DATOS_INVALIDOS"
+
 # ---------------------------------------------------------------------------
 Write-Host ""
 if ($script:Failures -eq 0) {
