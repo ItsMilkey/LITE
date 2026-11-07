@@ -457,9 +457,11 @@ try {
     $csvOk = $false
 }
 Check $csvOk "GET reporte CSV responde 2xx"
-Check (([string]$csvReporte.Headers["Content-Type"]) -like "text/csv*") "Content-Type text/csv"
-Check (([string]$csvReporte.Headers["Content-Disposition"]) -like "*reporte_saveup_completo.csv*") "Content-Disposition con nombre CSV"
-Check ($csvReporte.Content -match "Fecha") "El CSV incluye cabecera"
+if ($csvOk) {
+    Check (([string]$csvReporte.Headers["Content-Type"]) -like "text/csv*") "Content-Type text/csv"
+    Check (([string]$csvReporte.Headers["Content-Disposition"]) -like "*reporte_saveup_completo.csv*") "Content-Disposition con nombre CSV"
+    Check ($csvReporte.Content -match "Fecha") "El CSV incluye cabecera"
+}
 
 $pdfPath = Join-Path $env:TEMP "saveup-smoke-reporte.pdf"
 $pdfUri = "$BaseUrl/api/v1/reportes/movimientos/exportar?alcance=MENSUAL&formato=PDF&mes=$((Get-Date).Month)&anio=$((Get-Date).Year)"
@@ -482,6 +484,12 @@ $badReporte = Invoke-SaveUpApi -Method GET -Path "/api/v1/reportes/movimientos/e
 }
 Check ($badReporte.Status -eq 400) "Mes fuera de rango -> 400"
 Check ($badReporte.Body.codigo -eq "DATOS_INVALIDOS") "codigo DATOS_INVALIDOS"
+
+Step "20. Limpieza"
+$limpieza = Invoke-SaveUpApi -Method DELETE -Path "/api/v1/usuarios/me" -Token $token -Body @{
+    contrasena = $clave
+}
+Check $limpieza.Ok "DELETE /usuarios/me (no deja el usuario de smoke)"
 
 # ---------------------------------------------------------------------------
 Write-Host ""
